@@ -22,7 +22,7 @@
 
 - renpy sdk 7.6.3
 
-- python 2.7
+- python 3.9
 
 - pefile 2019.4.18
 

@@ -13,6 +13,13 @@ RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py ||
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python2 setup.py || true
 popd
 
+# Генерируем renpy.lexersupport.c (обязательно для Ren'Py 7.5.3!)
+echo "=== Генерация renpy.lexersupport.c (для 7.5.3) ==="
+pushd renpy-source/module
+python2 -OO -m py_compile *.py
+python2 -m renpy.translation.generation   # ← ЭТА СТРОКА РЕШАЕТ ВСЁ
+popd
+echo "=== renpy.lexersupport.c сгенерирован ==="
 
 pushd pygame_sdl2-source
 python2 setup.py build

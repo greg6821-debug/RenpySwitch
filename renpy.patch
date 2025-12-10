@@ -1644,17 +1644,6 @@ diff -Naur b/renpy/sl2/slast.py a/renpy/sl2/slast.py
  from renpy.compat.pickle import loads, dumps
  
  import ast
-diff -Naur b/renpy/sl2/slparser.py a/renpy/sl2/slparser.py
---- b/renpy/sl2/slparser.py	2023-03-26 16:50:20.000000000 +0300
-+++ a/renpy/sl2/slparser.py	2023-08-02 03:57:58.228040400 +0300
-@@ -21,7 +21,6 @@
- 
- from __future__ import division, absolute_import, with_statement, print_function, unicode_literals
- from renpy.compat import PY2, basestring, bchr, bord, chr, open, pystr, range, round, str, tobytes, unicode # *
--from typing import Any, Callable, Literal
- 
- 
- import collections
 diff -Naur b/renpy/test/testmouse.py a/renpy/test/testmouse.py
 --- b/renpy/test/testmouse.py	2023-01-08 03:11:32.000000000 +0300
 +++ a/renpy/test/testmouse.py	2023-08-02 03:57:48.545129800 +0300

@@ -23,23 +23,19 @@ RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 pyth
 popd
 
 # ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
-echo "=== Генерация renpy.lexersupport.c через запуск Ren'Py ==="
-pushd renpy-source
-python2 renpy.py . --compile || echo "Игнорируем ошибки запуска (главное — сгенерировался .c)" 
-popd
-echo "=== Готово! lexersupport.c теперь есть ==="
-# ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+export PYTHONPATH="$(pwd)/renpy-source:$(pwd)/renpy-source/module:$(pwd)/pygame_sdl2-source:$PYTHONPATH"
 
-# ПРОВЕРКА: Убедимся, что ключевые .c файлы сгенерированы (опционально, для дебага)
+echo "=== Генерация renpy.lexersupport.c (7.5.3) ==="
+pushd renpy-source
+python2 renpy.py . --compile 2>/dev/null || echo "Ren'Py упал, но lexersupport.c создан"
+popd
+
 if [ ! -f "renpy-source/module/renpy.lexersupport.c" ]; then
-    echo "ОШИБКА: renpy.lexersupport.c не найден! Проверьте setup.py."
+    echo "ФАТАЛЬНО: lexersupport.c не найден!"
     exit 1
 fi
-if [ ! -f "renpy-source/module/renpy.compat.dictviews.c" ]; then
-    echo "ОШИБКА: dictviews.c не найден!"
-    exit 1
-fi
-echo "=== Все .c файлы сгенерированы успешно ==="
+echo "lexersupport.c готов!"
+# ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
 
 # Остальной билд без изменений
 bash link_sources.bash

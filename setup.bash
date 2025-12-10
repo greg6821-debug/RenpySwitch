@@ -43,10 +43,16 @@ curl -LOC - https://www.renpy.org/dl/$RENPY_VER/renpy-$RENPY_VER-source.tar.bz2
 #curl -LOC - https://www.renpy.org/dl/$RENPY_VER/android-native-symbols.zip
 #curl -LOC - https://dl.otorh.in/github/rawproject.zip
 
-rm -rf pygame_sdl2-$PYGAME_SDL2_VER+renpy$RENPY_VER pygame_sdl2-source
-tar -xf pygame_sdl2-$PYGAME_SDL2_VER+renpy$RENPY_VER.tar.gz
-mv pygame_sdl2-$PYGAME_SDL2_VER+renpy$RENPY_VER pygame_sdl2-source
-rm pygame_sdl2-$PYGAME_SDL2_VER+renpy$RENPY_VER.tar.gz
+#rm -rf pygame_sdl2-$PYGAME_SDL2_VER+renpy$RENPY_VER pygame_sdl2-source
+#tar -xf pygame_sdl2-$PYGAME_SDL2_VER+renpy$RENPY_VER.tar.gz
+#mv pygame_sdl2-$PYGAME_SDL2_VER+renpy$RENPY_VER pygame_sdl2-source
+#rm pygame_sdl2-$PYGAME_SDL2_VER+renpy$RENPY_VER.tar.gz
+
+rm -rf pygame_sdl2-$PYGAME_SDL2_VER-for-renpy-$RENPY_VER pygame_sdl2-source
+tar -xf pygame_sdl2-$PYGAME_SDL2_VER-for-renpy-$RENPY_VER.tar.gz
+mv pygame_sdl2-$PYGAME_SDL2_VER-for-renpy-$RENPY_VER pygame_sdl2-source
+rm pygame_sdl2-$PYGAME_SDL2_VER-for-renpy-$RENPY_VER.tar.gz
+
 
 rm -rf renpy-$RENPY_VER-source renpy-source
 tar -xf renpy-$RENPY_VER-source.tar.bz2

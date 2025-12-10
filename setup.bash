@@ -1,7 +1,7 @@
 set -e
 
 export DEVKITPRO=/opt/devkitpro
-export RENPY_VER=7.5.3
+export RENPY_VER=7.6.1
 export PYGAME_SDL2_VER=2.1.0
 
 apt-get -y update

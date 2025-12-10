@@ -22,6 +22,14 @@ RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 pyth
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python2 setup.py install
 popd
 
+# ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+echo "=== Генерация renpy.lexersupport.c через запуск Ren'Py ==="
+pushd renpy-source
+python2 renpy.py . --compile || echo "Игнорируем ошибки запуска (главное — сгенерировался .c)" 
+popd
+echo "=== Готово! lexersupport.c теперь есть ==="
+# ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+
 # ПРОВЕРКА: Убедимся, что ключевые .c файлы сгенерированы (опционально, для дебага)
 if [ ! -f "renpy-source/module/renpy.lexersupport.c" ]; then
     echo "ОШИБКА: renpy.lexersupport.c не найден! Проверьте setup.py."

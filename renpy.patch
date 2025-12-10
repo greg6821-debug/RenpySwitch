@@ -24,17 +24,14 @@ diff -Naur b/module/ffmedia.c a/module/ffmedia.c
  		}
  		av_free(sqe);
  	}
-@@ -867,16 +859,7 @@
+@@ -911,13 +903,7 @@
  	    rv->pitch += ROW_ALIGNMENT - (rv->pitch % ROW_ALIGNMENT);
  	}
  
 -#ifndef USE_POSIX_MEMALIGN
      rv->pixels = SDL_calloc(rv->pitch * rv->h, 1);
 -#else
--	if (posix_memalign(&rv->pixels, ROW_ALIGNMENT, rv->pitch * rv->h)) {
--		av_free(rv);
--		return NULL;
--	}
+-    posix_memalign(&rv->pixels, ROW_ALIGNMENT, rv->pitch * rv->h);
 -    memset(rv->pixels, 0, rv->pitch * rv->h);
 -#endif
 -
@@ -56,31 +53,6 @@ diff -Naur b/module/ffmedia.c a/module/ffmedia.c
 diff -Naur b/renpy/__init__.py a/renpy/__init__.py
 --- b/renpy/__init__.py	2023-05-17 07:58:53.000000000 +0300
 +++ a/renpy/__init__.py	2023-08-03 20:23:08.950932300 +0300
-@@ -23,7 +23,6 @@
- # order.
- 
- from __future__ import division, absolute_import, with_statement, print_function, unicode_literals
--from typing import Any
- 
- # Initial import of the __main__ module. This gets replaced in renpy.py
- # whatever that module has been imported as.
-@@ -66,7 +65,6 @@
- import os
- import copy
- import types
--import site
- from collections import namedtuple
- 
- ################################################################################
-@@ -85,7 +83,7 @@
-     version_name = version_dict["version_name"]
-     version = version_dict["version"]
- 
--official = official and getattr(site, "renpy_build_official", False)
-+official = False
- 
- VersionTuple = namedtuple("VersionTuple", ["major", "minor", "patch", "commit"])
- version_tuple = VersionTuple(*(int(i) for i in version.split(".")))
 @@ -119,6 +117,7 @@
  android = False
  ios = False
@@ -106,16 +78,6 @@ diff -Naur b/renpy/__init__.py a/renpy/__init__.py
  
  # A flag that's set to true if the game directory is bundled inside a mac app.
  macapp = False
-@@ -420,7 +421,8 @@
-     import renpy.curry
-     import renpy.color
-     import renpy.easy
--    import renpy.encryption
-+    if not switch:
-+        import renpy.encryption
-     import renpy.execution
-     import renpy.lexer
-     import renpy.loadsave
 @@ -617,6 +619,11 @@
      returned.
      """
@@ -159,8 +121,8 @@ diff -Naur b/renpy/ast.py a/renpy/ast.py
 diff -Naur b/renpy/audio/androidhw.py a/renpy/audio/androidhw.py
 --- b/renpy/audio/androidhw.py	2023-06-08 02:55:48.000000000 +0300
 +++ a/renpy/audio/androidhw.py	1970-01-01 03:00:00.000000000 +0300
-@@ -1,217 +0,0 @@
--# Copyright 2004-2023 Tom Rothamel <pytom@bishoujo.us>
+@@ -1,219 +0,0 @@
+-# Copyright 2004-2022 Tom Rothamel <pytom@bishoujo.us>
 -#
 -# Permission is hereby granted, free of charge, to any person
 -# obtaining a copy of this software and associated documentation files
@@ -278,7 +240,9 @@ diff -Naur b/renpy/audio/androidhw.py a/renpy/audio/androidhw.py
 -
 -        filename = self.queue.pop(0)
 -
--        with renpy.loader.load(filename, directory="audio") as f:
+-        print("Playing", filename)
+-
+-        with renpy.loader.load(filename) as f:
 -            real_fn = f.name
 -            base = getattr(f, "base", -1)
 -            length = getattr(f, "length", -1)
@@ -346,7 +310,7 @@ diff -Naur b/renpy/audio/androidhw.py a/renpy/audio/androidhw.py
 -        self.stop()
 -        self.queue = [ ]
 -
--    def enqueue(self, filenames, loop=True, synchro_start=False, fadein=0, tight=None, relative_volume=1.0):
+-    def enqueue(self, filenames, loop=True, synchro_start=False, fadein=0, tight=None, loop_only=False, relative_volume=1.0):
 -        self.queue.extend(filenames)
 -
 -    def set_volume(self, volume):
@@ -377,6 +341,7 @@ diff -Naur b/renpy/audio/androidhw.py a/renpy/audio/androidhw.py
 -
 -    def video_ready(self):
 -        return 1
+-
 diff -Naur b/renpy/audio/audio.py a/renpy/audio/audio.py
 --- b/renpy/audio/audio.py	2023-06-08 02:55:48.000000000 +0300
 +++ a/renpy/audio/audio.py	2023-08-22 03:40:53.817637195 +0300
@@ -390,9 +355,8 @@ diff -Naur b/renpy/audio/audio.py a/renpy/audio/audio.py
  import time
  import pygame_sdl2 # @UnusedImport
  import os
-@@ -790,20 +787,6 @@
+@@ -790,19 +787,5 @@
          return renpysound.video_ready(self.number)
- 
  
 -# Use unconditional imports so these files get compiled during the build
 -# process.
@@ -425,13 +389,14 @@ diff -Naur b/renpy/audio/audio.py a/renpy/audio/audio.py
  
      c.mixer = mixer
  
-@@ -1053,6 +1031,9 @@
+@@ -996,7 +974,10 @@
  
  def quit(): # @ReservedAssignment
  
 +    if renpy.switch:
 +        return
 +
+     global periodic_thread
      global periodic_thread_quit
  
      global pcm_ok
@@ -447,7 +412,7 @@ diff -Naur b/renpy/audio/audio.py a/renpy/audio/audio.py
 diff -Naur b/renpy/audio/ioshw.py a/renpy/audio/ioshw.py
 --- b/renpy/audio/ioshw.py	2023-06-08 02:55:48.000000000 +0300
 +++ a/renpy/audio/ioshw.py	1970-01-01 03:00:00.000000000 +0300
-@@ -1,196 +0,0 @@
+@@ -1,198 +0,0 @@
 -from __future__ import division, absolute_import, with_statement, print_function, unicode_literals
 -from renpy.compat import PY2, basestring, bchr, bord, chr, open, pystr, range, round, str, tobytes, unicode # *
 -
@@ -544,7 +509,7 @@ diff -Naur b/renpy/audio/ioshw.py a/renpy/audio/ioshw.py
 -            return
 -
 -        filename = self.queue.pop(0)
--        with renpy.loader.load(filename, directory="audio") as f:
+-        with renpy.loader.load(filename) as f:
 -            real_fn = f.name
 -
 -        self.filename = filename
@@ -613,16 +578,18 @@ diff -Naur b/renpy/audio/ioshw.py a/renpy/audio/ioshw.py
 -        self.stop()
 -        self.queue = [ ]
 -
--    def enqueue(self, filenames, loop=True, synchro_start=False, fadein=0, tight=None, relative_volume=1.0):
+-    def enqueue(self, filenames, loop=True, synchro_start=False, fadein=0, tight=None, loop_only=False, relative_volume=1.0):
 -        self.queue.extend(filenames)
 -
 -    def pause(self):
 -        if self.player is not None:
 -            self.player.pause()
+-        pass
 -
 -    def unpause(self):
 -        if self.player is not None:
 -            self.player.unpause()
+-        pass
 -
 -    def set_volume(self, volume):
 -        pass
@@ -738,7 +705,7 @@ diff -Naur b/renpy/character.py a/renpy/character.py
  from __future__ import division, absolute_import, with_statement, print_function, unicode_literals
  from renpy.compat import PY2, basestring, bchr, bord, chr, open, pystr, range, round, str, tobytes, unicode # *
  
--from typing import Any, Literal
+-from typing import Any
 -
  import renpy
  
@@ -757,7 +724,7 @@ diff -Naur b/renpy/common/00compat.rpy a/renpy/common/00compat.rpy
 diff -Naur b/renpy/common/00keymap.rpy a/renpy/common/00keymap.rpy
 --- b/renpy/common/00keymap.rpy	2023-04-12 06:37:21.000000000 +0300
 +++ a/renpy/common/00keymap.rpy	2023-09-04 23:17:53.465141998 +0300
-@@ -152,31 +152,30 @@
+@@ -138,30 +138,29 @@
          profile_once = [ 'K_F8' ],
          memory_profile = [ 'K_F7' ],
  
@@ -766,8 +733,7 @@ diff -Naur b/renpy/common/00keymap.rpy a/renpy/common/00keymap.rpy
 +
      )
  
-     config.default_keymap = { k : _list(v) for k, v in config.keymap.items() }
-     config.keymap = { k : _keymap_list(v) for k, v in config.keymap.items() }
+     config.default_keymap = { k : list(v) for k, v in config.keymap.items() }
  
      config.pad_bindings = {
 +        "pad_lefttrigger_pos" : [ "dismiss", "button_select", "bar_activate", "bar_deactivate", ],
@@ -801,36 +767,14 @@ diff -Naur b/renpy/common/00keymap.rpy a/renpy/common/00keymap.rpy
  
          "pad_dpleft_press" : [ "focus_left", "bar_left", "viewport_leftarrow" ],
          "pad_leftx_neg" : [ "focus_left", "bar_left", "viewport_leftarrow" ],
-@@ -445,6 +444,8 @@
+@@ -434,5 +433,7 @@
          performance = ToggleScreen("_performance"),
          accessibility = ToggleScreen("_accessibility"),
-         bubble_editor = bubble.ToggleShown(),
 +        quick_save = QuickSave(),
 +        quick_load = QuickLoad(),
          )
  
      config.underlay = [ _default_keymap ]
-diff -Naur b/renpy/common/00sync.rpy a/renpy/common/00sync.rpy
---- b/renpy/common/00sync.rpy	2023-05-29 19:21:17.000000000 +0300
-+++ a/renpy/common/00sync.rpy	2023-08-03 17:47:11.636260700 +0300
-@@ -315,7 +315,7 @@
- 
-     def upload():
- 
--        if not config.has_sync:
-+        if not config.has_sync or renpy.switch:
-             return
- 
-         if not renpy.call_screen("sync_confirm"):
-@@ -404,7 +404,7 @@
- 
-     def download():
- 
--        if not config.has_sync:
-+        if not config.has_sync or renpy.switch:
-             return
- 
-         # Get and check the sync id.
 diff -Naur b/renpy/common/00updater.rpy a/renpy/common/00updater.rpy
 --- b/renpy/common/00updater.rpy	2023-02-14 07:50:20.000000000 +0300
 +++ a/renpy/common/00updater.rpy	2023-08-03 14:22:05.624752900 +0300
@@ -888,13 +832,18 @@ diff -Naur b/renpy/compat/__init__.py a/renpy/compat/__init__.py
  
  ################################################################################
  # Make open mimic Python 3.
-@@ -104,9 +97,50 @@
- strict_error = codecs.lookup_error("strict")
- codecs.register_error("python_strict", strict_error)
- 
+@@ -101,10 +101,51 @@
 -if PY2:
+-    import codecs
+-
+-    strict_error = codecs.lookup_error("strict")
+-    codecs.register_error("python_strict", strict_error)
 -    surrogateescape_error = codecs.lookup_error("surrogateescape")
 -    codecs.register_error("strict", surrogateescape_error)
++import codecs
++strict_error = codecs.lookup_error("strict")
++codecs.register_error("python_strict", strict_error)
++
 +def replace_surrogate_decode(mybytes):
 +    decoded = []
 +    for ch in mybytes:
@@ -942,21 +891,18 @@ diff -Naur b/renpy/compat/__init__.py a/renpy/compat/__init__.py
  
  import renpy
  renpy.update_path()
-@@ -114,24 +148,29 @@
+@@ -112,21 +146,26 @@
  ################################################################################
  # String (text and binary) types and functions.
  
--basestring = future.utils.string_types
+-basestring = future.utils.string_types # @ReservedAssignment
 +basestring = basestring
  pystr = str
--unicode = future.utils.text_type
+-str = future.utils.text_type # @ReservedAssignment
+-unicode = future.utils.text_type # @ReservedAssignment
 +unicode = unicode
  
- # This tries to help pylance get the types right.
--str = builtins.str; globals()["str"] = future.utils.text_type
 +str = builtins.str; globals()["str"] = unicode
- 
- 
 -bord = future.utils.bord
 +bord = ord
  
@@ -978,15 +924,6 @@ diff -Naur b/renpy/compat/__init__.py a/renpy/compat/__init__.py
  
  ################################################################################
  # Dictionary views.
-@@ -181,7 +220,7 @@
- 
- ################################################################################
- # Chance the default for subprocess.Popen.
--if PY2:
-+if PY2 and not sys.platform == 'horizon':
-     import subprocess
-     class Popen(subprocess.Popen):
-         def __init__(self, *args, **kwargs):
 diff -Naur b/renpy/config.py a/renpy/config.py
 --- b/renpy/config.py	2023-05-22 17:50:43.000000000 +0300
 +++ a/renpy/config.py	2023-08-03 20:03:32.198552700 +0300
@@ -1054,15 +991,8 @@ diff -Naur b/renpy/display/__init__.py a/renpy/display/__init__.py
 diff -Naur b/renpy/display/behavior.py a/renpy/display/behavior.py
 --- b/renpy/display/behavior.py	2023-06-08 02:55:48.000000000 +0300
 +++ a/renpy/display/behavior.py	2023-09-02 19:46:26.242131550 +0300
-@@ -23,7 +23,6 @@
- 
- from __future__ import division, absolute_import, with_statement, print_function, unicode_literals
- from renpy.compat import PY2, basestring, bchr, bord, chr, open, pystr, range, round, str, tobytes, unicode # *
--from typing import Callable
- 
- import json
- import math
-@@ -1716,6 +1715,9 @@
+@@ -1638,7 +1638,10 @@
+         elif ev.type == pygame.TEXTINPUT:
              self.edit_text = ""
              raw_text = ev.text
  
@@ -1072,44 +1002,6 @@ diff -Naur b/renpy/display/behavior.py a/renpy/display/behavior.py
          elif ev.type == pygame.KEYDOWN:
  
              if ev.unicode and ord(ev.unicode[0]) >= 32:
-@@ -2027,7 +2029,7 @@
-             self.animation_warper = None
- 
-             if not instantly:
--                self.change(value, end_animation=False)
-+                self.change(value)
- 
-     def periodic(self, st):
- 
-@@ -2042,15 +2044,20 @@
- 
-         value = self.animation_target - self.animation_amplitude * (1.0 - done)
- 
--        self.change(value, end_animation=False)
-+        self.change(value)
- 
--        if value < 0 or value > self._range:
--            self.end_animation(instantly=True)
--            return 0
--        elif st > self.animation_start + self.animation_delay: # type: ignore
--            self.end_animation()
--            return None
--        else:
-+        try:
-+
-+            if value < 0 or value > self._range:
-+                self.end_animation(instantly=True)
-+                return 0
-+            elif st > self.animation_start + self.animation_delay: # type: ignore
-+                self.end_animation()
-+                return None
-+            else:
-+                return 0
-+
-+        except:
-             return 0
- 
- 
 diff -Naur b/renpy/display/core.py a/renpy/display/core.py
 --- b/renpy/display/core.py	2023-06-08 02:56:13.000000000 +0300
 +++ a/renpy/display/core.py	2023-08-31 14:03:02.815623147 +0300
@@ -1122,7 +1014,7 @@ diff -Naur b/renpy/display/core.py a/renpy/display/core.py
  import sys
  import os
  import time
-@@ -2417,6 +2415,10 @@
+@@ -2260,6 +2258,10 @@
          # Kill off the presplash.
          renpy.display.presplash.end()
  
@@ -1130,9 +1022,9 @@ diff -Naur b/renpy/display/core.py a/renpy/display/core.py
 +            import _otrhlibnx
 +            _otrhlibnx.disableboost()
 +
-         # If we are on the web browser, start preloading the browser cache.
-         if renpy.emscripten and renpy.game.preferences.web_cache_preload:
-             emscripten.run_script("loadCache()")
+         renpy.main.log_clock("Interface start")
+ 
+         self.started = True
 @@ -2595,7 +2597,7 @@
  
          renpy.config.renderer = renderer
@@ -1173,10 +1065,9 @@ diff -Naur b/renpy/display/core.py a/renpy/display/core.py
 diff -Naur b/renpy/display/presplash.py a/renpy/display/presplash.py
 --- b/renpy/display/presplash.py	2023-02-14 07:45:56.000000000 +0300
 +++ a/renpy/display/presplash.py	2023-08-02 04:14:30.314534200 +0300
-@@ -236,3 +236,19 @@
-         emscripten.run_script(r"""progress(%d, %d);""" % (done, total))
- 
-     emscripten.sleep(0)
+@@ -190,2 +190,18 @@
+     while end_time - time.time() > 0:
+         pump_window()
 +
 +def start_switch(gamedir):
 +    filenames = ['/presplash.png', '/presplash.jpg']
@@ -1222,14 +1113,14 @@ diff -Naur b/renpy/display/video.py a/renpy/display/video.py
 +++ a/renpy/display/video.py	2023-08-22 03:42:00.867619970 +0300
 @@ -496,9 +496,6 @@
  
-         self.group = group
+         self.play_callback = play_callback
  
 -        if (self.channel == "movie") and (renpy.config.hw_video) and renpy.mobile:
 -            raise Exception("Movie(channel='movie') doesn't work on mobile when config.hw_video is true. (Use a different channel argument.)")
 -
-     def _handles_event(self, event):
-         return event == "show"
+     def render(self, width, height, st, at):
  
+         if self._play and not (renpy.game.preferences.video_image_fallback is True):
 @@ -695,7 +692,7 @@
  
          return False
@@ -1263,10 +1154,10 @@ diff -Naur b/renpy/execution.py a/renpy/execution.py
  import sys
  import time
  
-@@ -628,7 +626,7 @@
+@@ -613,7 +613,7 @@
                      except renpy.game.CONTROL_EXCEPTIONS as ce:
                          raise ce
-                     except Exception:
+                     except Exception as ce:
 -                        reraise(exc_info[0], exc_info[1], exc_info[2])
 +                        raise exc_info[0], exc_info[1], exc_info[2]
  
@@ -1287,13 +1178,12 @@ diff -Naur b/renpy/game.py a/renpy/game.py
 diff -Naur b/renpy/gl/gldraw.pyx a/renpy/gl/gldraw.pyx
 --- b/renpy/gl/gldraw.pyx	2023-04-04 07:12:26.000000000 +0300
 +++ a/renpy/gl/gldraw.pyx	2023-08-02 03:26:25.417990600 +0300
-@@ -150,7 +150,7 @@
+@@ -150,6 +150,6 @@
          gltexture.free_texture_numbers()
  
- 
--        if renpy.android or renpy.ios or renpy.emscripten:
+-        if renpy.android or renpy.ios:
 +        if renpy.android or renpy.ios or renpy.emscripten or renpy.switch:
-             pygame.display.get_window().recreate_gl_context(always=renpy.emscripten)
+             pygame.display.get_window().recreate_gl_context()
  
          # Are we in fullscreen mode?
 @@ -233,7 +233,7 @@
@@ -1363,17 +1253,6 @@ diff -Naur b/renpy/gl2/live2d.py a/renpy/gl2/live2d.py
  
  import renpy
  import renpy.gl2.live2dmotion
-diff -Naur b/renpy/lint.py a/renpy/lint.py
---- b/renpy/lint.py	2023-05-30 07:48:09.000000000 +0300
-+++ a/renpy/lint.py	2023-08-02 03:58:47.184422600 +0300
-@@ -21,7 +21,6 @@
- 
- from __future__ import division, absolute_import, with_statement, print_function, unicode_literals
- from renpy.compat import PY2, basestring, bchr, bord, chr, open, pystr, range, round, str, tobytes, unicode # *
--from typing import Any
- 
- import codecs
- import time
 diff -Naur b/renpy/loader.py a/renpy/loader.py
 --- b/renpy/loader.py	2023-06-08 02:56:04.000000000 +0300
 +++ a/renpy/loader.py	2023-08-22 01:38:24.139724562 +0300
@@ -1732,8 +1611,8 @@ diff -Naur b/renpy/savelocation.py a/renpy/savelocation.py
  
      with scan_thread_condition:
 @@ -624,6 +640,9 @@
-     for i in renpy.config.extra_savedirs:
-         location.add(FileLocation(i))
+         path = os.path.join(renpy.config.gamedir, "saves")
+         location.add(FileLocation(path))
  
 +    if renpy.switch:
 +        location = FileLocation("save:/Data/")
@@ -1744,15 +1623,15 @@ diff -Naur b/renpy/savelocation.py a/renpy/savelocation.py
 diff -Naur b/renpy/script.py a/renpy/script.py
 --- b/renpy/script.py	2023-02-01 09:37:45.000000000 +0300
 +++ a/renpy/script.py	2023-08-03 19:00:48.351515100 +0300
-@@ -694,7 +694,7 @@
+@@ -645,7 +645,7 @@
  
-                 pickle_data_after_static_transforms = dumps((data, stmts))
+             pickle_data_after_static_transforms = dumps((data, stmts))
  
--                if not renpy.macapp:
-+                if not (renpy.macapp or renpy.switch):
-                     try:
-                         with open(rpycfn, "wb") as f:
-                             self.write_rpyc_header(f)
+-            if not renpy.macapp:
++            if not (renpy.macapp or renpy.switch):
+                 try:
+                     with open(rpycfn, "wb") as f:
+                         self.write_rpyc_header(f)
 diff -Naur b/renpy/sl2/slast.py a/renpy/sl2/slast.py
 --- b/renpy/sl2/slast.py	2023-05-30 07:47:54.000000000 +0300
 +++ a/renpy/sl2/slast.py	2023-08-02 03:57:53.236982300 +0300
@@ -1795,7 +1674,7 @@ diff -Naur b/renpy/text/text.py a/renpy/text/text.py
  from __future__ import division, absolute_import, with_statement, print_function, unicode_literals
  from renpy.compat import PY2, basestring, bchr, bord, chr, open, pystr, range, round, str, tobytes, unicode # *
  
--from typing import Any, Optional, Callable
+-from typing import Optional, Callable
 -
  import math
  
@@ -1845,14 +1724,14 @@ diff -Naur b/renpy.py a/renpy.py
      # Android.
      if renpy.android:
          paths = [
-@@ -208,6 +217,9 @@
+@@ -203,6 +212,9 @@
      Returns the absolute path to thew Ren'Py base directory.
      """
  
 +    if sys.platform == 'horizon':
 +        return "romfs:/Contents"
 +
-     renpy_base = os.path.dirname(os.path.abspath(__file__))
+     renpy_base = os.path.dirname(os.path.realpath(sys.argv[0]))
      renpy_base = os.path.abspath(renpy_base)
  
 @@ -244,4 +256,10 @@

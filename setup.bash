@@ -65,10 +65,10 @@ rm renpy-$RENPY_VER-sdk.zip
 #unzip -qq rawproject.zip -d raw
 #rm rawproject.zip
 
-rm -rf android-native-symbols renpy_androidlib ./raw/android/lib
-unzip -qq android-native-symbols.zip -d ./raw/android/lib
-rm -rf ./raw/android/lib/x86_64/
-rm android-native-symbols.zip
+#rm -rf android-native-symbols renpy_androidlib ./raw/android/lib
+#unzip -qq android-native-symbols.zip -d ./raw/android/lib
+#rm -rf ./raw/android/lib/x86_64/
+#rm android-native-symbols.zip
 
 pushd renpy-source
 patch -p1 < ../renpy.patch

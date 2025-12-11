@@ -1,12 +1,16 @@
 name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
-
+run-name: ${{ github.actor }} is testing out GitHub Actions рџљЂ
+on: 
+ push:
+        branches:
+          - main
+ workflow_dispatch: 
+ 
 jobs:
     build-artifact:
         name: Build
-        runs-on: ubuntu-24.04
-        container: devkitpro/devkita64:20230910
+        runs-on: ubuntu-latest
+        container: devkitpro/devkita64:20221113
 
         steps:
         - name: Check for dockerenv file
@@ -27,4 +31,4 @@ jobs:
           uses: actions/upload-artifact@master
           with:
             name: raw
-            path: raw
+            path: raw.zip

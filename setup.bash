@@ -43,7 +43,7 @@ curl -LOC - https://www.renpy.org/dl/$RENPY_VER/pygame_sdl2-$PYGAME_SDL2_VER-for
 curl -LOC - https://www.renpy.org/dl/$RENPY_VER/renpy-$RENPY_VER-sdk.zip
 curl -LOC - https://www.renpy.org/dl/$RENPY_VER/renpy-$RENPY_VER-source.tar.bz2
 curl -LOC - https://www.renpy.org/dl/$RENPY_VER/android-native-symbols.zip
-curl -LOC - https://dl.otorh.in/github/rawproject.zip
+#curl -LOC - https://dl.otorh.in/github/rawproject.zip
 
 
 rm -rf pygame_sdl2-$PYGAME_SDL2_VER-for-renpy-$RENPY_VER pygame_sdl2-source
@@ -61,9 +61,9 @@ unzip -qq renpy-$RENPY_VER-sdk.zip -d renpy_sdk
 rm renpy-$RENPY_VER-sdk.zip
 cp -rf subprocess.pyo renpy_sdk/renpy-$RENPY_VER-sdk/lib/python2.7
 
-rm -rf raw
-unzip -qq rawproject.zip -d raw
-rm rawproject.zip
+#rm -rf raw
+#unzip -qq rawproject.zip -d raw
+#rm rawproject.zip
 
 rm -rf android-native-symbols renpy_androidlib ./raw/android/lib
 unzip -qq android-native-symbols.zip -d ./raw/android/lib

@@ -130,6 +130,7 @@ PyMODINIT_FUNC initrenpy_gl_glrtt_copy();
 PyMODINIT_FUNC initrenpy_gl_glrtt_fbo();
 PyMODINIT_FUNC initrenpy_gl_gltexture();
 PyMODINIT_FUNC initrenpy_pydict();
+PyMODINIT_FUNC initrenpy_parsersupport();
 PyMODINIT_FUNC initrenpy_style();
 PyMODINIT_FUNC initrenpy_styledata_style_activate_functions();
 PyMODINIT_FUNC initrenpy_styledata_style_functions();
@@ -338,6 +339,7 @@ int main(int argc, char* argv[])
         {"renpy.gl.glrtt_fbo", initrenpy_gl_glrtt_fbo},
         {"renpy.gl.gltexture", initrenpy_gl_gltexture},
         {"renpy.pydict", initrenpy_pydict},
+        {"renpy.arsersupport", initrenpy_parsersupport},
         {"renpy.style", initrenpy_style},
         {"renpy.styledata.style_activate_functions", initrenpy_styledata_style_activate_functions},
         {"renpy.styledata.style_functions", initrenpy_styledata_style_functions},

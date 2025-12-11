@@ -92,6 +92,8 @@ rm -rf private
 
 
 mkdir -p ./raw/switch/romfs/Contents/renpy/common
+mkdir -p ./raw/switch/romfs/Contents/renpy
+mkdir -p ./raw/lib
 #mkdir -p ./raw/android/assets/renpy/common
 cp -r ./renpy_clear/renpy/common ./raw/switch/romfs/Contents/renpy/
 #cp -r ./renpy_clear/renpy/common ./raw/android/assets/renpy/

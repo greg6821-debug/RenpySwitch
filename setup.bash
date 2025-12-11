@@ -61,9 +61,9 @@ unzip -qq renpy-$RENPY_VER-sdk.zip -d renpy_sdk
 rm renpy-$RENPY_VER-sdk.zip
 #cp -rf subprocess.pyo renpy_sdk/renpy-$RENPY_VER-sdk/lib/python2.7
 
-#rm -rf raw
-#unzip -qq rawproject.zip -d raw
-#rm rawproject.zip
+rm -rf raw
+unzip -qq rawproject.zip -d raw
+rm rawproject.zip
 
 #rm -rf android-native-symbols renpy_androidlib ./raw/android/lib
 #unzip -qq android-native-symbols.zip -d ./raw/android/lib

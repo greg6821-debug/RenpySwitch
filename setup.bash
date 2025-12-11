@@ -26,15 +26,15 @@ pip2 install future six typing requests ecdsa pefile==2019.4.18 Cython==0.29.36 
 #pip2 install future six typing requests ecdsa pefile==2019.4.18 Cython==0.29.36
 
 curl -LOC - https://github.com/knautilus/Utils/releases/download/v1.0/devkitpro-pkgbuild-helpers-2.2.4-2-any.pkg.tar.xz
-curl -LOC - https://github.com/knautilus/Utils/releases/download/v1.0/python27-switch.zip
+curl -LOC - https://github.com/greg6821-debug/scripts/releases/download/1.0-scripts/python27-switch.tar.gz
 curl -LOC - https://github.com/knautilus/Utils/releases/download/v1.0/switch-libfribidi-1.0.12-1-any.pkg.tar.xz
 dkp-pacman -U --noconfirm devkitpro-pkgbuild-helpers-2.2.4-2-any.pkg.tar.xz
 dkp-pacman -U --noconfirm switch-libfribidi-1.0.12-1-any.pkg.tar.xz
-unzip -qq python27-switch.zip -d $DEVKITPRO/portlibs/switch
+tar -xf python27-switch.tar.gz -C $DEVKITPRO/portlibs/switch
 
 rm devkitpro-pkgbuild-helpers-2.2.4-2-any.pkg.tar.xz
 rm switch-libfribidi-1.0.12-1-any.pkg.tar.xz
-rm python27-switch.zip
+rm python27-switch.tar.gz
 
 /bin/bash -c 'sed -i'"'"'.bak'"'"' '"'"'s/set(CMAKE_EXE_LINKER_FLAGS_INIT "/set(CMAKE_EXE_LINKER_FLAGS_INIT "-fPIC /'"'"' $DEVKITPRO/switch.cmake'
 
@@ -59,7 +59,7 @@ rm renpy-$RENPY_VER-source.tar.bz2
 rm -rf renpy-$RENPY_VER-sdk renpy_sdk
 unzip -qq renpy-$RENPY_VER-sdk.zip -d renpy_sdk
 rm renpy-$RENPY_VER-sdk.zip
-cp -rf subprocess.pyo renpy_sdk/renpy-$RENPY_VER-sdk/lib/python2.7
+#cp -rf subprocess.pyo renpy_sdk/renpy-$RENPY_VER-sdk/lib/python2.7
 
 #rm -rf raw
 #unzip -qq rawproject.zip -d raw

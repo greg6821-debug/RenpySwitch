@@ -389,6 +389,7 @@ int main(int argc, char* argv[])
     fclose(sysconfigdata_file);
 
     Py_SetPythonHome("romfs:/Contents");
+    Py_SetProgramName("romfs:/Contents/lib.zip"); // critical for zipimport
     PyImport_ExtendInittab(builtins);
     //Py_SetPythonHome("romfs:/Contents/lib.zip");
     Py_InitializeEx(0);
@@ -402,7 +403,7 @@ int main(int argc, char* argv[])
 
     int python_result;
 
-    python_result = PyRun_SimpleString("import sys\nsys.path = ['romfs:/Contents/lib.zip']");
+    python_result = PyRun_SimpleString("import sys\nsys.path.insert(0, 'romfs:/Contents/lib.zip')\nsys.path.insert(0, 'romfs:/Contents')\n");
 
     if (python_result == -1)
     {

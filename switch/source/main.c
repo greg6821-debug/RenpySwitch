@@ -388,6 +388,7 @@ int main(int argc, char* argv[])
 
     fclose(sysconfigdata_file);
 
+    Py_SetPythonHome("romfs:/Contents");
     PyImport_ExtendInittab(builtins);
     //Py_SetPythonHome("romfs:/Contents/lib.zip");
     Py_InitializeEx(0);
@@ -406,12 +407,6 @@ int main(int argc, char* argv[])
     if (python_result == -1)
     {
         show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.", 1);
-    }
-    
-    python_result = PyRun_SimpleString("import os; print(os.__file__)");
-    if (python_result == -1)
-    {
-        show_error("???.\n\nThis is an internal error and should not occur during normal usage.", 1);
     }
     
 #define x(lib) \

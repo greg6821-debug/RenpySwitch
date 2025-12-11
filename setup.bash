@@ -7,16 +7,32 @@ export PYGAME_SDL2_VER=2.1.0
 apt-get -y update
 apt-get -y upgrade
 
-apt -y install build-essential checkinstall
-apt -y install libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev
+#apt -y install build-essential checkinstall
+#apt -y install libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev
 
-apt -y install python2 python2-dev
+#apt -y install python2 python2-dev
 
-python2 --version
+#python2 --version
 
-curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
-python2 get-pip.py
-pip2 --version 
+#curl https://bootstrap.pypa.io/pip/2.7/get-pip.py --output get-pip.py
+#python2 get-pip.py
+#pip2 --version 
+
+ # 1. Установка системных зависимостей для сборки
+apt-get install -y wget build-essential zlib1g-dev libssl-dev libncurses5-dev libsqlite3-dev libreadline-dev libbz2-dev
+# Скачайте Python 2.7.18 (последняя версия)
+wget https://github.com/greg6821-debug/scripts/releases/download/1.0-scripts/Python-2.7.tgz
+# Распакуйте архив
+tar -xzf Python-2.7.tgz
+cd Python-2.7
+./configure --enable-optimizations --prefix=/usr/local
+make -j$(nproc)
+make altinstall  # Используем altinstall, чтобы не перезаписать python3
+Установка pip для Python 2.7
+curl -O https://bootstrap.pypa.io/pip/2.7/get-pip.py
+python2.7 get-pip.py
+
+
 
 apt-get -y install p7zip-full libsdl2-dev libsdl2-image-dev libjpeg-dev libpng-dev libsdl2-ttf-dev libsdl2-mixer-dev libavformat-dev libfreetype6-dev libswscale-dev libglew-dev libfribidi-dev libavcodec-dev  libswresample-dev libsdl2-gfx-dev libgl1-mesa-glx
 pip2 uninstall distribute

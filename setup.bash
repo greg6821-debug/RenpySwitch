@@ -28,7 +28,7 @@ cd Python-2.7
 ./configure --enable-optimizations --prefix=/usr/local
 make -j$(nproc)
 make altinstall  # Используем altinstall, чтобы не перезаписать python3
-Установка pip для Python 2.7
+#Установка pip для Python 2.7
 curl -O https://bootstrap.pypa.io/pip/2.7/get-pip.py
 python2.7 get-pip.py
 

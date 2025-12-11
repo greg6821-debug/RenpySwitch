@@ -10,7 +10,7 @@ jobs:
     build-artifact:
         name: Build
         runs-on: ubuntu-24.04
-        container: devkitpro/devkita64:20230507
+        container: devkitpro/devkita64:20230910
 
         steps:
         - name: Check for dockerenv file

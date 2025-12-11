@@ -369,14 +369,12 @@ int main(int argc, char* argv[])
         {"renpy.uguu.gl", initrenpy_uguu_gl},
         {"renpy.uguu.uguu", initrenpy_uguu_uguu},
 
-
+        {"renpy.gl.gl", initrenpy_gl_gl},
 
         {NULL, NULL}
     };
 
-    PyImport_ExtendInittab(builtins);
-
-    Py_SetPythonHome("romfs:/Contents/lib.zip");
+    
 
     FILE* sysconfigdata_file = fopen("romfs:/Contents/lib.zip", "rb");
     FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
@@ -394,6 +392,8 @@ int main(int argc, char* argv[])
     fclose(sysconfigdata_file);
 
     Py_InitializeEx(0);
+    PyImport_ExtendInittab(builtins);
+    Py_SetPythonHome("romfs:/Contents/lib.zip");
 
     char* pyargs[] = {
         "romfs:/Contents/renpy.py",
@@ -404,7 +404,7 @@ int main(int argc, char* argv[])
 
     int python_result;
 
-    python_result = PyRun_SimpleString("import sys; sys.path = ['romfs:/Contents/lib.zip']");
+    python_result = PyRun_SimpleString("import sys\nsys.path = ['romfs:/Contents/lib.zip']");
 
     if (python_result == -1)
     {

@@ -83,7 +83,7 @@ rm -rf private
 mkdir private
 mkdir private/lib
 cp -r renpy_clear/renpy private/renpy
-cp -r renpy_clear/lib/python2.7/ private/lib/python2.7/
+cp -r renpy_clear/lib/python2.7/ private/lib/
 cp renpy_clear/renpy.py private/main.py
 rm -rf private/renpy/common
 python2 generate_private.py
@@ -101,9 +101,12 @@ cp -r ./renpy_clear/renpy/common ./raw/switch/romfs/Contents/renpy/
 cp ./renpy_clear/renpy.py ./raw/switch/romfs/Contents/
 #unzip -qq ./raw/lib.zip -d ./raw/lib/
 #rm ./raw/lib.zip
-cp -r ./renpy_clear/renpy/ ./raw/lib/renpy/
+
+cp -r ./renpy_clear/lib/python2.7/. ./raw/lib
+cp -r ./renpy_clear/renpy ./raw/lib
 rm -rf ./raw/lib/renpy/common/
 7z a -tzip ./raw/switch/romfs/Contents/lib.zip ./raw/lib/*
+
 rm -rf ./raw/lib
 #rm ./renpy_clear/*.txt
 rm -rf ./renpy_clear/game

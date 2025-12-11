@@ -1,5 +1,10 @@
 set -e
 
+# Fix: удаляем системную FriBidi, чтобы не было конфликта с bundled
+sudo apt-get update
+sudo apt-get remove -y libfribidi-dev || true
+sudo apt-get autoremove -y || true
+
 export DEVKITPRO=/opt/devkitpro
 pushd pygame_sdl2-source
 rm -rf gen gen-static

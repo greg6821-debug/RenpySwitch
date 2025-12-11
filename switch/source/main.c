@@ -393,55 +393,7 @@ int main(int argc, char* argv[])
     PyImport_ExtendInittab(builtins);
     //Py_SetPythonHome("romfs:/Contents/lib.zip");
     Py_InitializeEx(0);
-
-
-    // Diagnostic block for Python ZIP loading issues
-    PyRun_SimpleString(
-        "import sys, traceback, zipfile\n"
-        "buf = []\n"
-        "\n"
-        "buf.append('--- Python ZIP Diagnostic ---')\n"
-        "\n"
-        "# 1. sys.path\n"
-        "buf.append('sys.path = ' + repr(sys.path))\n"
-        "\n"
-        "# 2. zipimport availability\n"
-        "try:\n"
-        "    import zipimport\n"
-        "    buf.append('zipimport: OK (builtin=%s)' % (hasattr(zipimport, '__file__')==False))\n"
-        "except Exception as e:\n"
-        "    buf.append('zipimport ERROR: ' + repr(e))\n"
-        "    buf.append(traceback.format_exc())\n"
-        "\n"
-        "# 3. Try to open lib.zip\n"
-        "try:\n"
-        "    z = zipfile.ZipFile('romfs:/Contents/lib.zip')\n"
-        "    buf.append('lib.zip: opened OK')\n"
-        "    names = z.namelist()\n"
-        "    buf.append('lib.zip file count: %d' % len(names))\n"
-        "    buf.append('lib.zip sample: ' + repr(names[:20]))\n"
-        "    has_os = any(n.endswith('os.py') or n.endswith('os.pyc') or n.endswith('os.pyo') for n in names)\n"
-        "    buf.append('contains os module: %s' % has_os)\n"
-        "except Exception as e:\n"
-        "    buf.append('lib.zip ERROR: ' + repr(e))\n"
-        "    buf.append(traceback.format_exc())\n"
-        "\n"
-        "# 4. Try to import os\n"
-        "try:\n"
-        "    import os\n"
-        "    buf.append('import os: SUCCESS')\n"
-        "except Exception as e:\n"
-        "    buf.append('import os ERROR: ' + repr(e))\n"
-        "    buf.append(traceback.format_exc())\n"
-        "\n"
-        "# FINAL: join into a single output\n"
-        "error_output = '\\n'.join(buf)\n"
-    );
-    
-    show_error(PyUnicode_AsUTF8(PyObject_GetAttrString(PyImport_ImportModule(\"__main__\"), "error_output")));
-
-
-    
+   
     char* pyargs[] = {
         "romfs:/Contents/renpy.py",
         NULL,
@@ -456,6 +408,36 @@ int main(int argc, char* argv[])
     if (python_result == -1)
     {
         show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.", 1);
+    }
+
+
+    // Diagnostic block for Python ZIP loading issues
+    python_result = PyRun_SimpleString(
+    "import sys\n"
+    "sys.path.insert(0, 'romfs:/Contents/lib.zip')\n"
+    "sys.path.insert(0, 'romfs:/Contents')\n"
+    "try:\n"
+    "    import zipimport\n"
+    "except Exception:\n"
+    "    raise SystemExit(101)\n"
+    "try:\n"
+    "    import zipfile\n"
+    "    z = zipfile.ZipFile('romfs:/Contents/lib.zip')\n"
+    "    names = z.namelist()\n"
+    "except Exception:\n"
+    "    raise SystemExit(102)\n"
+    "if not any(n.endswith('os.py') or n.endswith('os.pyo') or n.endswith('os.pyc') for n in names):\n"
+    "    raise SystemExit(103)\n"
+    "if not any(n.startswith('encodings/') for n in names):\n"
+    "    raise SystemExit(104)\n"
+    "try:\n"
+    "    import os\n"
+    "except Exception:\n"
+    "    raise SystemExit(105)\n"
+    );
+    if (python_result == -1)
+    {
+        show_error("Python initialization error (generic).", 1);
     }
     
 #define x(lib) \

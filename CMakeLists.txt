@@ -77,6 +77,7 @@ set(SOURCES
     source/module/renpy.gl.glrtt_fbo.c
     source/module/renpy.gl.gltexture.c
     source/module/renpy.pydict.c
+    source/module/renpy.parsersupport.c
     source/module/renpy.style.c
     source/module/renpy.styledata.style_activate_functions.c
     source/module/renpy.styledata.style_functions.c

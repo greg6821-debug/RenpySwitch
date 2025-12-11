@@ -45,6 +45,12 @@ export PREFIXARCHIVE=$(realpath renpy-switch-modules.tar.gz)
 
 rm -rf build-switch
 mkdir build-switch
+
+# Fix: исправляем include в renpybidicore.c для кросс-компиляции
+sed -i 's|#include <.*fribidi.h.*>|#include "fribidi.h"|' renpy-source/module/renpybidicore.c || true
+# Или более точная замена, если путь уже неправильный
+sed -i 's|#include <fribidi-src/lib/fribidi.h>|#include "fribidi.h"|' renpy-source/module/renpybidicore.c || true
+
 pushd build-switch
 mkdir local_prefix
 export LOCAL_PREFIX=$(realpath local_prefix)

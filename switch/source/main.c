@@ -286,7 +286,7 @@ int main(int argc, char* argv[])
         {"renpy.display.accelerator", initrenpy_display_accelerator},
         {"renpy.display.matrix", initrenpy_display_matrix},
         {"renpy.display.render", initrenpy_display_render},
-        {"renpy.gl.gl", initrenpy_gl_gl},
+
         {"renpy.gl.gldraw", initrenpy_gl_gldraw},
         {"renpy.gl.glenviron_shader", initrenpy_gl_glenviron_shader},
         {"renpy.gl.glrtt_copy", initrenpy_gl_glrtt_copy},

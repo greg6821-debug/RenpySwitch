@@ -160,8 +160,6 @@ PyMODINIT_FUNC initrenpy_gl2_gl2texture();
 PyMODINIT_FUNC initrenpy_uguu_gl();
 PyMODINIT_FUNC initrenpy_uguu_uguu();
 
-
-
 // Overide the heap initialization function.
 void __libnx_initheap(void)
 {
@@ -369,7 +367,6 @@ int main(int argc, char* argv[])
         {"renpy.uguu.gl", initrenpy_uguu_gl},
         {"renpy.uguu.uguu", initrenpy_uguu_uguu},
 
-        {"renpy.gl.gl", initrenpy_gl_gl},
 
         {NULL, NULL}
     };

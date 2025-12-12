@@ -116,7 +116,7 @@ diff -Naur b/renpy/__init__.py a/renpy/__init__.py
      import renpy.execution
      import renpy.lexer
      import renpy.loadsave
-@@ -617,6 +619,11 @@ def reload_all():
+@@ -617,6 +619,11 @@
      returned.
      """
  
@@ -127,6 +127,7 @@ diff -Naur b/renpy/__init__.py a/renpy/__init__.py
 +
      if mobile:
          raise Exception("Reloading is not supported on mobile platforms.")
+ 
 diff -Naur b/renpy/arguments.py a/renpy/arguments.py
 --- b/renpy/arguments.py	2023-02-15 08:18:38.000000000 +0300
 +++ a/renpy/arguments.py	2023-08-02 04:08:53.893476700 +0300
@@ -1974,7 +1975,7 @@ diff -Naur b/renpy.py a/renpy.py
      renpy_base = os.path.dirname(os.path.realpath(sys.argv[0]))
      renpy_base = os.path.abspath(renpy_base)
  
-@@ -242,4 +254,10 @@
+@@ -244,4 +256,10 @@
  
  
  if __name__ == "__main__":
@@ -1983,6 +1984,6 @@ diff -Naur b/renpy.py a/renpy.py
 +        main()
 +    except:
 +        if sys.platform == 'horizon':
-+            with open("save://otrh.log", "w") as f:
++            with open("save://exception.log", "w") as f:
 +                import traceback
 +                f.write(traceback.format_exc())

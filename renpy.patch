@@ -54,6 +54,7 @@ diff -Naur b/module/ffmedia.c a/module/ffmedia.c
  			av_free(sqe);
  
 diff -Naur b/renpy/__init__.py a/renpy/__init__.py
+							 
 --- b/renpy/__init__.py	2023-05-17 07:58:53.000000000 +0300
 +++ a/renpy/__init__.py	2023-08-03 20:23:08.950932300 +0300
 @@ -23,7 +23,6 @@
@@ -116,7 +117,20 @@ diff -Naur b/renpy/__init__.py a/renpy/__init__.py
      import renpy.execution
      import renpy.lexer
      import renpy.loadsave
+@@ -617,6 +619,11 @@ def reload_all():
+     returned.
+     """
+ 
++    if switch:
++        _otrhlibnx.commitsave()
++        _otrhlibnx.restartprogram()
++        return
++
+     if mobile:
+         raise Exception("Reloading is not supported on mobile platforms.")
+ 
 diff -Naur b/renpy/arguments.py a/renpy/arguments.py
+							 
 --- b/renpy/arguments.py	2023-02-15 08:18:38.000000000 +0300
 +++ a/renpy/arguments.py	2023-08-02 04:08:53.893476700 +0300
 @@ -36,12 +36,6 @@
@@ -135,6 +149,7 @@ diff -Naur b/renpy/arguments.py a/renpy/arguments.py
 diff -Naur b/renpy/ast.py a/renpy/ast.py
 --- b/renpy/ast.py	2023-04-19 06:37:46.000000000 +0300
 +++ a/renpy/ast.py	2023-08-02 03:58:22.938340300 +0300
+				  
 @@ -29,8 +29,6 @@
  from __future__ import division, absolute_import, with_statement, print_function, unicode_literals
  from renpy.compat import PY2, basestring, bchr, bord, chr, open, pystr, range, round, str, tobytes, unicode # *
@@ -720,6 +735,7 @@ diff -Naur b/renpy/bootstrap.py a/renpy/bootstrap.py
 +        if not (renpy.emscripten):
              subprocess.Popen.__del__ = popen_del # type: ignore
 diff -Naur b/renpy/character.py a/renpy/character.py
+							 
 --- b/renpy/character.py	2023-05-22 17:50:43.000000000 +0300
 +++ a/renpy/character.py	2023-08-02 03:58:31.428415300 +0300
 @@ -24,8 +24,6 @@
@@ -732,6 +748,7 @@ diff -Naur b/renpy/character.py a/renpy/character.py
  
  import re
 diff -Naur b/renpy/common/00compat.rpy a/renpy/common/00compat.rpy
+							 
 --- b/renpy/common/00compat.rpy	2023-05-29 08:50:24.000000000 +0300
 +++ a/renpy/common/00compat.rpy	2023-08-22 03:41:31.797627760 +0300
 @@ -208,7 +208,6 @@
@@ -742,7 +759,21 @@ diff -Naur b/renpy/common/00compat.rpy a/renpy/common/00compat.rpy
              config.who_what_sub_compat = 0
  
          if version <= (7, 4, 0):
+diff -Naur b/renpy/common/00gamemenu.rpy a/renpy/common/00gamemenu.rpy
+							 
+--- b/renpy/common/00gamemenu.rpy	2023-05-29 08:50:24.000000000 +0300
++++ a/renpy/common/00gamemenu.rpy	2023-08-22 03:41:31.797627760 +0300
+@@ -60,7 +60,7 @@ init -1700 python:
+     config.end_game_transition = None
+ 
+     # basics: True if quicksave has been enabled.
+-    config.has_quicksave = True
++    config.has_quicksave = False
+ 
+     # A list of layers to clear when entering the main and game menus.
+     config.clear_layers = [ ]
 diff -Naur b/renpy/common/00keymap.rpy a/renpy/common/00keymap.rpy
+							 
 --- b/renpy/common/00keymap.rpy	2023-04-12 06:37:21.000000000 +0300
 +++ a/renpy/common/00keymap.rpy	2023-09-04 23:17:53.465141998 +0300
 @@ -152,31 +152,30 @@
@@ -798,7 +829,21 @@ diff -Naur b/renpy/common/00keymap.rpy a/renpy/common/00keymap.rpy
          )
  
      config.underlay = [ _default_keymap ]
+diff -Naur b/renpy/common/00layout.rpy a/renpy/common/00layout.rpy
+							 
+--- b/renpy/common/00layout.rpy	2023-05-29 19:21:17.000000000 +0300
++++ a/renpy/common/00layout.rpy	2023-08-03 17:47:11.636260700 +0300
+@@ -28,7 +28,7 @@ init -1400 python:
+     config.thumbnail_height = 50
+ 
+     # Should autosave be called when the game is about to quit?
+-    config.autosave_on_quit = True
++    config.autosave_on_quit = False
+ 
+     # Should the confirm screen be used?
+     config.confirm_screen = True
 diff -Naur b/renpy/common/00sync.rpy a/renpy/common/00sync.rpy
+							 
 --- b/renpy/common/00sync.rpy	2023-05-29 19:21:17.000000000 +0300
 +++ a/renpy/common/00sync.rpy	2023-08-03 17:47:11.636260700 +0300
 @@ -315,7 +315,7 @@
@@ -820,6 +865,7 @@ diff -Naur b/renpy/common/00sync.rpy a/renpy/common/00sync.rpy
  
          # Get and check the sync id.
 diff -Naur b/renpy/common/00updater.rpy a/renpy/common/00updater.rpy
+							 
 --- b/renpy/common/00updater.rpy	2023-02-14 07:50:20.000000000 +0300
 +++ a/renpy/common/00updater.rpy	2023-08-03 14:22:05.624752900 +0300
 @@ -28,7 +28,7 @@
@@ -849,6 +895,7 @@ diff -Naur b/renpy/common/00updater.rpy a/renpy/common/00updater.rpy
          def add_dlc_state(self, name):
              url = urlparse.urljoin(self.url, self.updates[name]["json_url"])
 diff -Naur b/renpy/compat/__init__.py a/renpy/compat/__init__.py
+							 
 --- b/renpy/compat/__init__.py	2023-06-08 02:56:04.000000000 +0300
 +++ a/renpy/compat/__init__.py	2023-08-03 16:54:30.048632700 +0300
 @@ -58,8 +58,6 @@
@@ -861,6 +908,7 @@ diff -Naur b/renpy/compat/__init__.py a/renpy/compat/__init__.py
  
  import io
 @@ -69,14 +67,9 @@
+ 
  python_open = open
  
  ################################################################################
@@ -976,6 +1024,7 @@ diff -Naur b/renpy/compat/__init__.py a/renpy/compat/__init__.py
      class Popen(subprocess.Popen):
          def __init__(self, *args, **kwargs):
 diff -Naur b/renpy/config.py a/renpy/config.py
+							 
 --- b/renpy/config.py	2023-05-22 17:50:43.000000000 +0300
 +++ a/renpy/config.py	2023-08-03 20:03:32.198552700 +0300
 @@ -26,8 +26,6 @@
@@ -1009,7 +1058,26 @@ diff -Naur b/renpy/config.py a/renpy/config.py
  
  # A list of channels we should emphasize the audio on.
  emphasize_audio_channels = [ 'voice' ]
-@@ -675,7 +673,7 @@
+@@ -591,15 +589,14 @@
+ # of statement identifiers that should be predicted.
+ predict_statements_callback = None
+ 
+-# Should we use hardware video on platforms that support it?
+-hw_video = False
+-
+ # A function to use to dispatch gestures.
+ dispatch_gesture = None
+ 
+ # The table mapping gestures to events used by the default function.
+ gestures = {
+-    "n_s_w_e_w_e" : "progress_screen",
++    "e" : "toggle_skip",
++    "w" : "rollback",
++    "n" : "game_menu",
+     }
+ 
+ # Sizes of gesture components and strokes, as a fraction of screen_width.
+@@ -675,7 +672,7 @@
  dynamic_images = True
  
  # Should Ren'Py save when the mobile app may terminate?
@@ -1028,6 +1096,7 @@ diff -Naur b/renpy/config.py a/renpy/config.py
  # Does this game use the depth buffer? If so, how many bits of depth should
  # it use?
 diff -Naur b/renpy/display/__init__.py a/renpy/display/__init__.py
+							 
 --- b/renpy/display/__init__.py	2023-01-08 03:11:32.000000000 +0300
 +++ a/renpy/display/__init__.py	2023-08-02 03:57:20.428038400 +0300
 @@ -22,8 +22,6 @@
@@ -1040,6 +1109,7 @@ diff -Naur b/renpy/display/__init__.py a/renpy/display/__init__.py
  import renpy
  renpy.update_path()
 diff -Naur b/renpy/display/behavior.py a/renpy/display/behavior.py
+							 
 --- b/renpy/display/behavior.py	2023-06-08 02:55:48.000000000 +0300
 +++ a/renpy/display/behavior.py	2023-09-02 19:46:26.242131550 +0300
 @@ -23,7 +23,6 @@
@@ -1099,6 +1169,7 @@ diff -Naur b/renpy/display/behavior.py a/renpy/display/behavior.py
  
  
 diff -Naur b/renpy/display/core.py a/renpy/display/core.py
+							 
 --- b/renpy/display/core.py	2023-06-08 02:56:13.000000000 +0300
 +++ a/renpy/display/core.py	2023-08-31 14:03:02.815623147 +0300
 @@ -25,8 +25,6 @@
@@ -1158,7 +1229,33 @@ diff -Naur b/renpy/display/core.py a/renpy/display/core.py
  
          renpy.exports.free_memory()
  
+@@ -4340,8 +4343,9 @@
+ 
+                 # Check to see if the OS is asking us to suspend (on Android
+                 # and iOS.)
+-                if self.check_suspend(ev):
+-                    continue
++                # Delete for optimization School Days
++                #if self.check_suspend(ev):
++                #f    continue
+ 
+                 # Try to merge an TIMEEVENT with other timeevents.
+                 if ev.type == TIMEEVENT:
+diff -Naur b/renpy/display/im.py a/renpy/display/im.py
+							 
+--- b/renpy/display/im.py
++++ a/renpy/display/im.py
+@@ -123,7 +123,7 @@ class Cache(object):
+         self.cache_limit = 0
+ 
+         # The preload thread.
+-        if not renpy.emscripten:
++        if not (renpy.emscripten or renpy.switch):
+             self.preload_thread = threading.Thread(target=self.preload_thread_main, name="preloader")
+             self.preload_thread.daemon = True
+             self.preload_thread.start()
 diff -Naur b/renpy/display/presplash.py a/renpy/display/presplash.py
+							 
 --- b/renpy/display/presplash.py	2023-02-14 07:45:56.000000000 +0300
 +++ a/renpy/display/presplash.py	2023-08-02 04:14:30.314534200 +0300
 @@ -236,3 +236,19 @@
@@ -1182,6 +1279,7 @@ diff -Naur b/renpy/display/presplash.py a/renpy/display/presplash.py
 +    dis.blit(presplashImg, (0, 0))
 +    pygame.display.flip()
 diff -Naur b/renpy/display/screen.py a/renpy/display/screen.py
+							 
 --- b/renpy/display/screen.py	2023-05-29 19:21:17.000000000 +0300
 +++ a/renpy/display/screen.py	2023-08-02 03:58:15.146986600 +0300
 @@ -22,8 +22,6 @@
@@ -1194,6 +1292,7 @@ diff -Naur b/renpy/display/screen.py a/renpy/display/screen.py
  import time
  import collections
 diff -Naur b/renpy/display/transform.py a/renpy/display/transform.py
+							 
 --- b/renpy/display/transform.py	2023-06-06 07:33:10.000000000 +0300
 +++ a/renpy/display/transform.py	2023-08-02 03:58:18.472532100 +0300
 @@ -22,8 +22,6 @@
@@ -1206,6 +1305,7 @@ diff -Naur b/renpy/display/transform.py a/renpy/display/transform.py
  # transform displayables. (As well as displayables that support them.)
  import math
 diff -Naur b/renpy/display/video.py a/renpy/display/video.py
+							 
 --- b/renpy/display/video.py	2023-06-02 05:27:56.000000000 +0300
 +++ a/renpy/display/video.py	2023-08-22 03:42:00.867619970 +0300
 @@ -496,9 +496,6 @@
@@ -1230,6 +1330,7 @@ diff -Naur b/renpy/display/video.py a/renpy/display/video.py
 diff -Naur b/renpy/easy.py a/renpy/easy.py
 --- b/renpy/easy.py	2023-02-14 07:45:56.000000000 +0300
 +++ a/renpy/easy.py	2023-08-02 03:58:39.473396500 +0300
+				   
 @@ -24,8 +24,6 @@
  from __future__ import division, absolute_import, with_statement, print_function, unicode_literals
  from renpy.compat import PY2, basestring, bchr, bord, chr, open, pystr, range, round, str, tobytes, unicode # *
@@ -1240,6 +1341,7 @@ diff -Naur b/renpy/easy.py a/renpy/easy.py
  import time
  
 diff -Naur b/renpy/execution.py a/renpy/execution.py
+							 
 --- b/renpy/execution.py	2023-06-08 02:55:48.000000000 +0300
 +++ a/renpy/execution.py	2023-08-31 13:08:32.523010973 +0300
 @@ -25,8 +25,6 @@
@@ -1263,6 +1365,7 @@ diff -Naur b/renpy/execution.py a/renpy/execution.py
 diff -Naur b/renpy/game.py a/renpy/game.py
 --- b/renpy/game.py	2023-03-12 06:54:19.000000000 +0300
 +++ a/renpy/game.py	2023-08-02 03:58:43.288462400 +0300
+				   
 @@ -26,8 +26,6 @@
  from __future__ import division, absolute_import, with_statement, print_function, unicode_literals
  from renpy.compat import PY2, basestring, bchr, bord, chr, open, pystr, range, round, str, tobytes, unicode # *
@@ -1354,6 +1457,7 @@ diff -Naur b/renpy/gl2/live2d.py a/renpy/gl2/live2d.py
 diff -Naur b/renpy/lint.py a/renpy/lint.py
 --- b/renpy/lint.py	2023-05-30 07:48:09.000000000 +0300
 +++ a/renpy/lint.py	2023-08-02 03:58:47.184422600 +0300
+				   
 @@ -21,7 +21,6 @@
  
  from __future__ import division, absolute_import, with_statement, print_function, unicode_literals
@@ -1363,6 +1467,7 @@ diff -Naur b/renpy/lint.py a/renpy/lint.py
  import codecs
  import time
 diff -Naur b/renpy/loader.py a/renpy/loader.py
+							 
 --- b/renpy/loader.py	2023-06-08 02:56:04.000000000 +0300
 +++ a/renpy/loader.py	2023-08-22 01:38:24.139724562 +0300
 @@ -22,8 +22,6 @@
@@ -1461,6 +1566,7 @@ diff -Naur b/renpy/loader.py a/renpy/loader.py
          add_auto(fn)
  
 diff -Naur b/renpy/loadsave.py a/renpy/loadsave.py
+							 
 --- b/renpy/loadsave.py	2023-04-05 07:48:56.000000000 +0300
 +++ a/renpy/loadsave.py	2023-08-03 13:36:49.230289300 +0300
 @@ -24,10 +24,6 @@
@@ -1527,6 +1633,7 @@ diff -Naur b/renpy/loadsave.py a/renpy/loadsave.py
 diff -Naur b/renpy/log.py a/renpy/log.py
 --- b/renpy/log.py	2023-01-08 03:11:31.000000000 +0300
 +++ a/renpy/log.py	2023-09-01 00:58:09.824050774 +0300
+				  
 @@ -40,6 +40,7 @@
  
  real_stdout = sys.stdout
@@ -1567,6 +1674,7 @@ diff -Naur b/renpy/log.py a/renpy/log.py
 diff -Naur b/renpy/main.py a/renpy/main.py
 --- b/renpy/main.py	2023-05-21 05:28:40.000000000 +0300
 +++ a/renpy/main.py	2023-08-31 22:13:43.002791565 +0300
+				   
 @@ -22,8 +22,6 @@
  from __future__ import division, absolute_import, with_statement, print_function, unicode_literals
  from renpy.compat import PY2, basestring, bchr, bord, chr, open, pystr, range, round, str, tobytes, unicode # *
@@ -1595,7 +1703,21 @@ diff -Naur b/renpy/main.py a/renpy/main.py
  
      renpy.game.exception_info = 'After loading the script.'
  
+@@ -529,6 +530,12 @@ def main():
+     # Init save locations and loadsave.
+     renpy.savelocation.init()
+ 
++    renpy.config.gestures = {
++            "e" : "toggle_skip",
++            "w" : "rollback",
++            "n" : "game_menu",
++        }
++
+     try:
+ 
+         # Init save slots and save tokens.
 diff -Naur b/renpy/performance.py a/renpy/performance.py
+							 
 --- b/renpy/performance.py	2023-01-08 03:11:31.000000000 +0300
 +++ a/renpy/performance.py	2023-08-31 14:03:48.785613612 +0300
 @@ -49,7 +49,6 @@
@@ -1607,6 +1729,7 @@ diff -Naur b/renpy/performance.py a/renpy/performance.py
          return
  
 diff -Naur b/renpy/persistent.py a/renpy/persistent.py
+							 
 --- b/renpy/persistent.py	2023-02-24 05:54:44.000000000 +0300
 +++ a/renpy/persistent.py	2023-08-02 04:18:39.409859600 +0300
 @@ -535,6 +535,8 @@
@@ -1618,7 +1741,49 @@ diff -Naur b/renpy/persistent.py a/renpy/persistent.py
      else:
          files = [ os.path.expanduser("~/.renpy/persistent") ]
  
+diff -Naur b/renpy/preferences.py a/renpy/preferences.py
+							 
+--- b/renpy/preferences.py
++++ a/renpy/preferences.py
+@@ -147,13 +147,13 @@
+ Preference("gl_npot", True)
+ 
+ # Should we try to save power by limiting how often we draw frames?
+-Preference("gl_powersave", True)
++Preference("gl_powersave", False)
+ 
+ # The target framerate, used to set the swap interval.
+ Preference("gl_framerate", None, (int, type(None)))
+ 
+ # Do we allow tearing?
+-Preference("gl_tearing", False)
++Preference("gl_tearing", True)
+ 
+ # The font transformation used.
+ Preference("font_transform", None, (type(None), str))
+@@ -223,9 +223,9 @@
+         mobile_rollback_side = u'disable'
+         desktop_rollback_side = u'disable'
+         gl_npot = True
+-        gl_powersave = True
++        gl_powersave = False
+         gl_framerate = None
+-        gl_tearing = False
++        gl_tearing = True
+         font_transform = None
+         font_size = 1.0
+         font_line_spacing = 1.0
+@@ -252,7 +252,7 @@
+         """
+ 
+         if self.gl_powersave == "auto":
+-            self.gl_powersave = True
++            self.gl_powersave = False
+ 
+         error = None
+ 
 diff -Naur b/renpy/python.py a/renpy/python.py
+							 
 --- b/renpy/python.py	2023-03-30 06:27:25.000000000 +0300
 +++ a/renpy/python.py	2023-08-02 03:59:23.396784600 +0300
 @@ -24,9 +24,7 @@
@@ -1633,6 +1798,7 @@ diff -Naur b/renpy/python.py a/renpy/python.py
  
  # Import the python ast module, not ours.
 diff -Naur b/renpy/revertable.py a/renpy/revertable.py
+							 
 --- b/renpy/revertable.py	2023-05-21 05:22:01.000000000 +0300
 +++ a/renpy/revertable.py	2023-08-02 03:57:26.506455500 +0300
 @@ -26,8 +26,6 @@
@@ -1645,6 +1811,7 @@ diff -Naur b/renpy/revertable.py a/renpy/revertable.py
  
  import marshal
 diff -Naur b/renpy/rollback.py a/renpy/rollback.py
+							 
 --- b/renpy/rollback.py	2023-06-08 02:55:48.000000000 +0300
 +++ a/renpy/rollback.py	2023-08-02 03:57:30.447883300 +0300
 @@ -26,8 +26,6 @@
@@ -1657,6 +1824,7 @@ diff -Naur b/renpy/rollback.py a/renpy/rollback.py
  import random
  import weakref
 diff -Naur b/renpy/savelocation.py a/renpy/savelocation.py
+							 
 --- b/renpy/savelocation.py	2023-01-24 07:28:54.000000000 +0300
 +++ a/renpy/savelocation.py	2023-08-02 04:20:30.215116000 +0300
 @@ -37,6 +37,9 @@
@@ -1730,6 +1898,7 @@ diff -Naur b/renpy/savelocation.py a/renpy/savelocation.py
      location.scan()
  
 diff -Naur b/renpy/script.py a/renpy/script.py
+							 
 --- b/renpy/script.py	2023-02-01 09:37:45.000000000 +0300
 +++ a/renpy/script.py	2023-08-03 19:00:48.351515100 +0300
 @@ -694,7 +694,7 @@
@@ -1742,6 +1911,7 @@ diff -Naur b/renpy/script.py a/renpy/script.py
                          with open(rpycfn, "wb") as f:
                              self.write_rpyc_header(f)
 diff -Naur b/renpy/sl2/slast.py a/renpy/sl2/slast.py
+							 
 --- b/renpy/sl2/slast.py	2023-05-30 07:47:54.000000000 +0300
 +++ a/renpy/sl2/slast.py	2023-08-02 03:57:53.236982300 +0300
 @@ -29,8 +29,6 @@
@@ -1754,6 +1924,7 @@ diff -Naur b/renpy/sl2/slast.py a/renpy/sl2/slast.py
  
  import ast
 diff -Naur b/renpy/sl2/slparser.py a/renpy/sl2/slparser.py
+							 
 --- b/renpy/sl2/slparser.py	2023-03-26 16:50:20.000000000 +0300
 +++ a/renpy/sl2/slparser.py	2023-08-02 03:57:58.228040400 +0300
 @@ -21,7 +21,6 @@
@@ -1765,6 +1936,7 @@ diff -Naur b/renpy/sl2/slparser.py a/renpy/sl2/slparser.py
  
  import collections
 diff -Naur b/renpy/test/testmouse.py a/renpy/test/testmouse.py
+							 
 --- b/renpy/test/testmouse.py	2023-01-08 03:11:32.000000000 +0300
 +++ a/renpy/test/testmouse.py	2023-08-02 03:57:48.545129800 +0300
 @@ -22,8 +22,6 @@
@@ -1777,6 +1949,7 @@ diff -Naur b/renpy/test/testmouse.py a/renpy/test/testmouse.py
  
  # The overridden positioning of the mouse.
 diff -Naur b/renpy/text/text.py a/renpy/text/text.py
+							 
 --- b/renpy/text/text.py	2023-04-25 07:17:21.000000000 +0300
 +++ a/renpy/text/text.py	2023-08-02 03:57:41.387784100 +0300
 @@ -22,8 +22,6 @@
@@ -1791,6 +1964,7 @@ diff -Naur b/renpy/text/text.py a/renpy/text/text.py
 diff -Naur b/renpy/ui.py a/renpy/ui.py
 --- b/renpy/ui.py	2023-05-29 19:21:17.000000000 +0300
 +++ a/renpy/ui.py	2023-08-02 03:57:33.958207000 +0300
+				 
 @@ -29,8 +29,6 @@
  from __future__ import division, absolute_import, with_statement, print_function, unicode_literals
  from renpy.compat import PY2, basestring, bchr, bord, chr, open, pystr, range, round, str, tobytes, unicode # *

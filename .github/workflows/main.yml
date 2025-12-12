@@ -31,4 +31,4 @@ jobs:
           uses: actions/upload-artifact@master
           with:
             name: raw
-            path: raw
+            path: raw.zip

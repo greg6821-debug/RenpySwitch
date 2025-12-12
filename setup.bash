@@ -64,6 +64,7 @@ rm -rf raw
 unzip -qq rawproject.zip -d raw
 rm rawproject.zip
 
+mkdir -p ./raw/android/lib
 rm -rf android-native-symbols renpy_androidlib ./raw/android/lib
 unzip -qq android-native-symbols.zip -d ./raw/android/lib
 rm -rf ./raw/android/lib/x86_64/

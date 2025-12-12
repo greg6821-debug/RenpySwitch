@@ -95,11 +95,11 @@ mkdir -p ./raw/switch/romfs/Contents/renpy/common
 mkdir -p ./raw/switch/romfs/Contents/renpy
 mkdir -p ./raw/lib
 
-mkdir -p ./raw/android/assets/renpy/common
+#mkdir -p ./raw/android/assets/renpy/common
 
 cp -r ./renpy_clear/renpy/common ./raw/switch/romfs/Contents/renpy/
 
-cp -r ./renpy_clear/renpy/common ./raw/android/assets/renpy/
+#cp -r ./renpy_clear/renpy/common ./raw/android/assets/renpy/
 #mv private.mp3 ./raw/android/assets
 
 cp ./renpy_clear/renpy.py ./raw/switch/romfs/Contents/

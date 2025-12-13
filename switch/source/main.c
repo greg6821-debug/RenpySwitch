@@ -2,29 +2,6 @@
 #include <Python.h>
 #include <stdio.h>
 
-char python_error_buffer[0x400];
-
-void show_error(const char* message, int exit)
-{
-    if (exit == 1) {
-        Py_Finalize();
-    }
-    char* first_line = (char*)message;
-    char* end = strchr(message, '\n');
-    if (end != NULL)
-    {
-        first_line = python_error_buffer;
-        memcpy(first_line, message, (end - message) > sizeof(python_error_buffer) ? sizeof(python_error_buffer) : (end - message));
-        first_line[end - message] = '\0';
-    }
-    ErrorSystemConfig c;
-    errorSystemCreate(&c, (const char*)first_line, message);
-    errorSystemShow(&c);
-    if (exit == 1) {
-        Py_Exit(1);
-    }
-}
-
 u64 cur_progid = 0;
 AccountUid userID={0};
 
@@ -269,6 +246,28 @@ ConsoleRenderer* getDefaultConsoleRenderer(void)
     return NULL;
 }
 
+char python_error_buffer[0x400];
+
+void show_error(const char* message, int exit)
+{
+    if (exit == 1) {
+        Py_Finalize();
+    }
+    char* first_line = (char*)message;
+    char* end = strchr(message, '\n');
+    if (end != NULL)
+    {
+        first_line = python_error_buffer;
+        memcpy(first_line, message, (end - message) > sizeof(python_error_buffer) ? sizeof(python_error_buffer) : (end - message));
+        first_line[end - message] = '\0';
+    }
+    ErrorSystemConfig c;
+    errorSystemCreate(&c, (const char*)first_line, message);
+    errorSystemShow(&c);
+    if (exit == 1) {
+        Py_Exit(1);
+    }
+}
 
 static AppletHookCookie applet_hook_cookie;
 static void on_applet_hook(AppletHookType hook, void *param)
@@ -386,14 +385,11 @@ int main(int argc, char* argv[])
         show_error("Could not find renpy.py.\n\nPlease ensure that you have extracted the files correctly so that the \"renpy.py\" file is in the same directory as the nsp file.", 1);
     }
 
-    fclose(sysconfigdata_file);
-
-    Py_SetPythonHome("romfs:/Contents");
-    Py_SetProgramName("romfs:/Contents/lib.zip"); // critical for zipimport
-    PyImport_ExtendInittab(builtins);
-    //Py_SetPythonHome("romfs:/Contents/lib.zip");
+   fclose(sysconfigdata_file);
     Py_InitializeEx(0);
-   
+    Py_SetPythonHome("romfs:/Contents/lib.zip");
+    PyImport_ExtendInittab(builtins);
+
     char* pyargs[] = {
         "romfs:/Contents/renpy.py",
         NULL,
@@ -403,7 +399,7 @@ int main(int argc, char* argv[])
 
     int python_result;
 
-    python_result = PyRun_SimpleString("import sys\nsys.path.insert(0, 'romfs:/Contents/lib.zip')\nsys.path.insert(0, 'romfs:/Contents')\n");
+    python_result = PyRun_SimpleString("import sys\nsys.path = ['romfs:/Contents/lib.zip']");
 
     if (python_result == -1)
     {

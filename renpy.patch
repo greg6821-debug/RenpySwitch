@@ -721,6 +721,18 @@ diff -Naur b/renpy/common/00compat.rpy a/renpy/common/00compat.rpy
              config.who_what_sub_compat = 0
  
          if version <= (7, 4, 0):
+diff -Naur b/renpy/common/00gamemenu.rpy a/renpy/common/00gamemenu.rpy
+--- b/renpy/common/00gamemenu.rpy	2023-05-29 08:50:24.000000000 +0300
++++ a/renpy/common/00gamemenu.rpy	2023-08-22 03:41:31.797627760 +0300
+@@ -60,7 +60,7 @@
+     config.end_game_transition = None
+ 
+     # basics: True if quicksave has been enabled.
+-    config.has_quicksave = True
++    config.has_quicksave = False
+ 
+     # A list of layers to clear when entering the main and game menus.
+     config.clear_layers = [ ]
 diff -Naur b/renpy/common/00keymap.rpy a/renpy/common/00keymap.rpy
 --- b/renpy/common/00keymap.rpy	2023-04-12 06:37:21.000000000 +0300
 +++ a/renpy/common/00keymap.rpy	2023-09-04 23:17:53.465141998 +0300
@@ -775,6 +787,18 @@ diff -Naur b/renpy/common/00keymap.rpy a/renpy/common/00keymap.rpy
          )
  
      config.underlay = [ _default_keymap ]
+diff -Naur b/renpy/common/00layout.rpy a/renpy/common/00layout.rpy
+--- b/renpy/common/00layout.rpy	2023-05-29 19:21:17.000000000 +0300
++++ a/renpy/common/00layout.rpy	2023-08-03 17:47:11.636260700 +0300
+@@ -28,7 +28,7 @@
+     config.thumbnail_height = 50
+ 
+     # Should autosave be called when the game is about to quit?
+-    config.autosave_on_quit = True
++    config.autosave_on_quit = False
+ 
+     # Should the confirm screen be used?
+     config.confirm_screen = True
 diff -Naur b/renpy/common/00updater.rpy a/renpy/common/00updater.rpy
 --- b/renpy/common/00updater.rpy	2023-02-14 07:50:20.000000000 +0300
 +++ a/renpy/common/00updater.rpy	2023-08-03 14:22:05.624752900 +0300
@@ -958,6 +982,25 @@ diff -Naur b/renpy/config.py a/renpy/config.py
  
  # A list of channels we should emphasize the audio on.
  emphasize_audio_channels = [ 'voice' ]
+@@ -591,15 +589,14 @@
+ # of statement identifiers that should be predicted.
+ predict_statements_callback = None
+ 
+-# Should we use hardware video on platforms that support it?
+-hw_video = False
+-
+ # A function to use to dispatch gestures.
+ dispatch_gesture = None
+ 
+ # The table mapping gestures to events used by the default function.
+ gestures = {
+-    "n_s_w_e_w_e" : "progress_screen",
++    "e" : "toggle_skip",
++    "w" : "rollback",
++    "n" : "game_menu",
+     }
+ 
+ # Sizes of gesture components and strokes, as a fraction of screen_width.
 @@ -675,7 +673,7 @@
  dynamic_images = True
  
@@ -1062,6 +1105,36 @@ diff -Naur b/renpy/display/core.py a/renpy/display/core.py
  
          renpy.exports.free_memory()
  
+@@ -4340,8 +4343,9 @@
+ 
+                 # Check to see if the OS is asking us to suspend (on Android
+                 # and iOS.)
+-                if self.check_suspend(ev):
+-                    continue
++                # Delete for optimization School Days
++                #if self.check_suspend(ev):
++                #f    continue
+ 
+                 # Try to merge an TIMEEVENT with other timeevents.
+                 if ev.type == TIMEEVENT:
+diff -Naur b/renpy/display/im.py a/renpy/display/im.py
+--- b/renpy/display/im.py	2023-02-14 07:45:56.000000000 +0300
++++ a/renpy/display/im.py	2023-08-02 04:14:30.314534200 +0300
+@@ -115,8 +115,11 @@
+         self.cache_limit = 0
+ 
+         # The preload thread.
+-        self.preload_thread = threading.Thread(target=self.preload_thread_main, name="preloader")
+-        self.preload_thread.daemon = True
+-        self.preload_thread.start()
++        if not (renpy.switch):
++            self.preload_thread = threading.Thread(target=self.preload_thread_main, name="preloader")
++            self.preload_thread.daemon = True
++            self.preload_thread.start()
++        else:
++            self.preload_thread = None
+ 
+         # Have we been added this tick?
 diff -Naur b/renpy/display/presplash.py a/renpy/display/presplash.py
 --- b/renpy/display/presplash.py	2023-02-14 07:45:56.000000000 +0300
 +++ a/renpy/display/presplash.py	2023-08-02 04:14:30.314534200 +0300
@@ -1486,6 +1559,20 @@ diff -Naur b/renpy/main.py a/renpy/main.py
  
      renpy.game.exception_info = 'After loading the script.'
  
+@@ -527,7 +528,13 @@
+     # Init save locations and loadsave.
+     renpy.savelocation.init()
+ 
++    renpy.config.gestures = {
++            "e" : "toggle_skip",
++            "w" : "rollback",
++            "n" : "game_menu",
++        }
++
+     # We need to be 100% sure we kill the savelocation thread.
+     try:
+ 
+         # Init save slots.
 diff -Naur b/renpy/performance.py a/renpy/performance.py
 --- b/renpy/performance.py	2023-01-08 03:11:31.000000000 +0300
 +++ a/renpy/performance.py	2023-08-31 14:03:48.785613612 +0300
@@ -1508,6 +1595,46 @@ diff -Naur b/renpy/persistent.py a/renpy/persistent.py
 +        files = ["save://MultiPersistent"]
      else:
          files = [ os.path.expanduser("~/.renpy/persistent") ]
+ 
+diff -Naur b/renpy/preferences.py a/renpy/preferences.py
+--- b/renpy/preferences.py
++++ a/renpy/preferences.py
+@@ -147,13 +147,13 @@
+ Preference("gl_npot", True)
+ 
+ # Should we try to save power by limiting how often we draw frames?
+-Preference("gl_powersave", True)
++Preference("gl_powersave", False)
+ 
+ # The target framerate, used to set the swap interval.
+ Preference("gl_framerate", None, (int, type(None)))
+ 
+ # Do we allow tearing?
+-Preference("gl_tearing", False)
++Preference("gl_tearing", True)
+ 
+ # The font transformation used.
+ Preference("font_transform", None, (type(None), str))
+@@ -223,9 +223,9 @@
+         mobile_rollback_side = u'disable'
+         desktop_rollback_side = u'disable'
+         gl_npot = True
+-        gl_powersave = True
++        gl_powersave = False
+         gl_framerate = None
+-        gl_tearing = False
++        gl_tearing = True
+         font_transform = None
+         font_size = 1.0
+         font_line_spacing = 1.0
+@@ -252,7 +252,7 @@
+         """
+ 
+         if self.gl_powersave == "auto":
+-            self.gl_powersave = True
++            self.gl_powersave = False
+ 
+         error = None
  
 diff -Naur b/renpy/python.py a/renpy/python.py
 --- b/renpy/python.py	2023-03-30 06:27:25.000000000 +0300

@@ -2,36 +2,6 @@
 #include <Python.h>
 #include <stdio.h>
 
-
-u32 __nx_applet_exit_mode = 1;
-extern u32 __nx_applet_type;
-extern size_t __nx_heap_size;
-
-#if 0
-PyMODINIT_FUNC init_libnx();
-#endif
-
-#if 0
-PyMODINIT_FUNC initpygame_sdl2_font();
-#endif
-
-
-#if 0
-PyMODINIT_FUNC initpygame_sdl2_mixer();
-PyMODINIT_FUNC initpygame_sdl2_mixer_music();
-#endif
-
-#if 0
-PyMODINIT_FUNC initrenpy_gl2_gl2draw();
-PyMODINIT_FUNC initrenpy_gl2_gl2environ_shader();
-PyMODINIT_FUNC initrenpy_gl2_gl2geometry();
-PyMODINIT_FUNC initrenpy_gl2_gl2rtt_fbo();
-PyMODINIT_FUNC initrenpy_gl2_gl2shader();
-PyMODINIT_FUNC initrenpy_gl2_gl2texture();
-PyMODINIT_FUNC initrenpy_gl2_uguu();
-PyMODINIT_FUNC initrenpy_gl2_uguugl();
-#endif
-
 u64 cur_progid = 0;
 AccountUid userID={0};
 
@@ -137,7 +107,6 @@ PyMODINIT_FUNC initrenpy_gl_glrtt_copy();
 PyMODINIT_FUNC initrenpy_gl_glrtt_fbo();
 PyMODINIT_FUNC initrenpy_gl_gltexture();
 PyMODINIT_FUNC initrenpy_pydict();
-PyMODINIT_FUNC initrenpy_parsersupport();
 PyMODINIT_FUNC initrenpy_style();
 PyMODINIT_FUNC initrenpy_styledata_style_activate_functions();
 PyMODINIT_FUNC initrenpy_styledata_style_functions();
@@ -167,39 +136,14 @@ PyMODINIT_FUNC initrenpy_gl2_gl2texture();
 PyMODINIT_FUNC initrenpy_uguu_gl();
 PyMODINIT_FUNC initrenpy_uguu_uguu();
 
+
+
 // Overide the heap initialization function.
 void __libnx_initheap(void)
 {
-    //void* addr = NULL;
-    //u64 size = 0;
-    //u64 mem_available = 0, mem_used = 0;
-    void*  addr;
-    size_t size = 0;
-    size_t mem_available = 0, mem_used = 0;
-    const size_t max_mem = 0x18000000;
-
-    if (envHasHeapOverride()) {
-        addr = envGetHeapOverrideAddr();
-        size = envGetHeapOverrideSize();
-    }
-    else {
-        if (__nx_heap_size==0) {
-            svcGetInfo(&mem_available, InfoType_TotalMemorySize, CUR_PROCESS_HANDLE, 0);
-            svcGetInfo(&mem_used, InfoType_UsedMemorySize, CUR_PROCESS_HANDLE, 0);
-            if (mem_available > mem_used+0x200000)
-                size = (mem_available - mem_used - 0x200000) & ~0x1FFFFF;
-            if (size==0)
-                size = 0x2000000*16;
-        }
-        else {
-            size = __nx_heap_size;
-        }
-
-        if (size > max_mem)
-        {
-            size = max_mem;
-        }
-    }
+    void* addr = NULL;
+    u64 size = 0;
+    u64 mem_available = 0, mem_used = 0;
 
     svcGetInfo(&mem_available, InfoType_TotalMemorySize, CUR_PROCESS_HANDLE, 0);
     svcGetInfo(&mem_used, InfoType_UsedMemorySize, CUR_PROCESS_HANDLE, 0);
@@ -210,6 +154,7 @@ void __libnx_initheap(void)
         size = 0x2000000*16;
 
     Result rc = svcSetHeapSize(&addr, size);
+
     if (R_FAILED(rc) || addr==NULL)
         diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_HeapAllocFailed));
 
@@ -254,6 +199,7 @@ Result createSaveData()
 
 void userAppInit()
 {
+
     // fsdevUnmountAll();
 
     Result rc=0;
@@ -287,8 +233,6 @@ void userAppInit()
 
     romfsInit();
     socketInitializeDefault();
-
-    nxlinkStdio();
 }
 
 void userAppExit()
@@ -305,14 +249,8 @@ ConsoleRenderer* getDefaultConsoleRenderer(void)
     return NULL;
 }
 
-
-char relative_dir_path[0x400];
-char sysconfigdata_file_path[0x400];
-char python_home_buffer[0x400];
-char python_snprintf_buffer[0x400];
-char python_script_buffer[0x400];
-
 char python_error_buffer[0x400];
+
 
 void show_error(const char* message, int exit)
 {
@@ -335,6 +273,7 @@ void show_error(const char* message, int exit)
     }
 }
 
+
 static AppletHookCookie applet_hook_cookie;
 static void on_applet_hook(AppletHookType hook, void *param)
 {
@@ -352,22 +291,11 @@ static void on_applet_hook(AppletHookType hook, void *param)
 }
 
 
+
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
 
-
-    if (__nx_applet_type != AppletType_Application)
-    {
-#if 0
-        show_error("Only application override is supported by this program.\n\nTo run this program as application override, hold down the R button while launching an application on the menu.",1);
-#endif
-#if 1
-        setenv("RENPY_LESS_MEMORY", "1", 1);
-#endif
-    }
-    
-    
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
 
@@ -379,26 +307,6 @@ int main(int argc, char* argv[])
 
     static struct _inittab builtins[] = {
 
-#if 0
-        {"_libnx", init_libnx},
-#endif
-#if 0
-        {"pygame_sdl2.font", initpygame_sdl2_font},
-#endif
-
-#if 0
-        {"pygame_sdl2.mixer", initpygame_sdl2_mixer},
-        {"pygame_sdl2.mixer_music", initpygame_sdl2_mixer_music},
-#endif
-#if 0
-        {"renpy.gl2.gl2draw", initrenpy_gl2_gl2draw},
-        {"renpy.gl2.gl2geometry", initrenpy_gl2_gl2geometry},
-        {"renpy.gl2.gl2shader", initrenpy_gl2_gl2shader},
-        {"renpy.gl2.gl2texture", initrenpy_gl2_gl2texture},
-        {"renpy.gl2.uguu", initrenpy_gl2_uguu},
-        {"renpy.gl2.uguugl", initrenpy_gl2_uguugl},
-#endif
-    
         {"_otrhlibnx", init_otrh_libnx},
 
         {"pygame_sdl2.color", initpygame_sdl2_color},
@@ -434,7 +342,6 @@ int main(int argc, char* argv[])
         {"renpy.gl.glrtt_fbo", initrenpy_gl_glrtt_fbo},
         {"renpy.gl.gltexture", initrenpy_gl_gltexture},
         {"renpy.pydict", initrenpy_pydict},
-        {"renpy.arsersupport", initrenpy_parsersupport},
         {"renpy.style", initrenpy_style},
         {"renpy.styledata.style_activate_functions", initrenpy_styledata_style_activate_functions},
         {"renpy.styledata.style_functions", initrenpy_styledata_style_functions},
@@ -463,13 +370,12 @@ int main(int argc, char* argv[])
         {"renpy.gl2.gl2texture", initrenpy_gl2_gl2texture},
         {"renpy.uguu.gl", initrenpy_uguu_gl},
         {"renpy.uguu.uguu", initrenpy_uguu_uguu},
+        
+
 
 
         {NULL, NULL}
     };
-
-    int found_sysconfigdata = 0;
-    int found_renpy = 0;
 
     FILE* sysconfigdata_file = fopen("romfs:/Contents/lib.zip", "rb");
     FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
@@ -504,7 +410,7 @@ int main(int argc, char* argv[])
     {
         show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.", 1);
     }
-    
+
 #define x(lib) \
     { \
         if (PyRun_SimpleString("import " lib) == -1) \

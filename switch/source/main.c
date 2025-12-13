@@ -199,10 +199,8 @@ void __libnx_initheap(void)
         {
             size = max_mem;
         }
-        Result rc = svcSetHeapSize(&addr, size);
-        if (R_FAILED(rc))
-            diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_HeapAllocFailed));
-    
+    }
+
     svcGetInfo(&mem_available, InfoType_TotalMemorySize, CUR_PROCESS_HANDLE, 0);
     svcGetInfo(&mem_used, InfoType_UsedMemorySize, CUR_PROCESS_HANDLE, 0);
 

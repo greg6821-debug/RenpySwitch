@@ -2,6 +2,36 @@
 #include <Python.h>
 #include <stdio.h>
 
+
+u32 __nx_applet_exit_mode = 1;
+extern u32 __nx_applet_type;
+extern size_t __nx_heap_size;
+
+#if 0
+PyMODINIT_FUNC init_libnx();
+#endif
+
+#if 0
+PyMODINIT_FUNC initpygame_sdl2_font();
+#endif
+
+
+#if 0
+PyMODINIT_FUNC initpygame_sdl2_mixer();
+PyMODINIT_FUNC initpygame_sdl2_mixer_music();
+#endif
+
+#if 0
+PyMODINIT_FUNC initrenpy_gl2_gl2draw();
+PyMODINIT_FUNC initrenpy_gl2_gl2environ_shader();
+PyMODINIT_FUNC initrenpy_gl2_gl2geometry();
+PyMODINIT_FUNC initrenpy_gl2_gl2rtt_fbo();
+PyMODINIT_FUNC initrenpy_gl2_gl2shader();
+PyMODINIT_FUNC initrenpy_gl2_gl2texture();
+PyMODINIT_FUNC initrenpy_gl2_uguu();
+PyMODINIT_FUNC initrenpy_gl2_uguugl();
+#endif
+
 u64 cur_progid = 0;
 AccountUid userID={0};
 
@@ -140,10 +170,39 @@ PyMODINIT_FUNC initrenpy_uguu_uguu();
 // Overide the heap initialization function.
 void __libnx_initheap(void)
 {
-    void* addr = NULL;
-    u64 size = 0;
-    u64 mem_available = 0, mem_used = 0;
+    //void* addr = NULL;
+    //u64 size = 0;
+    //u64 mem_available = 0, mem_used = 0;
+    void*  addr;
+    size_t size = 0;
+    size_t mem_available = 0, mem_used = 0;
+    const size_t max_mem = 0x18000000;
 
+    if (envHasHeapOverride()) {
+        addr = envGetHeapOverrideAddr();
+        size = envGetHeapOverrideSize();
+    }
+    else {
+        if (__nx_heap_size==0) {
+            svcGetInfo(&mem_available, InfoType_TotalMemorySize, CUR_PROCESS_HANDLE, 0);
+            svcGetInfo(&mem_used, InfoType_UsedMemorySize, CUR_PROCESS_HANDLE, 0);
+            if (mem_available > mem_used+0x200000)
+                size = (mem_available - mem_used - 0x200000) & ~0x1FFFFF;
+            if (size==0)
+                size = 0x2000000*16;
+        }
+        else {
+            size = __nx_heap_size;
+        }
+
+        if (size > max_mem)
+        {
+            size = max_mem;
+        }
+        Result rc = svcSetHeapSize(&addr, size);
+        if (R_FAILED(rc))
+            diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_HeapAllocFailed));
+    
     svcGetInfo(&mem_available, InfoType_TotalMemorySize, CUR_PROCESS_HANDLE, 0);
     svcGetInfo(&mem_used, InfoType_UsedMemorySize, CUR_PROCESS_HANDLE, 0);
 
@@ -230,6 +289,8 @@ void userAppInit()
 
     romfsInit();
     socketInitializeDefault();
+
+    nxlinkStdio();
 }
 
 void userAppExit()
@@ -245,6 +306,13 @@ ConsoleRenderer* getDefaultConsoleRenderer(void)
 {
     return NULL;
 }
+
+
+char relative_dir_path[0x400];
+char sysconfigdata_file_path[0x400];
+char python_home_buffer[0x400];
+char python_snprintf_buffer[0x400];
+char python_script_buffer[0x400];
 
 char python_error_buffer[0x400];
 
@@ -290,6 +358,18 @@ int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
 
+
+    if (__nx_applet_type != AppletType_Application)
+    {
+#if 0
+        show_error_and_exit("Only application override is supported by this program.\n\nTo run this program as application override, hold down the R button while launching an application on the menu.");
+#endif
+#if 1
+        setenv("RENPY_LESS_MEMORY", "1", 1);
+#endif
+    }
+    
+    
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
 
@@ -301,6 +381,26 @@ int main(int argc, char* argv[])
 
     static struct _inittab builtins[] = {
 
+#if 0
+        {"_libnx", init_libnx},
+#endif
+#if 0
+        {"pygame_sdl2.font", initpygame_sdl2_font},
+#endif
+
+#if 0
+        {"pygame_sdl2.mixer", initpygame_sdl2_mixer},
+        {"pygame_sdl2.mixer_music", initpygame_sdl2_mixer_music},
+#endif
+#if 0
+        {"renpy.gl2.gl2draw", initrenpy_gl2_gl2draw},
+        {"renpy.gl2.gl2geometry", initrenpy_gl2_gl2geometry},
+        {"renpy.gl2.gl2shader", initrenpy_gl2_gl2shader},
+        {"renpy.gl2.gl2texture", initrenpy_gl2_gl2texture},
+        {"renpy.gl2.uguu", initrenpy_gl2_uguu},
+        {"renpy.gl2.uguugl", initrenpy_gl2_uguugl},
+#endif
+    
         {"_otrhlibnx", init_otrh_libnx},
 
         {"pygame_sdl2.color", initpygame_sdl2_color},
@@ -370,6 +470,77 @@ int main(int argc, char* argv[])
         {NULL, NULL}
     };
 
+
+
+if (argc != 1)
+    {
+        show_error_and_exit("Only one argument (the program itself) should be passed to the program.\n\nPlease use hbmenu to run this program.");
+    }
+
+    if (strchr(argv[0], ' '))
+    {
+        show_error_and_exit("No spaces should be contained in the program path.\n\nPlease remove spaces from the program path.");
+    }
+
+    if (!strchr(argv[0], ':'))
+    {
+        show_error_and_exit("Program path does not appear to be an absolute path.\n\nPlease use hbmenu to run this program.");
+    }
+
+    char* last_dir_separator = strrchr(argv[0], '/');
+
+    if (last_dir_separator)
+    {
+        size_t dirpath_size = last_dir_separator - argv[0];
+        memcpy(relative_dir_path, argv[0], dirpath_size);
+        relative_dir_path[dirpath_size] = '\000';
+    }
+    else
+    {
+        getcwd(relative_dir_path, sizeof(relative_dir_path));
+    }
+
+    char* dir_paths[] = {
+        "romfs:/Contents",
+        relative_dir_path,
+        NULL,
+    };
+
+    int found_sysconfigdata = 0;
+    int found_renpy = 0;
+
+    for (int i = 0; i < sizeof(dir_paths); i += 1)
+        {
+        if (dir_paths[i] == NULL)
+        {
+            break;
+        }
+        snprintf(sysconfigdata_file_path, sizeof(sysconfigdata_file_path), "%s/lib.zip", dir_paths[i]);
+        FILE* sysconfigdata_file = fopen((const char*)sysconfigdata_file_path, "rb");
+        if (sysconfigdata_file != NULL)
+        {
+            found_sysconfigdata = 1;
+            fclose(sysconfigdata_file);
+        }
+
+        snprintf(python_script_buffer, sizeof(python_script_buffer), "%s/renpy.py", dir_paths[i]);
+        FILE* renpy_file = fopen((const char*)python_script_buffer, "rb");
+        if (renpy_file != NULL)
+        {
+            found_renpy = 1;
+            fclose(renpy_file);
+        }
+
+        if (found_sysconfigdata == 1 && found_renpy == 1)
+        {
+            snprintf(python_home_buffer, sizeof(python_home_buffer), "%s/lib.zip", dir_paths[i]);
+            snprintf(python_snprintf_buffer, sizeof(python_snprintf_buffer), "import sys\nsys.path = ['%s/lib.zip']", dir_paths[i]);
+            Py_SetPythonHome(python_home_buffer);
+            break;
+        }
+    }
+
+    
     
 
     FILE* sysconfigdata_file = fopen("romfs:/Contents/lib.zip", "rb");

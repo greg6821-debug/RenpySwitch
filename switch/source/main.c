@@ -468,78 +468,8 @@ int main(int argc, char* argv[])
         {NULL, NULL}
     };
 
-
-
-if (argc != 1)
-    {
-        show_error("Only one argument (the program itself) should be passed to the program.\n\nPlease use hbmenu to run this program.",1);
-    }
-
-    if (strchr(argv[0], ' '))
-    {
-        show_error("No spaces should be contained in the program path.\n\nPlease remove spaces from the program path.",1);
-    }
-
-    if (!strchr(argv[0], ':'))
-    {
-        show_error("Program path does not appear to be an absolute path.\n\nPlease use hbmenu to run this program.",1);
-    }
-
-    char* last_dir_separator = strrchr(argv[0], '/');
-
-    if (last_dir_separator)
-    {
-        size_t dirpath_size = last_dir_separator - argv[0];
-        memcpy(relative_dir_path, argv[0], dirpath_size);
-        relative_dir_path[dirpath_size] = '\000';
-    }
-    else
-    {
-        getcwd(relative_dir_path, sizeof(relative_dir_path));
-    }
-
-    char* dir_paths[] = {
-        "romfs:/Contents",
-        relative_dir_path,
-        NULL,
-    };
-
     int found_sysconfigdata = 0;
     int found_renpy = 0;
-
-    for (int i = 0; i < sizeof(dir_paths); i += 1)
-        {
-        if (dir_paths[i] == NULL)
-        {
-            break;
-        }
-        snprintf(sysconfigdata_file_path, sizeof(sysconfigdata_file_path), "%s/lib.zip", dir_paths[i]);
-        FILE* sysconfigdata_file = fopen((const char*)sysconfigdata_file_path, "rb");
-        if (sysconfigdata_file != NULL)
-        {
-            found_sysconfigdata = 1;
-            fclose(sysconfigdata_file);
-        }
-
-        snprintf(python_script_buffer, sizeof(python_script_buffer), "%s/renpy.py", dir_paths[i]);
-        FILE* renpy_file = fopen((const char*)python_script_buffer, "rb");
-        if (renpy_file != NULL)
-        {
-            found_renpy = 1;
-            fclose(renpy_file);
-        }
-
-        if (found_sysconfigdata == 1 && found_renpy == 1)
-        {
-            snprintf(python_home_buffer, sizeof(python_home_buffer), "%s/lib.zip", dir_paths[i]);
-            snprintf(python_snprintf_buffer, sizeof(python_snprintf_buffer), "import sys\nsys.path = ['%s/lib.zip']", dir_paths[i]);
-            Py_SetPythonHome(python_home_buffer);
-            break;
-        }
-    }
-
-    
-    
 
     FILE* sysconfigdata_file = fopen("romfs:/Contents/lib.zip", "rb");
     FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
@@ -554,7 +484,7 @@ if (argc != 1)
         show_error("Could not find renpy.py.\n\nPlease ensure that you have extracted the files correctly so that the \"renpy.py\" file is in the same directory as the nsp file.", 1);
     }
 
-   fclose(sysconfigdata_file);
+    fclose(sysconfigdata_file);
     Py_InitializeEx(0);
     Py_SetPythonHome("romfs:/Contents/lib.zip");
     PyImport_ExtendInittab(builtins);

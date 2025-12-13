@@ -110,7 +110,7 @@ python2 generate_private.py
 rm -rf private
 
 
-
+mkdir -p ./raw/switch/romfs/Contents/renpy/common
 mkdir -p ./raw/switch/romfs/Contents/renpy
 mkdir -p ./raw/lib
 #mkdir -p ./raw/android/assets/renpy/common
@@ -118,13 +118,15 @@ cp -r ./renpy_clear/renpy/common ./raw/switch/romfs/Contents/renpy/
 #cp -r ./renpy_clear/renpy/common ./raw/android/assets/renpy/
 #mv private.mp3 ./raw/android/assets
 cp ./renpy_clear/renpy.py ./raw/switch/romfs/Contents/
-#unzip -qq ./raw/lib.zip -d ./raw/lib/
-#rm ./raw/lib.zip
-cp -r ./renpy_clear/lib/python2.7/. ./raw/lib
-cp -r ./renpy_clear/renpy ./raw/lib
+unzip -qq ./raw/lib.zip -d ./raw/lib/
+rm ./raw/lib.zip
+
+#cp -r ./renpy_clear/lib/python2.7/. ./raw/lib
+cp -r ./renpy_clear/renpy ./raw/lib/renpy/
 rm -rf ./raw/lib/renpy/common/
 7z a -tzip ./raw/switch/romfs/Contents/lib.zip ./raw/lib/*
 rm -rf ./raw/lib
 #rm ./renpy_clear/*.txt
 rm -rf ./renpy_clear/game
-mv ./renpy_clear/ ./raw/
+mv ./renpy_clear/ ./raw/renpy_clear/
+7z a -tzip raw.zip ./raw/*

@@ -1,7 +1,7 @@
 set -e
 
 export DEVKITPRO=/opt/devkitpro
-export RENPY_VER=7.6.1
+export RENPY_VER=7.5.3
 export PYGAME_SDL2_VER=2.1.0
 
 apt-get -y update
@@ -42,7 +42,6 @@ rm python27-switch.tar.gz
 curl -LOC - https://www.renpy.org/dl/$RENPY_VER/pygame_sdl2-$PYGAME_SDL2_VER-for-renpy-$RENPY_VER.tar.gz
 curl -LOC - https://www.renpy.org/dl/$RENPY_VER/renpy-$RENPY_VER-sdk.zip
 curl -LOC - https://www.renpy.org/dl/$RENPY_VER/renpy-$RENPY_VER-source.tar.bz2
-curl -LOC - https://www.renpy.org/dl/$RENPY_VER/android-native-symbols.zip
 #curl -LOC - https://dl.otorh.in/github/rawproject.zip
 curl -LOC - https://github.com/greg6821-debug/scripts/releases/download/1.0-scripts/rawproject.zip
 

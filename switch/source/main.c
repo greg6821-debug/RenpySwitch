@@ -409,36 +409,6 @@ int main(int argc, char* argv[])
     {
         show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.", 1);
     }
-
-
-    // Diagnostic block for Python ZIP loading issues
-    python_result = PyRun_SimpleString(
-    "import sys\n"
-    "sys.path.insert(0, 'romfs:/Contents/lib.zip')\n"
-    "sys.path.insert(0, 'romfs:/Contents')\n"
-    "try:\n"
-    "    import zipimport\n"
-    "except Exception:\n"
-    "    raise SystemExit(101)\n"
-    "try:\n"
-    "    import zipfile\n"
-    "    z = zipfile.ZipFile('romfs:/Contents/lib.zip')\n"
-    "    names = z.namelist()\n"
-    "except Exception:\n"
-    "    raise SystemExit(102)\n"
-    "if not any(n.endswith('os.py') or n.endswith('os.pyo') or n.endswith('os.pyc') for n in names):\n"
-    "    raise SystemExit(103)\n"
-    "if not any(n.startswith('encodings/') for n in names):\n"
-    "    raise SystemExit(104)\n"
-    "try:\n"
-    "    import os\n"
-    "except Exception:\n"
-    "    raise SystemExit(105)\n"
-    );
-    if (python_result == -1)
-    {
-        show_error("Python initialization error (generic).", 1);
-    }
     
 #define x(lib) \
     { \

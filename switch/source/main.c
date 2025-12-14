@@ -1,12 +1,15 @@
 #include <switch.h>
 #include <Python.h>
 #include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
 
 u64 cur_progid = 0;
-AccountUid userID={0};
+AccountUid userID = {0};
+char fallback_save_path[FS_MAX_PATH] = "sdmc:/"; // Эмулятор: пишем прямо в корень sdmc
 
-static PyObject* commitsave(PyObject* self, PyObject* args)
-{
+// ----------------------- SaveData Handling -----------------------
+static PyObject* commitsave(PyObject* self, PyObject* args) {
     u64 total_size = 0;
     u64 free_size = 0;
     FsFileSystem* FsSave = fsdevGetDeviceFileSystem("save");
@@ -15,7 +18,7 @@ static PyObject* commitsave(PyObject* self, PyObject* args)
     FsSaveDataInfo info;
     s64 total_entries=0;
     Result rc=0;
-    
+
     fsdevCommitDevice("save");
     fsFsGetTotalSpace(FsSave, "/", &total_size);
     fsFsGetFreeSpace(FsSave, "/", &free_size);
@@ -29,7 +32,10 @@ static PyObject* commitsave(PyObject* self, PyObject* args)
             rc = fsSaveDataInfoReaderRead(&reader, &info, 1, &total_entries);
             if (R_FAILED(rc) || total_entries==0) break;
 
-            if (info.save_data_type == FsSaveDataType_Account && userID.uid[0] == info.uid.uid[0] && userID.uid[1] == info.uid.uid[1] && info.application_id == cur_progid) {
+            if (info.save_data_type == FsSaveDataType_Account &&
+                userID.uid[0] == info.uid.uid[0] &&
+                userID.uid[1] == info.uid.uid[1] &&
+                info.application_id == cur_progid) {
                 fsExtendSaveDataFileSystem(info.save_data_space_id, info.save_data_id, new_size, 0x400000);
                 break;
             }
@@ -37,25 +43,22 @@ static PyObject* commitsave(PyObject* self, PyObject* args)
 
         fsSaveDataInfoReaderClose(&reader);
         fsdevMountSaveData("save", cur_progid, userID);
-
     }
+
     return Py_None;
 }
 
-static PyObject* startboost(PyObject* self, PyObject* args)
-{
+static PyObject* startboost(PyObject* self, PyObject* args) {
     appletSetCpuBoostMode(ApmPerformanceMode_Boost);
     return Py_None;
 }
 
-static PyObject* disableboost(PyObject* self, PyObject* args)
-{
+static PyObject* disableboost(PyObject* self, PyObject* args) {
     appletSetCpuBoostMode(ApmPerformanceMode_Normal);
     return Py_None;
 }
 
-static PyObject* restartprogram(PyObject* self, PyObject* args)
-{
+static PyObject* restartprogram(PyObject* self, PyObject* args) {
     appletRestartProgram(NULL, 0);
     return Py_None;
 }
@@ -68,11 +71,9 @@ static PyMethodDef myMethods[] = {
     { NULL, NULL, 0, NULL }
 };
 
-PyMODINIT_FUNC init_otrh_libnx(void)
-{
-    Py_InitModule("_otrhlibnx", myMethods);
-}
+PyMODINIT_FUNC init_otrh_libnx(void) { Py_InitModule("_otrhlibnx", myMethods); }
 
+// ----------------------- PyMODINIT_FUNC from new version -----------------------
 PyMODINIT_FUNC initpygame_sdl2_color();
 PyMODINIT_FUNC initpygame_sdl2_controller();
 PyMODINIT_FUNC initpygame_sdl2_display();
@@ -140,12 +141,8 @@ PyMODINIT_FUNC initpygame_sdl2_font();
 PyMODINIT_FUNC initpygame_sdl2_mixer();
 PyMODINIT_FUNC initpygame_sdl2_mixer_music();
 
-
-
-
-// Overide the heap initialization function.
-void __libnx_initheap(void)
-{
+// ----------------------- Heap -----------------------
+void __libnx_initheap(void) {
     void* addr = NULL;
     u64 size = 0;
     u64 mem_available = 0, mem_used = 0;
@@ -170,9 +167,8 @@ void __libnx_initheap(void)
     fake_heap_end   = (char*)addr + size;
 }
 
-
-Result createSaveData()
-{
+// ----------------------- Save Data -----------------------
+Result createSaveData() {
     NsApplicationControlData g_applicationControlData;
     size_t dummy;
 
@@ -202,22 +198,29 @@ Result createSaveData()
     return fsCreateSaveDataFileSystem(&attr, &crt, &meta);
 }
 
-void userAppInit()
-{
+// ----------------------- User App Init/Exit -----------------------
+Result setupSavePath() {
+    Result rc = fsdevMountSaveData("save", cur_progid, userID);
+    if (R_FAILED(rc)) {
+        rc = createSaveData();
+        rc = fsdevMountSaveData("save", cur_progid, userID);
+        if (R_FAILED(rc)) {
+            printf("Save fallback to sdmc:/\n");
+        }
+    }
+    return rc;
+}
 
-    // fsdevUnmountAll();
-
+void userAppInit() {
     Result rc=0;
     PselUserSelectionSettings settings;
-    
+
     rc = svcGetInfo(&cur_progid, InfoType_ProgramId, CUR_PROCESS_HANDLE, 0);
     rc = accountInitialize(AccountServiceType_Application);
     rc = accountGetPreselectedUser(&userID);
     if (R_FAILED(rc)) {
         s32 count;
-
         accountGetUserCount(&count);
-
         if (count > 1) {
             pselShowUserSelector(&userID, &settings);
         } else {
@@ -229,76 +232,71 @@ void userAppInit()
     }
 
     if (accountUidIsValid(&userID)) {
-        rc = fsdevMountSaveData("save", cur_progid, userID);
-        if (R_FAILED(rc)) {
-            rc = createSaveData();
-            rc = fsdevMountSaveData("save", cur_progid, userID);
-        }
+        setupSavePath();
     }
 
     romfsInit();
     socketInitializeDefault();
 }
 
-void userAppExit()
-{
+void userAppExit() {
     fsdevCommitDevice("save");
     fsdevUnmountDevice("save");
     socketExit();
     romfsExit();
 }
 
+// ----------------------- Console -----------------------
+ConsoleRenderer* getDefaultConsoleRenderer(void) { return NULL; }
 
-ConsoleRenderer* getDefaultConsoleRenderer(void)
-{
-    return NULL;
+void writePythonErrorFallback(const char* message) {
+    char log_path[FS_MAX_PATH];
+    snprintf(log_path, sizeof(log_path), "%s/exception.log", fallback_save_path);
+
+    FILE* f = fopen(log_path, "w");
+    if (f) {
+        fprintf(f, "%s\n", message);
+        fclose(f);
+    }
 }
 
-char python_error_buffer[0x400];
+void show_error(const char* message, int exit) {
+    if (exit == 1) Py_Finalize();
 
-
-void show_error(const char* message, int exit)
-{
-    if (exit == 1) {
-        Py_Finalize();
-    }
     char* first_line = (char*)message;
+    char python_error_buffer[0x400];
     char* end = strchr(message, '\n');
-    if (end != NULL)
-    {
+    if (end != NULL) {
         first_line = python_error_buffer;
         memcpy(first_line, message, (end - message) > sizeof(python_error_buffer) ? sizeof(python_error_buffer) : (end - message));
         first_line[end - message] = '\0';
     }
+
     ErrorSystemConfig c;
-    errorSystemCreate(&c, (const char*)first_line, message);
+    errorSystemCreate(&c, first_line, message);
     errorSystemShow(&c);
-    if (exit == 1) {
-        Py_Exit(1);
+
+    writePythonErrorFallback(message);
+
+    if (exit == 1) Py_Exit(1);
+}
+
+// ----------------------- Applet Hook -----------------------
+static AppletHookCookie applet_hook_cookie;
+static void on_applet_hook(AppletHookType hook, void *param) {
+    switch (hook) {
+        case AppletHookType_OnExitRequest:
+            fsdevCommitDevice("save");
+            svcSleepThread(1500000000ULL);
+            appletUnlockExit();
+            break;
+        default:
+            break;
     }
 }
 
-
-static AppletHookCookie applet_hook_cookie;
-static void on_applet_hook(AppletHookType hook, void *param)
-{
-   switch (hook)
-   {
-      case AppletHookType_OnExitRequest:
-        fsdevCommitDevice("save");
-        svcSleepThread(1500000000ULL);
-        appletUnlockExit();
-        break;
-
-      default:
-         break;
-   }
-}
-
-
-
-int main(int argc, char* argv[])
-{
+// ----------------------- Main -----------------------
+int main(int argc, char* argv[]) {
     setenv("MESA_NO_ERROR", "1", 1);
 
     appletLockExit();
@@ -311,7 +309,6 @@ int main(int argc, char* argv[])
     Py_OptimizeFlag = 2;
 
     static struct _inittab builtins[] = {
-
         {"_otrhlibnx", init_otrh_libnx},
 
         {"pygame_sdl2.color", initpygame_sdl2_color},
@@ -375,7 +372,6 @@ int main(int argc, char* argv[])
         {"renpy.gl2.gl2texture", initrenpy_gl2_gl2texture},
         {"renpy.uguu.gl", initrenpy_uguu_gl},
         {"renpy.uguu.uguu", initrenpy_uguu_uguu},
-        
 
         {"renpy.parsersupport", initrenpy_parsersupport},
         {"pygame_sdl2.font", initpygame_sdl2_font},
@@ -388,58 +384,30 @@ int main(int argc, char* argv[])
     FILE* sysconfigdata_file = fopen("romfs:/Contents/lib.zip", "rb");
     FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
 
-    if (sysconfigdata_file == NULL)
-    {
-        show_error("Could not find lib.zip.\n\nPlease ensure that you have extracted the files correctly so that the \"lib.zip\" file is in the same directory as the nsp file.", 1);
-    }
-
-    if (renpy_file == NULL)
-    {
-        show_error("Could not find renpy.py.\n\nPlease ensure that you have extracted the files correctly so that the \"renpy.py\" file is in the same directory as the nsp file.", 1);
-    }
+    if (!sysconfigdata_file)
+        show_error("Could not find lib.zip.\n", 1);
+    if (!renpy_file)
+        show_error("Could not find renpy.py.\n", 1);
 
     fclose(sysconfigdata_file);
     Py_InitializeEx(0);
     Py_SetPythonHome("romfs:/Contents/lib.zip");
     PyImport_ExtendInittab(builtins);
 
-    char* pyargs[] = {
-        "romfs:/Contents/renpy.py",
-        NULL,
-    };
-
+    char* pyargs[] = { "romfs:/Contents/renpy.py", NULL };
     PySys_SetArgvEx(1, pyargs, 1);
 
-    int python_result;
-
-    python_result = PyRun_SimpleString("import sys\nsys.path = ['romfs:/Contents/lib.zip']");
-
+    int python_result = PyRun_SimpleString("import sys\nsys.path = ['romfs:/Contents/lib.zip']");
     if (python_result == -1)
-    {
-        show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.", 1);
+        show_error("Python initialization failed\n", 1);
+
+    userAppInit();
+
+    while (appletMainLoop()) {
+        svcSleepThread(1000000000ULL);
     }
 
-#define x(lib) \
-    { \
-        if (PyRun_SimpleString("import " lib) == -1) \
-        { \
-            show_error("Could not import python library " lib ".\n\nPlease ensure that you have extracted the files correctly so that the \"lib\" folder is in the same directory as the nsp file, and that the \"lib\" folder contains the folder \"python2.7\". \nInside that folder, the file \"" lib ".py\" or folder \"" lib "\" needs to exist.", 1); \
-        } \
-    }
+    userAppExit();
 
-    x("os");
-    x("pygame_sdl2");
-    x("encodings");
-
-#undef x
-
-    python_result = PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1);
-
-    if (python_result == -1)
-    {
-        show_error("An uncaught Python exception occurred during renpy.py execution.\n\nPlease look in the save:// folder for more information about this exception.", 1);
-    }
-
-    Py_Exit(0);
     return 0;
 }

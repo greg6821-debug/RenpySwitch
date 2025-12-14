@@ -141,7 +141,54 @@ PyMODINIT_FUNC initpygame_sdl2_mixer();
 PyMODINIT_FUNC initpygame_sdl2_mixer_music();
 
 
+void show_python_exception_and_exit(void)
+{
+    PyObject *ptype = NULL;
+    PyObject *pvalue = NULL;
+    PyObject *ptraceback = NULL;
 
+    PyErr_Fetch(&ptype, &pvalue, &ptraceback);
+    PyErr_NormalizeException(&ptype, &pvalue, &ptraceback);
+
+    PyObject *traceback_module = PyImport_ImportModule("traceback");
+    PyObject *traceback_func = NULL;
+    PyObject *formatted_tb = NULL;
+
+    if (traceback_module)
+        traceback_func = PyObject_GetAttrString(traceback_module, "format_exception");
+
+    if (traceback_func && PyCallable_Check(traceback_func))
+    {
+        formatted_tb = PyObject_CallFunctionObjArgs(
+            traceback_func,
+            ptype ? ptype : Py_None,
+            pvalue ? pvalue : Py_None,
+            ptraceback ? ptraceback : Py_None,
+            NULL
+        );
+    }
+
+    const char *error_text = "Unknown Python error";
+
+    if (formatted_tb && PyList_Check(formatted_tb))
+    {
+        PyObject *sep = PyUnicode_FromString("");
+        PyObject *joined = PyUnicode_Join(sep, formatted_tb);
+
+        if (joined)
+        {
+            error_text = PyUnicode_AsUTF8(joined);
+        }
+    }
+
+    // Показываем системное окно с полной трассировкой
+    ErrorSystemConfig c;
+    errorSystemCreate(&c, "Python traceback", error_text);
+    errorSystemShow(&c);
+
+    Py_Finalize();
+    Py_Exit(1);
+}
 
 // Overide the heap initialization function.
 void __libnx_initheap(void)
@@ -437,7 +484,7 @@ int main(int argc, char* argv[])
 
     if (python_result == -1)
     {
-        show_error("An uncaught Python exception occurred during renpy.py execution.\n\nPlease look in the save:// folder for more information about this exception.", 1);
+        show_python_exception_and_exit();
     }
 
     Py_Exit(0);

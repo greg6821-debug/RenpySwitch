@@ -30,5 +30,5 @@ jobs:
         - name: upload raw
           uses: actions/upload-artifact@master
           with:
-            name: raw
+            name: RenToSwitch${{ github.ref_name }}
             path: raw

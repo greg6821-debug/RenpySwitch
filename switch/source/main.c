@@ -149,6 +149,10 @@ PyMODINIT_FUNC initrenpy_uguu_gl();
 PyMODINIT_FUNC initrenpy_uguu_uguu();
 
 PyMODINIT_FUNC initrenpy_parsersupport();
+PyMODINIT_FUNC initpygame_sdl2_font();
+PyMODINIT_FUNC initpygame_sdl2_mixer();
+PyMODINIT_FUNC initpygame_sdl2_mixer_music();
+
 
 
 
@@ -387,6 +391,9 @@ int main(int argc, char* argv[])
         
 
         {"renpy.parsersupport", initrenpy_parsersupport},
+        {"pygame_sdl2.font", initpygame_sdl2_font},
+        {"pygame_sdl2.mixer", initpygame_sdl2_mixer},
+        {"pygame_sdl2.mixer_music", initpygame_sdl2_mixer_music},
 
         {NULL, NULL}
     };

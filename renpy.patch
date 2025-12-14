@@ -1810,7 +1810,26 @@ diff -Naur b/renpy/ui.py a/renpy/ui.py
 diff -Naur b/renpy.py a/renpy.py
 --- b/renpy.py	2023-06-08 04:21:52.000000000 +0300
 +++ a/renpy.py	2023-09-01 00:08:00.794406391 +0300
-@@ -44,6 +44,9 @@
+@@ -32,6 +33,18 @@
+ 
+ # Functions to be customized by distributors. ################################
+ 
++if sys.platform == 'horizon':
++    if not hasattr(os, "getuid"):
++        os.getuid = lambda: 0
++    if not hasattr(os, "getgid"):
++        os.getgid = lambda: 0
++    if not hasattr(os, "geteuid"):
++        os.geteuid = lambda: 0
++    if not hasattr(os, "getegid"):
++        os.getegid = lambda: 0
++if sys.platform == 'horizon':
++    os.getlogin = lambda: "switch"
++
+ def path_to_gamedir(basedir, name):
+     """
+     Returns the absolute path to the directory containing the game
+@@ -43,6 +56,9 @@
          The basename of the executable, with the extension removed.
      """
  
@@ -1820,7 +1839,7 @@ diff -Naur b/renpy.py a/renpy.py
      # A list of candidate game directory names.
      candidates = [ name ]
  
-@@ -87,6 +90,9 @@
+@@ -86,6 +102,9 @@
          containing this file.
      """
  
@@ -1830,7 +1849,7 @@ diff -Naur b/renpy.py a/renpy.py
      return renpy_base + "/renpy/common"
  
  
-@@ -120,6 +126,9 @@
+@@ -119,6 +138,9 @@
          except Exception:
              return False
  
@@ -1840,7 +1859,7 @@ diff -Naur b/renpy.py a/renpy.py
      # Android.
      if renpy.android:
          paths = [
-@@ -203,6 +212,9 @@
+@@ -207,6 +229,9 @@
      Returns the absolute path to thew Ren'Py base directory.
      """
  
@@ -1850,7 +1869,7 @@ diff -Naur b/renpy.py a/renpy.py
      renpy_base = os.path.dirname(os.path.realpath(sys.argv[0]))
      renpy_base = os.path.abspath(renpy_base)
  
-@@ -244,4 +256,10 @@
+@@ -248,4 +273,10 @@
  
  
  if __name__ == "__main__":

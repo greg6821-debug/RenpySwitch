@@ -112,7 +112,6 @@ PyMODINIT_FUNC initrenpy_audio_renpysound();
 PyMODINIT_FUNC initrenpy_display_accelerator();
 PyMODINIT_FUNC initrenpy_display_render();
 PyMODINIT_FUNC initrenpy_display_matrix();
-PyMODINIT_FUNC initrenpy_gl_gl();
 PyMODINIT_FUNC initrenpy_gl_gldraw();
 PyMODINIT_FUNC initrenpy_gl_glenviron_shader();
 PyMODINIT_FUNC initrenpy_gl_glrtt_copy();

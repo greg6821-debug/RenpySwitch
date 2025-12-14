@@ -112,5 +112,6 @@ rm -rf ./raw/lib/renpy/common/
 rm -rf ./raw/lib
 #rm ./renpy_clear/*.txt
 rm -rf ./renpy_clear/game
-mv ./renpy_clear/ ./raw/renpy_clear/
+#mv ./renpy_clear/ ./raw/renpy_clear/
+rm -rf ./renpy_clear
 7z a -tzip raw.zip ./raw/*

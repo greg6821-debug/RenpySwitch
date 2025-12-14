@@ -73,18 +73,6 @@ PyMODINIT_FUNC init_otrh_libnx(void)
     Py_InitModule("_otrhlibnx", myMethods);
 }
 
-PyMODINIT_FUNC initcolor();
-PyMODINIT_FUNC initcontroller();
-PyMODINIT_FUNC initdisplay();
-PyMODINIT_FUNC initcolor();
-PyMODINIT_FUNC initcolor();
-PyMODINIT_FUNC initcolor();
-PyMODINIT_FUNC initcolor();
-PyMODINIT_FUNC initcolor();
-PyMODINIT_FUNC initcolor();
-PyMODINIT_FUNC initcolor();
-
-
 PyMODINIT_FUNC initpygame_sdl2_color();
 PyMODINIT_FUNC initpygame_sdl2_controller();
 PyMODINIT_FUNC initpygame_sdl2_display();

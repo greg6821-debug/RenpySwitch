@@ -73,6 +73,18 @@ PyMODINIT_FUNC init_otrh_libnx(void)
     Py_InitModule("_otrhlibnx", myMethods);
 }
 
+PyMODINIT_FUNC initcolor();
+PyMODINIT_FUNC initcontroller();
+PyMODINIT_FUNC initdisplay();
+PyMODINIT_FUNC initcolor();
+PyMODINIT_FUNC initcolor();
+PyMODINIT_FUNC initcolor();
+PyMODINIT_FUNC initcolor();
+PyMODINIT_FUNC initcolor();
+PyMODINIT_FUNC initcolor();
+PyMODINIT_FUNC initcolor();
+
+
 PyMODINIT_FUNC initpygame_sdl2_color();
 PyMODINIT_FUNC initpygame_sdl2_controller();
 PyMODINIT_FUNC initpygame_sdl2_display();
@@ -135,6 +147,8 @@ PyMODINIT_FUNC initrenpy_gl2_gl2shader();
 PyMODINIT_FUNC initrenpy_gl2_gl2texture();
 PyMODINIT_FUNC initrenpy_uguu_gl();
 PyMODINIT_FUNC initrenpy_uguu_uguu();
+
+PyMODINIT_FUNC initrenpy_parsersupport();
 
 
 
@@ -372,7 +386,7 @@ int main(int argc, char* argv[])
         {"renpy.uguu.uguu", initrenpy_uguu_uguu},
         
 
-
+        {"renpy.parsersupport", initrenpy_parsersupport},
 
         {NULL, NULL}
     };

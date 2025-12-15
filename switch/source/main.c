@@ -235,12 +235,17 @@ void userAppInit()
             rc = fsdevMountSaveData("save", cur_progid, userID);
         }
     }
+    
+    romfsInit();
 
     // 🔊 ВАЖНО: инициализация аудио
+    audrenInitialize();
+    audrenStartAudioRenderer();
+
+    // (опционально, но безопасно)
     audoutInitialize();
     audoutStartAudioOut();
     
-    romfsInit();
     socketInitializeDefault();
 }
 
@@ -251,6 +256,9 @@ void userAppExit()
 
     audoutStopAudioOut();
     audoutExit();
+
+    audrenStopAudioRenderer();
+    audrenExit();
 
     socketExit();
     romfsExit();
@@ -406,6 +414,14 @@ int main(int argc, char* argv[])
         show_error("Could not find renpy.py.\n\nPlease ensure that you have extracted the files correctly so that the \"renpy.py\" file is in the same directory as the nsp file.", 1);
     }
 
+
+    printf("audren init\n");
+    Result r1 = audrenInitialize();
+    printf("audren init rc=%x\n", r1);
+    Result r2 = audrenStartAudioRenderer();
+    printf("audren start rc=%x\n", r2);
+
+    
     fclose(sysconfigdata_file);
     Py_InitializeEx(0);
     Py_SetPythonHome("romfs:/Contents/lib.zip");

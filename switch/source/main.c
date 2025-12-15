@@ -167,11 +167,7 @@ void show_error_and_exit(const char* message)
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
-    if (__nx_applet_type != AppletType_Application)
-    {
-#if 0
-        show_error_and_exit("Only application override is supported by this program.\n\nTo run this program as application override, hold down the R button while launching an application on the menu.");
-#endif
+
 #if 1
         setenv("RENPY_LESS_MEMORY", "1", 1);
 #endif
@@ -257,19 +253,10 @@ int main(int argc, char* argv[])
         {NULL, NULL}
     };
 
-    if (argc != 1)
-    {
-        show_error_and_exit("Only one argument (the program itself) should be passed to the program.\n\nPlease use hbmenu to run this program.");
-    }
 
     if (strchr(argv[0], ' '))
     {
         show_error_and_exit("No spaces should be contained in the program path.\n\nPlease remove spaces from the program path.");
-    }
-
-    if (!strchr(argv[0], ':'))
-    {
-        show_error_and_exit("Program path does not appear to be an absolute path.\n\nPlease use hbmenu to run this program.");
     }
 
     char* last_dir_separator = strrchr(argv[0], '/');

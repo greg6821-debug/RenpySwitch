@@ -51,12 +51,11 @@ PyMODINIT_FUNC initrenpy_gl_gltexture();
 
 PyMODINIT_FUNC initrenpy_gl2_gl2draw();
 PyMODINIT_FUNC initrenpy_gl2_gl2environ_shader();
-PyMODINIT_FUNC initrenpy_gl2_gl2geometry();
+
 PyMODINIT_FUNC initrenpy_gl2_gl2rtt_fbo();
 PyMODINIT_FUNC initrenpy_gl2_gl2shader();
 PyMODINIT_FUNC initrenpy_gl2_gl2texture();
-PyMODINIT_FUNC initrenpy_gl2_uguu();
-PyMODINIT_FUNC initrenpy_gl2_uguugl();
+
 
 PyMODINIT_FUNC initrenpy_parsersupport();
 PyMODINIT_FUNC initrenpy_pydict();
@@ -224,11 +223,10 @@ int main(int argc, char* argv[])
         {"renpy.gl.gltexture", initrenpy_gl_gltexture},
 
         {"renpy.gl2.gl2draw", initrenpy_gl2_gl2draw},
-        {"renpy.gl2.gl2geometry", initrenpy_gl2_gl2geometry},
+
         {"renpy.gl2.gl2shader", initrenpy_gl2_gl2shader},
         {"renpy.gl2.gl2texture", initrenpy_gl2_gl2texture},
-        {"renpy.gl2.uguu", initrenpy_gl2_uguu},
-        {"renpy.gl2.uguugl", initrenpy_gl2_uguugl},
+
 
         {"renpy.parsersupport", initrenpy_parsersupport},
         {"renpy.pydict", initrenpy_pydict},

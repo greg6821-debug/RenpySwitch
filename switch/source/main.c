@@ -1,10 +1,8 @@
 #include <switch.h>
 #include <Python.h>
 #include <stdio.h>
-#include <switch/services/audren.h>
 #include <SDL2/SDL.h>
 
-static AudioRendererConfig g_audren_config;
 
 u64 cur_progid = 0;
 AccountUid userID={0};
@@ -243,29 +241,14 @@ void userAppInit()
     romfsInit();
 
     // 🔊 ВАЖНО: инициализация аудио
-    // 1. setenv SDL_AUDIODRIVER и другие
     setenv("SDL_AUDIODRIVER", "audren", 1);
     setenv("SDL_VIDEODRIVER", "switch", 1);
+    // Эти параметры можно оставить — они подскажут SDL желаемые настройки
     setenv("SDL_AUDIO_FREQUENCY", "48000", 1);
     setenv("SDL_AUDIO_CHANNELS", "2", 1);
     setenv("SDL_AUDIO_SAMPLES", "1024", 1);
 
-    // 2. Инициализация audren/audout
-    memset(&g_audren_config, 0, sizeof(g_audren_config));
-    g_audren_config.num_voices = 32;
-    g_audren_config.num_effects = 0;
-    g_audren_config.num_sinks = 1;
-    g_audren_config.num_mix_objs = 1;
-    g_audren_config.num_mix_buffers = 2;
-    g_audren_config.output_rate = AudioRendererOutputRate_48kHz;
-
-    if (R_SUCCEEDED(audrenInitialize(&g_audren_config)))
-        audrenStartAudioRenderer();
-
-    audoutInitialize();
-    audoutStartAudioOut();
-
-    // 3. Только после этого SDL
+    // Инициализируем SDL (видео + аудио). Аудио теперь инициализируется правильно через драйвер audren внутри SDL.
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
     
     socketInitializeDefault();
@@ -275,13 +258,7 @@ void userAppExit()
 {
     fsdevCommitDevice("save");
     fsdevUnmountDevice("save");
-
-    audoutStopAudioOut();
-    audoutExit();
-
-    audrenStopAudioRenderer();
-    audrenExit();
-
+    
     socketExit();
     romfsExit();
 }

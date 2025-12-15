@@ -48,7 +48,7 @@ PyMODINIT_FUNC initrenpy_gl_glenviron_shader();
 PyMODINIT_FUNC initrenpy_gl_glrtt_copy();
 PyMODINIT_FUNC initrenpy_gl_glrtt_fbo();
 PyMODINIT_FUNC initrenpy_gl_gltexture();
-#if 0
+
 PyMODINIT_FUNC initrenpy_gl2_gl2draw();
 PyMODINIT_FUNC initrenpy_gl2_gl2environ_shader();
 PyMODINIT_FUNC initrenpy_gl2_gl2geometry();
@@ -57,7 +57,7 @@ PyMODINIT_FUNC initrenpy_gl2_gl2shader();
 PyMODINIT_FUNC initrenpy_gl2_gl2texture();
 PyMODINIT_FUNC initrenpy_gl2_uguu();
 PyMODINIT_FUNC initrenpy_gl2_uguugl();
-#endif
+
 PyMODINIT_FUNC initrenpy_parsersupport();
 PyMODINIT_FUNC initrenpy_pydict();
 PyMODINIT_FUNC initrenpy_style();
@@ -161,7 +161,6 @@ void show_error_and_exit(const char* message)
     ErrorSystemConfig c;
     errorSystemCreate(&c, (const char*)first_line, message);
     errorSystemShow(&c);
-    Py_Exit(1);
 }
 
 int main(int argc, char* argv[])
@@ -223,14 +222,14 @@ int main(int argc, char* argv[])
         {"renpy.gl.glrtt_copy", initrenpy_gl_glrtt_copy},
         {"renpy.gl.glrtt_fbo", initrenpy_gl_glrtt_fbo},
         {"renpy.gl.gltexture", initrenpy_gl_gltexture},
-#if 0
+
         {"renpy.gl2.gl2draw", initrenpy_gl2_gl2draw},
         {"renpy.gl2.gl2geometry", initrenpy_gl2_gl2geometry},
         {"renpy.gl2.gl2shader", initrenpy_gl2_gl2shader},
         {"renpy.gl2.gl2texture", initrenpy_gl2_gl2texture},
         {"renpy.gl2.uguu", initrenpy_gl2_uguu},
         {"renpy.gl2.uguugl", initrenpy_gl2_uguugl},
-#endif
+
         {"renpy.parsersupport", initrenpy_parsersupport},
         {"renpy.pydict", initrenpy_pydict},
         {"renpy.style", initrenpy_style},

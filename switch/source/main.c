@@ -242,8 +242,15 @@ void userAppInit()
     romfsInit();
 
     // 🔊 ВАЖНО: инициализация аудио
-    memset(&g_audren_config, 0, sizeof(g_audren_config));
+    // 1. setenv SDL_AUDIODRIVER и другие
+    setenv("SDL_AUDIODRIVER", "audren", 1);
+    setenv("SDL_VIDEODRIVER", "switch", 1);
+    setenv("SDL_AUDIO_FREQUENCY", "48000", 1);
+    setenv("SDL_AUDIO_CHANNELS", "2", 1);
+    setenv("SDL_AUDIO_SAMPLES", "1024", 1);
 
+    // 2. Инициализация audren/audout
+    memset(&g_audren_config, 0, sizeof(g_audren_config));
     g_audren_config.num_voices = 32;
     g_audren_config.num_effects = 0;
     g_audren_config.num_sinks = 1;
@@ -251,14 +258,14 @@ void userAppInit()
     g_audren_config.num_mix_buffers = 2;
     g_audren_config.output_rate = AudioRendererOutputRate_48kHz;
 
-    Result rc_audio = audrenInitialize(&g_audren_config);
-    if (R_SUCCEEDED(rc_audio)) {
+    if (R_SUCCEEDED(audrenInitialize(&g_audren_config)))
         audrenStartAudioRenderer();
-    }
 
-    /* audout — обязательно для SDL2 */
     audoutInitialize();
     audoutStartAudioOut();
+
+    // 3. Только после этого SDL
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
     
     socketInitializeDefault();
 }
@@ -427,16 +434,10 @@ int main(int argc, char* argv[])
     {
         show_error("Could not find renpy.py.\n\nPlease ensure that you have extracted the files correctly so that the \"renpy.py\" file is in the same directory as the nsp file.", 1);
     }
-
-
-    printf("audren init\n");
-    Result r2 = audrenStartAudioRenderer();
-    printf("audren start rc=%x\n", r2);
-
     
     fclose(sysconfigdata_file);
     Py_InitializeEx(0);
-    Py_SetPythonHome("romfs:/Contents/lib.zip");
+    Py_SetPythonHome("romfs:/Contents");
     PyImport_ExtendInittab(builtins);
 
     char* pyargs[] = {
@@ -468,7 +469,7 @@ int main(int argc, char* argv[])
     x("encodings");
 
 #undef x
-
+    
     python_result = PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1);
 
     if (python_result == -1)

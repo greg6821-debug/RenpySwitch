@@ -250,7 +250,6 @@ void userAppInit()
     g_audren_config.num_mix_objs = 1;
     g_audren_config.num_mix_buffers = 2;
     g_audren_config.output_rate = AudioRendererOutputRate_48kHz;
-    g_audren_config.buffer_size_frames = 0x100;
 
     Result rc_audio = audrenInitialize(&g_audren_config);
     if (R_SUCCEEDED(rc_audio)) {

@@ -141,78 +141,6 @@ PyMODINIT_FUNC initpygame_sdl2_mixer();
 PyMODINIT_FUNC initpygame_sdl2_mixer_music();
 
 
-void show_python_exception_and_exit(void)
-{
-    PyObject *ptype = NULL;
-    PyObject *pvalue = NULL;
-    PyObject *ptraceback = NULL;
-
-    PyErr_Fetch(&ptype, &pvalue, &ptraceback);
-    PyErr_NormalizeException(&ptype, &pvalue, &ptraceback);
-
-    const char *error_text = "Unknown Python exception";
-
-    // --- Попытка №1: traceback.format_exception ---
-    PyObject *traceback_module = PyImport_ImportModule("traceback");
-    if (traceback_module)
-    {
-        PyObject *fmt = PyObject_GetAttrString(traceback_module, "format_exception");
-        if (fmt && PyCallable_Check(fmt))
-        {
-            PyObject *lst = PyObject_CallFunctionObjArgs(
-                fmt,
-                ptype ? ptype : Py_None,
-                pvalue ? pvalue : Py_None,
-                ptraceback ? ptraceback : Py_None,
-                NULL
-            );
-
-            if (lst && PyList_Check(lst))
-            {
-                PyObject *sep = PyString_FromString("");
-                PyObject *joined = PyObject_CallMethod(sep, "join", "O", lst);
-
-                if (joined && PyString_Check(joined))
-                {
-                    error_text = PyString_AsString(joined);
-                }
-                else if (joined && PyUnicode_Check(joined))
-                {
-                    PyObject *utf8 = PyUnicode_AsUTF8String(joined);
-                    if (utf8)
-                        error_text = PyString_AsString(utf8);
-                }
-            }
-        }
-    }
-
-    // --- Попытка №2: str(exception) ---
-    if (error_text == NULL || error_text[0] == '\0')
-    {
-        if (pvalue)
-        {
-            PyObject *s = PyObject_Str(pvalue);
-            if (s && PyString_Check(s))
-                error_text = PyString_AsString(s);
-        }
-    }
-
-    // --- Попытка №3: вывести в файл ---
-    FILE *f = fopen("sdmc:/python_error.txt", "w");
-    if (f)
-    {
-        PyErr_Display(ptype, pvalue, ptraceback);
-        fprintf(f, "ptype=%p\npvalue=%p\nptraceback=%p\n", ptype, pvalue, ptraceback);
-        fclose(f);
-    }
-
-    ErrorSystemConfig c;
-    errorSystemCreate(&c, "Python traceback", error_text ? error_text : "Python error");
-    errorSystemShow(&c);
-
-    Py_Finalize();
-    Py_Exit(1);
-}
 
 
 // Overide the heap initialization function.
@@ -509,7 +437,7 @@ int main(int argc, char* argv[])
 
     if (python_result == -1)
     {
-        show_python_exception_and_exit();
+        show_error("An uncaught Python exception occurred during renpy.py execution.\n\nPlease look in the save:// folder for more information about this exception.", 1);
     }
 
     Py_Exit(0);

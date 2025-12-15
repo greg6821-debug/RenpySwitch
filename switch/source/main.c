@@ -100,7 +100,6 @@ PyMODINIT_FUNC initrenpy_audio_renpysound();
 PyMODINIT_FUNC initrenpy_display_accelerator();
 PyMODINIT_FUNC initrenpy_display_render();
 PyMODINIT_FUNC initrenpy_display_matrix();
-PyMODINIT_FUNC initrenpy_gl_gl();
 PyMODINIT_FUNC initrenpy_gl_gldraw();
 PyMODINIT_FUNC initrenpy_gl_glenviron_shader();
 PyMODINIT_FUNC initrenpy_gl_glrtt_copy();
@@ -392,7 +391,6 @@ int main(int argc, char* argv[])
         
 
         {"renpy.parsersupport", initrenpy_parsersupport},
-        {"renpy.gl.gl", initrenpy_gl_gl},
         //{"pygame_sdl2.font", initpygame_sdl2_font},
         //{"pygame_sdl2.mixer", initpygame_sdl2_mixer},
         //{"pygame_sdl2.mixer_music", initpygame_sdl2_mixer_music},

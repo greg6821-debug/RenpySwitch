@@ -167,7 +167,7 @@ void show_error_and_exit(const char* message)
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
-
+    {
 #if 1
         setenv("RENPY_LESS_MEMORY", "1", 1);
 #endif

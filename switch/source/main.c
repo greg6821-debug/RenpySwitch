@@ -242,23 +242,22 @@ void userAppInit()
     romfsInit();
 
     // 🔊 ВАЖНО: инициализация аудио
-    audrenInitializeAudioRendererConfig(&g_audren_config);
+    memset(&g_audren_config, 0, sizeof(g_audren_config));
 
     g_audren_config.num_voices = 32;
     g_audren_config.num_effects = 0;
     g_audren_config.num_sinks = 1;
-    g_audren_config.num_mix_objects = 1;
+    g_audren_config.num_mix_objs = 1;
     g_audren_config.num_mix_buffers = 2;
-    g_audren_config.sample_rate = AudioRendererSampleRate_48000;
-    g_audren_config.buffer_size = 0x1000;
+    g_audren_config.output_rate = AudioRendererOutputRate_48kHz;
+    g_audren_config.buffer_size_frames = 0x100;
 
-    Result rc = audrenInitialize(&g_audren_config);
-    if (R_SUCCEEDED(rc))
-    {
+    Result rc_audio = audrenInitialize(&g_audren_config);
+    if (R_SUCCEEDED(rc_audio)) {
         audrenStartAudioRenderer();
     }
 
-    // audout нужен SDL2 как fallback
+    /* audout — обязательно для SDL2 */
     audoutInitialize();
     audoutStartAudioOut();
     
@@ -432,8 +431,6 @@ int main(int argc, char* argv[])
 
 
     printf("audren init\n");
-    Result r1 = audrenInitialize();
-    printf("audren init rc=%x\n", r1);
     Result r2 = audrenStartAudioRenderer();
     printf("audren start rc=%x\n", r2);
 

@@ -236,6 +236,10 @@ void userAppInit()
         }
     }
 
+    // 🔊 ВАЖНО: инициализация аудио
+    audoutInitialize();
+    audoutStartAudioOut();
+    
     romfsInit();
     socketInitializeDefault();
 }
@@ -244,6 +248,10 @@ void userAppExit()
 {
     fsdevCommitDevice("save");
     fsdevUnmountDevice("save");
+
+    audoutStopAudioOut();
+    audoutExit();
+
     socketExit();
     romfsExit();
 }

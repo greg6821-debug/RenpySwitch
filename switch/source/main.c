@@ -1,6 +1,9 @@
 #include <switch.h>
 #include <Python.h>
 #include <stdio.h>
+#include <switch/services/audren.h>
+
+static AudioRendererConfig g_audren_config;
 
 u64 cur_progid = 0;
 AccountUid userID={0};
@@ -221,7 +224,7 @@ void userAppInit()
         if (count > 1) {
             pselShowUserSelector(&userID, &settings);
         } else {
-            size_t loadedUsers;
+            s32 loadedUsers;
             AccountUid account_ids[count];
             accountListAllUsers(account_ids, count, &loadedUsers);
             userID = account_ids[0];
@@ -239,10 +242,23 @@ void userAppInit()
     romfsInit();
 
     // 🔊 ВАЖНО: инициализация аудио
-    audrenInitialize();
-    audrenStartAudioRenderer();
+    audrenInitializeAudioRendererConfig(&g_audren_config);
 
-    // (опционально, но безопасно)
+    g_audren_config.num_voices = 32;
+    g_audren_config.num_effects = 0;
+    g_audren_config.num_sinks = 1;
+    g_audren_config.num_mix_objects = 1;
+    g_audren_config.num_mix_buffers = 2;
+    g_audren_config.sample_rate = AudioRendererSampleRate_48000;
+    g_audren_config.buffer_size = 0x1000;
+
+    Result rc = audrenInitialize(&g_audren_config);
+    if (R_SUCCEEDED(rc))
+    {
+        audrenStartAudioRenderer();
+    }
+
+    // audout нужен SDL2 как fallback
     audoutInitialize();
     audoutStartAudioOut();
     

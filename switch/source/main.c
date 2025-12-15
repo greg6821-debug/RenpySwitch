@@ -172,16 +172,24 @@ void show_python_exception_and_exit(void)
 
     if (formatted_tb && PyList_Check(formatted_tb))
     {
-        PyObject *sep = PyUnicode_FromString("");
-        PyObject *joined = PyUnicode_Join(sep, formatted_tb);
+        PyObject *sep = PyString_FromString("");
+        PyObject *joined = PyObject_CallMethod(sep, "join", "O", formatted_tb);
 
         if (joined)
         {
-            error_text = PyUnicode_AsUTF8(joined);
+            if (PyUnicode_Check(joined))
+            {
+                PyObject *utf8 = PyUnicode_AsUTF8String(joined);
+                if (utf8)
+                    error_text = PyString_AsString(utf8);
+            }
+            else if (PyString_Check(joined))
+            {
+                error_text = PyString_AsString(joined);
+            }
         }
     }
 
-    // Показываем системное окно с полной трассировкой
     ErrorSystemConfig c;
     errorSystemCreate(&c, "Python traceback", error_text);
     errorSystemShow(&c);
@@ -189,6 +197,7 @@ void show_python_exception_and_exit(void)
     Py_Finalize();
     Py_Exit(1);
 }
+
 
 // Overide the heap initialization function.
 void __libnx_initheap(void)

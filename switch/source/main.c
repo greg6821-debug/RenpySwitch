@@ -39,24 +39,28 @@ static PyObject* commitsave(PyObject* self, PyObject* args)
         fsdevMountSaveData("save", cur_progid, userID);
 
     }
+					
     return Py_None;
 }
 
 static PyObject* startboost(PyObject* self, PyObject* args)
 {
     appletSetCpuBoostMode(ApmPerformanceMode_Boost);
+					   
     return Py_None;
 }
 
 static PyObject* disableboost(PyObject* self, PyObject* args)
 {
     appletSetCpuBoostMode(ApmPerformanceMode_Normal);
+					   
     return Py_None;
 }
 
 static PyObject* restartprogram(PyObject* self, PyObject* args)
 {
     appletRestartProgram(NULL, 0);
+					   
     return Py_None;
 }
 
@@ -412,9 +416,11 @@ int main(int argc, char* argv[])
     }
     
     fclose(sysconfigdata_file);
-    Py_InitializeEx(0);
     Py_SetPythonHome("romfs:/Contents");
     PyImport_ExtendInittab(builtins);
+    Py_InitializeEx(0);
+					   
+
 
     char* pyargs[] = {
         "romfs:/Contents/renpy.py",

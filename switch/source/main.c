@@ -2,6 +2,7 @@
 #include <Python.h>
 #include <stdio.h>
 #include <switch/services/audren.h>
+#include <SDL2/SDL.h>
 
 static AudioRendererConfig g_audren_config;
 

@@ -150,48 +150,64 @@ void show_python_exception_and_exit(void)
     PyErr_Fetch(&ptype, &pvalue, &ptraceback);
     PyErr_NormalizeException(&ptype, &pvalue, &ptraceback);
 
+    const char *error_text = "Unknown Python exception";
+
+    // --- Попытка №1: traceback.format_exception ---
     PyObject *traceback_module = PyImport_ImportModule("traceback");
-    PyObject *traceback_func = NULL;
-    PyObject *formatted_tb = NULL;
-
     if (traceback_module)
-        traceback_func = PyObject_GetAttrString(traceback_module, "format_exception");
-
-    if (traceback_func && PyCallable_Check(traceback_func))
     {
-        formatted_tb = PyObject_CallFunctionObjArgs(
-            traceback_func,
-            ptype ? ptype : Py_None,
-            pvalue ? pvalue : Py_None,
-            ptraceback ? ptraceback : Py_None,
-            NULL
-        );
-    }
-
-    const char *error_text = "Unknown Python error";
-
-    if (formatted_tb && PyList_Check(formatted_tb))
-    {
-        PyObject *sep = PyString_FromString("");
-        PyObject *joined = PyObject_CallMethod(sep, "join", "O", formatted_tb);
-
-        if (joined)
+        PyObject *fmt = PyObject_GetAttrString(traceback_module, "format_exception");
+        if (fmt && PyCallable_Check(fmt))
         {
-            if (PyUnicode_Check(joined))
+            PyObject *lst = PyObject_CallFunctionObjArgs(
+                fmt,
+                ptype ? ptype : Py_None,
+                pvalue ? pvalue : Py_None,
+                ptraceback ? ptraceback : Py_None,
+                NULL
+            );
+
+            if (lst && PyList_Check(lst))
             {
-                PyObject *utf8 = PyUnicode_AsUTF8String(joined);
-                if (utf8)
-                    error_text = PyString_AsString(utf8);
-            }
-            else if (PyString_Check(joined))
-            {
-                error_text = PyString_AsString(joined);
+                PyObject *sep = PyString_FromString("");
+                PyObject *joined = PyObject_CallMethod(sep, "join", "O", lst);
+
+                if (joined && PyString_Check(joined))
+                {
+                    error_text = PyString_AsString(joined);
+                }
+                else if (joined && PyUnicode_Check(joined))
+                {
+                    PyObject *utf8 = PyUnicode_AsUTF8String(joined);
+                    if (utf8)
+                        error_text = PyString_AsString(utf8);
+                }
             }
         }
     }
 
+    // --- Попытка №2: str(exception) ---
+    if (error_text == NULL || error_text[0] == '\0')
+    {
+        if (pvalue)
+        {
+            PyObject *s = PyObject_Str(pvalue);
+            if (s && PyString_Check(s))
+                error_text = PyString_AsString(s);
+        }
+    }
+
+    // --- Попытка №3: вывести в файл ---
+    FILE *f = fopen("sdmc:/python_error.txt", "w");
+    if (f)
+    {
+        PyErr_Display(ptype, pvalue, ptraceback);
+        fprintf(f, "ptype=%p\npvalue=%p\nptraceback=%p\n", ptype, pvalue, ptraceback);
+        fclose(f);
+    }
+
     ErrorSystemConfig c;
-    errorSystemCreate(&c, "Python traceback", error_text);
+    errorSystemCreate(&c, "Python traceback", error_text ? error_text : "Python error");
     errorSystemShow(&c);
 
     Py_Finalize();

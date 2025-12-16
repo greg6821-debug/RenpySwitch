@@ -254,10 +254,10 @@ void userAppInit()
 
     romfsInit();
 											 
-	Result arc = audrenInitialize(NULL);
-    if (R_FAILED(arc)) {
-        printf("audrenInitialize failed: 0x%x\n", arc);
-    }									 
+	//Result arc = audrenInitialize(NULL);
+    //if (R_FAILED(arc)) {
+        //printf("audrenInitialize failed: 0x%x\n", arc);
+    //}									 
 																 
 												
 										   

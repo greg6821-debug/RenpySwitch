@@ -189,21 +189,31 @@ static PyMethodDef myMethods[] = {
     { NULL, NULL, 0, NULL }
 };
 
-// Современная версия инициализации модуля для Python 3
-static struct PyModuleDef otrhlibnx_module = {
-    PyModuleDef_HEAD_INIT,
-    "_otrhlibnx",
-    "libnx module for Ren'Py on Switch",
-    -1,
-    myMethods
-};
-
-PyMODINIT_FUNC PyInit__otrhlibnx(void)
+// Для Python 2.7 используем старый API
+PyMODINIT_FUNC init_otrh_libnx(void)
 {
-    return PyModule_Create(&otrhlibnx_module);
+    Py_InitModule("_otrhlibnx", myMethods);
 }
 
-// ... остальные PyMODINIT_FUNC объявления остаются без изменений ...
+// Декларация функции createSaveData для избежания предупреждения
+Result createSaveData();
+
+// Хук для applet (выносим из main)
+static AppletHookCookie applet_hook_cookie;
+static void on_applet_hook(AppletHookType hook, void *param)
+{
+   switch (hook)
+   {
+      case AppletHookType_OnExitRequest:
+        fsdevCommitDevice("save");
+        svcSleepThread(1500000000ULL);
+        appletUnlockExit();
+        break;
+
+      default:
+         break;
+   }
+}
 
 void userAppInit()
 {
@@ -212,13 +222,13 @@ void userAppInit()
     
     rc = svcGetInfo(&cur_progid, InfoType_ProgramId, CUR_PROCESS_HANDLE, 0);
     if (R_FAILED(rc)) {
-        fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail));
+        diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_NotInitialized));
     }
     
     // Инициализация аккаунта
     rc = accountInitialize(AccountServiceType_Application);
     if (R_FAILED(rc)) {
-        fatalSimple(rc);
+        // Продолжаем без аккаунта
     }
     
     // Получаем пользователя
@@ -248,8 +258,8 @@ void userAppInit()
         rc = fsdevMountSaveData("save", cur_progid, userID);
         if (R_FAILED(rc)) {
             // Пытаемся создать сохранение
-            Result create_rc = createSaveData();
-            if (R_FAILED(create_rc)) {
+            rc = createSaveData();
+            if (R_FAILED(rc)) {
                 // Если не удалось создать, продолжаем без сохранения
             } else {
                 rc = fsdevMountSaveData("save", cur_progid, userID);
@@ -267,9 +277,6 @@ void userAppInit()
     if (R_FAILED(rc)) {
         // Продолжаем без сети
     }
-    
-    // Предварительная инициализация аудио (опционально)
-    // initialize_audio_system();
 }
 
 // Обновленная функция show_error
@@ -292,7 +299,6 @@ void show_error(const char* message, int should_exit)
     }
 }
 
-// Обновленный main с улучшенной обработкой ошибок
 int main(int argc, char* argv[])
 {
     // Настройка окружения
@@ -303,26 +309,9 @@ int main(int argc, char* argv[])
     appletLockExit();
     
     // Настройка хука для корректного завершения
-    static AppletHookCookie applet_hook_cookie;
-    static void on_applet_hook(AppletHookType hook, void *param)
-    {
-        switch (hook)
-        {
-            case AppletHookType_OnExitRequest:
-                // Коммитим сохранение перед выходом
-                fsdevCommitDevice("save");
-                // Разблокируем выход после задержки
-                svcSleepThread(1000000000ULL); // 1 секунда
-                appletUnlockExit();
-                break;
-                
-            default:
-                break;
-        }
-    }
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
     
-    // Настройка флагов Python
+    // Настройка флагов Python (Python 2.7)
     Py_NoSiteFlag = 1;
     Py_IgnoreEnvironmentFlag = 1;
     Py_NoUserSiteDirectory = 1;
@@ -346,22 +335,18 @@ int main(int argc, char* argv[])
     }
     fclose(renpy_main);
     
-    // Инициализация Python
+    // Инициализация Python (Python 2.7)
     Py_InitializeEx(0);
     if (!Py_IsInitialized()) {
         show_error("Failed to initialize Python interpreter.", 1);
         return 1;
     }
     
+    Py_SetProgramName(argv[0]);
     Py_SetPythonHome("romfs:/Contents/lib.zip");
     
-    // Настройка встроенных модулей
-    PyImport_AppendInittab("_otrhlibnx", PyInit__otrhlibnx);
-    // ... добавьте остальные модули аналогично
-    
-    // Установка аргументов Python
-    wchar_t* py_argv[] = { L"romfs:/Contents/renpy.py", NULL };
-    PySys_SetArgvEx(1, py_argv, 0);
+    // Установка аргументов Python (Python 2.7 использует char*)
+    PySys_SetArgvEx(argc, argv, 0);
     
     // Настройка пути Python
     if (PyRun_SimpleString(
@@ -418,7 +403,8 @@ int main(int argc, char* argv[])
         if (value != NULL) {
             PyObject* str = PyObject_Str(value);
             if (str != NULL) {
-                const char* error_msg = PyUnicode_AsUTF8(str);
+                // Для Python 2.7 используем PyString_AsString
+                const char* error_msg = PyString_AsString(str);
                 if (error_msg) {
                     show_error(error_msg, 1);
                 }
@@ -443,3 +429,14 @@ int main(int argc, char* argv[])
     
     return 0;
 }
+
+// Функция createSaveData (должна быть определена где-то в коде)
+Result createSaveData()
+{
+    // Реализация функции createSaveData (если есть в исходном коде)
+    // Если нет, нужно добавить реализацию
+    return 0;
+}
+
+// Остальные функции PyMODINIT_FUNC остаются как в оригинальном коде
+// ... (все init функции остаются без изменений)

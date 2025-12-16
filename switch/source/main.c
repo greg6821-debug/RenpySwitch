@@ -393,16 +393,7 @@ int main(int argc, char* argv[])
     if (!renpy_file)
         show_error("Could not find renpy.py", 1);
 
-    Py_SetPythonHome("romfs:/Contents/lib.zip");
-    PyImport_ExtendInittab(builtins);
-    Py_InitializeEx(0);
 
-    /* sys.argv — ТОЛЬКО ЗДЕСЬ */
-    char* pyargs[] = {
-        "romfs:/Contents/renpy.py",
-        NULL
-    };
-    PySys_SetArgvEx(1, pyargs, 1);
 
     /* init python */
     Py_SetPythonHome("romfs:/Contents/lib.zip");

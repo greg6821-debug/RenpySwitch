@@ -438,6 +438,31 @@ int main(int argc, char* argv[])
         "except ImportError:\n"
         "    pass\n"
     );
+
+	PyRun_SimpleString(
+        "import threading\n"
+        "import time\n"
+        "\n"
+        "# Patch Condition.wait for libnx compatibility\n"
+        "_original_condition_wait = threading.Condition.wait\n"
+        "def _patched_condition_wait(self, timeout=None):\n"
+        "    # Use a simple sleep-based wait instead\n"
+        "    if timeout is not None:\n"
+        "        time.sleep(timeout)\n"
+        "        return False  # Indicate timeout occurred\n"
+        "    else:\n"
+        "        # For indefinite wait, use a short, interruptible sleep.\n"
+        "        # In practice, Ren'Py threads check conditions in loops.\n"
+        "        time.sleep(0.016)  # ~60 FPS interval\n"
+        "        return True\n"
+        "threading.Condition.wait = _patched_condition_wait\n"
+        "\n"
+        "# Also patch Event.wait as it can have similar issues\n"
+        "_original_event_wait = threading.Event.wait\n"
+        "threading.Event.wait = _patched_condition_wait\n"
+        "\n"
+        "print('Threading patched for libnx')\n"
+    );
 	
     /* ---------- argv ---------- */
     char* pyargs[] = {
@@ -454,24 +479,16 @@ int main(int argc, char* argv[])
     );
 
     /* ---------- threads (CRITICAL) ---------- */
-    PyEval_InitThreads();
+    //PyEval_InitThreads();
 
     /* RELEASE GIL IMMEDIATELY */
-    PyThreadState *mainThreadState = PyEval_SaveThread();
+    //PyThreadState *mainThreadState = PyEval_SaveThread();
 
     /* ---------- back to python ---------- */
-    PyEval_RestoreThread(mainThreadState);
+    //PyEval_RestoreThread(mainThreadState);
 
     /* ---------- libnx threading FIX ---------- */
-    PyRun_SimpleString(
-        "import threading, time\n"
-        "def _nx_wait(self, timeout=None):\n"
-        "    if timeout is not None:\n"
-        "        time.sleep(timeout)\n"
-        "    else:\n"
-        "        time.sleep(0)\n"
-        "threading.Condition.wait = _nx_wait\n"
-    );
+
 
     /* ---------- run Ren'Py ---------- */
     if (PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1) == -1) {
@@ -479,10 +496,10 @@ int main(int argc, char* argv[])
     }
 
     /* ---------- release again ---------- */
-    mainThreadState = PyEval_SaveThread();
+    //mainThreadState = PyEval_SaveThread();
 
     /* ---------- shutdown ---------- */
-    PyEval_RestoreThread(mainThreadState);
+    //PyEval_RestoreThread(mainThreadState);
     Py_Finalize();
 
     return 0;

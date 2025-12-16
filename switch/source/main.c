@@ -44,6 +44,29 @@ static PyObject* commitsave(PyObject* self, PyObject* args)
     return Py_None;
 }
 
+static PyObject* py_nx_sleep(PyObject* self, PyObject* args) {
+    double seconds;
+    if (!PyArg_ParseTuple(args, "d", &seconds))
+        return NULL;
+    svcSleepThread((uint64_t)(seconds * 1000000000ULL));  // секунды → наносекунды
+    Py_RETURN_NONE;
+}
+
+static PyMethodDef NxMethods[] = {
+    {"sleep", py_nx_sleep, METH_VARARGS, "Sleep for given seconds using libnx"},
+    {NULL, NULL, 0, NULL}
+};
+
+static struct PyModuleDef nxmodule = {
+    PyModuleDef_HEAD_INIT,
+    "_nx",   // имя модуля
+    NULL,    // docstring
+    -1,      // размер состояния модуля
+    NxMethods
+};
+
+
+
 static PyObject* startboost(PyObject* self, PyObject* args)
 {
     appletSetCpuBoostMode(ApmPerformanceMode_Boost);
@@ -77,6 +100,10 @@ PyMODINIT_FUNC init_otrh_libnx(void)
 {
     Py_InitModule("_otrhlibnx", myMethods);
 }
+PyMODINIT_FUNC init_nx(void) {
+    Py_InitModule("_nx", NxMethods);
+}
+
 
 PyMODINIT_FUNC initpygame_sdl2_color();
 PyMODINIT_FUNC initpygame_sdl2_controller();
@@ -248,24 +275,10 @@ void userAppInit()
             rc = createSaveData();
             rc = fsdevMountSaveData("save", cur_progid, userID);
         }
-    }
-	
-				
+    }			
 
-    romfsInit();
-											 
-	//Result arc = audrenInitialize(NULL);
-    //if (R_FAILED(arc)) {
-        //printf("audrenInitialize failed: 0x%x\n", arc);
-    //}									 
-																 
-												
-										   
-											 
-
-																																 
-												
-	
+    romfsInit()									 							 
+																 											
     socketInitializeDefault();
 }
 
@@ -347,6 +360,7 @@ int main(int argc, char* argv[])
 
     static struct _inittab builtins[] = {
         {"_otrhlibnx", init_otrh_libnx},
+	    {"_nx", init_nx},
         {"pygame_sdl2.color", initpygame_sdl2_color},
         {"pygame_sdl2.controller", initpygame_sdl2_controller},
         {"pygame_sdl2.display", initpygame_sdl2_display},
@@ -424,8 +438,6 @@ int main(int argc, char* argv[])
 
     Py_SetPythonHome("romfs:/Contents/lib.zip");
     PyImport_ExtendInittab(builtins);
-
-
 	
     Py_InitializeEx(0);
 
@@ -453,28 +465,11 @@ int main(int argc, char* argv[])
         "sys.path.insert(0, 'romfs:/Contents/lib.zip')\n"
     );
 
-    /* ---------- threads (CRITICAL) ---------- */
-    //PyEval_InitThreads();
-
-    /* RELEASE GIL IMMEDIATELY */
-    //PyThreadState *mainThreadState = PyEval_SaveThread();
-
-    /* ---------- back to python ---------- */
-    //PyEval_RestoreThread(mainThreadState);
-
-    /* ---------- libnx threading FIX ---------- */
-
-
     /* ---------- run Ren'Py ---------- */
     if (PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1) == -1) {
         PyErr_Print();
     }
 
-    /* ---------- release again ---------- */
-    //mainThreadState = PyEval_SaveThread();
-
-    /* ---------- shutdown ---------- */
-    //PyEval_RestoreThread(mainThreadState);
     Py_Finalize();
 
     return 0;

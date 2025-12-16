@@ -419,6 +419,11 @@ int main(int argc, char* argv[])
     PyEval_InitThreads();
     PyThreadState* mainThreadState = PyEval_SaveThread();
 
+    PyRun_SimpleString(
+        "import renpy.fs\n"
+        "renpy.fs.mount('save', 'save:/')\n"
+    );
+	
     /* запуск Ren'Py */
     PyEval_RestoreThread(mainThreadState);
     if (PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1) == -1)

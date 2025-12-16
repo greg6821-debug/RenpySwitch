@@ -450,7 +450,7 @@ int main(int argc, char* argv[])
     /* ---------- sys.path ---------- */
     PyRun_SimpleString(
         "import sys\n"
-        "sys.path = ['romfs:/Contents/lib.zip']\n"
+        "sys.path.insert(0, 'romfs:/Contents/lib.zip')\n"
     );
 
     /* ---------- threads (CRITICAL) ---------- */

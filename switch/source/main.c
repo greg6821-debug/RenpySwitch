@@ -453,7 +453,8 @@ int main(int argc, char* argv[])
     /* sys.path */
     if (PyRun_SimpleString(
             "import sys\n"
-            "sys.path = ['romfs:/Contents/lib.zip']"
+            "sys.path.insert(0, 'romfs:/Contents/lib.zip')\n"
+		    "sys.path.insert(0, 'romfs:/Contents')\n"
         ) == -1)
     {
         show_error("Could not set Python path", 1);
@@ -466,6 +467,11 @@ int main(int argc, char* argv[])
     PyRun_SimpleString(
         "import renpy.fs\n"
         "renpy.fs.mount('save', 'save:/')\n"
+    );
+
+	PyRun_SimpleString(
+        "import renpy.config\n"
+        "renpy.config.has_background_threads = False\n"
     );
 	
     /* запуск Ren'Py */

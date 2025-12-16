@@ -454,8 +454,7 @@ int main(int argc, char* argv[])
     /* sys.path */
     if (PyRun_SimpleString(
             "import sys\n"
-            "sys.path.insert(0, 'romfs:/Contents/lib.zip')\n"
-		    "sys.path.insert(0, 'romfs:/Contents')\n"
+            "sys.path = ['romfs:/Contents/lib.zip']"
         ) == -1)
     {
         show_error("Could not set Python path", 1);

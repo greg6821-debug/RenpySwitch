@@ -425,9 +425,7 @@ int main(int argc, char* argv[])
     Py_SetPythonHome("romfs:/Contents/lib.zip");
     PyImport_ExtendInittab(builtins);
 
-    // Устанавливаем argv ПЕРЕД инициализацией
-    wchar_t *argv_w[] = {L"romfs:/Contents/renpy.py", NULL};
-    PySys_SetArgv(1, argv_w);
+
 	
     Py_InitializeEx(0);
 
@@ -437,7 +435,10 @@ int main(int argc, char* argv[])
     //    NULL
     //};
     //PySys_SetArgvEx(1, pyargs, 1);
-
+	
+    // Устанавливаем argv 
+    wchar_t *argv_w[] = {L"romfs:/Contents/renpy.py", NULL};
+    PySys_SetArgv(1, argv_w);
 
 	
     /* sys.path */

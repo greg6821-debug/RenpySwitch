@@ -440,7 +440,12 @@ int main(int argc, char* argv[])
     PyImport_ExtendInittab(builtins);								 
     Py_InitializeEx(0);
     PyEval_InitThreads();
-    
+
+	/* Захватываем GIL */
+    PyGILState_STATE gil_state = PyGILState_Ensure();
+
+    /* Сохраняем main thread state и ОТПУСКАЕМ GIL */
+    PyThreadState* mainThreadState = PyEval_SaveThread();
 
     char* pyargs[] = {
         "romfs:/Contents/renpy.py",
@@ -450,7 +455,7 @@ int main(int argc, char* argv[])
     PySys_SetArgvEx(1, pyargs, 1);
 
     int python_result;
-
+    PyEval_RestoreThread(mainThreadState);
     python_result = PyRun_SimpleString("import sys\nsys.path = ['romfs:/Contents/lib.zip']");
 
     if (python_result == -1)
@@ -466,12 +471,15 @@ int main(int argc, char* argv[])
         } \
     }
 
+	PyEval_RestoreThread(mainThreadState);
     x("os");
+	PyEval_RestoreThread(mainThreadState);
     x("pygame_sdl2");
+	PyEval_RestoreThread(mainThreadState);
     x("encodings");
 
 #undef x
-
+    PyEval_RestoreThread(mainThreadState);
     python_result = PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1);
 
     if (python_result == -1)
@@ -479,6 +487,9 @@ int main(int argc, char* argv[])
         show_error("An uncaught Python exception occurred during renpy.py execution.\n\nPlease look in the save:// folder for more information about this exception.", 1);
     }
 
+	PyGILState_STATE gil = PyGILState_Ensure();
+    PyGILState_Release(gil);
+	
     Py_Exit(0);
     return 0;
 }

@@ -404,20 +404,21 @@ int main(int argc, char* argv[])
     };
     PySys_SetArgvEx(1, pyargs, 1);
 
-	PyRun_SimpleString(
-        "import __builtin__\n"
-        "import os\n"
-        "\n"
-        "_orig_open = __builtin__.open\n"
-        "\n"
-        "def _switch_open(path, *args, **kwargs):\n"
-        "    if isinstance(path, basestring) and path.startswith('save://'):\n"
-        "        path = 'save:/' + path[7:]\n"
-        "    return _orig_open(path, *args, **kwargs)\n"
-        "\n"
-        "__builtin__.open = _switch_open\n"
-    );
-	
+    /* init python */
+    Py_SetPythonHome("romfs:/Contents/lib.zip");
+    PyImport_ExtendInittab(builtins);
+    Py_InitializeEx(0);
+
+    /* threads MUST be initialized early */
+    PyEval_InitThreads();
+
+    /* argv */
+    char* pyargs[] = {
+        "romfs:/Contents/renpy.py",
+        NULL,
+    };
+    PySys_SetArgvEx(1, pyargs, 1);
+
     /* sys.path */
     if (PyRun_SimpleString(
             "import sys\n"
@@ -427,18 +428,29 @@ int main(int argc, char* argv[])
         show_error("Could not set Python path", 1);
     }
 
-    /* threads */
-    PyEval_InitThreads();
+    /* patch save:// for Python 2.7 */
+    PyRun_SimpleString(
+        "import __builtin__\n"
+        "_orig_open = __builtin__.open\n"
+        "def _switch_open(path, *args, **kwargs):\n"
+        "    if isinstance(path, basestring) and path.startswith('save://'):\n"
+        "        path = 'save:/' + path[7:]\n"
+        "    return _orig_open(path, *args, **kwargs)\n"
+        "__builtin__.open = _switch_open\n"
+    );
+
+    /* release GIL for other threads */
     PyThreadState* mainThreadState = PyEval_SaveThread();
 
-    /* запуск Ren'Py */
+    /* run Ren'Py */
     PyEval_RestoreThread(mainThreadState);
     if (PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1) == -1)
     {
         show_error("Uncaught exception in renpy.py", 1);
     }
 
+    /* exit */
     Py_Exit(0);
     return 0;
-}
+    }
 

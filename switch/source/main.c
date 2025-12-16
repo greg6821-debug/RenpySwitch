@@ -146,33 +146,6 @@ PyMODINIT_FUNC initrenpy_parsersupport();
 
 
 
-// Overide the heap initialization function.
-void __libnx_initheap(void)
-{
-    void* addr = NULL;
-    u64 size = 0;
-    u64 mem_available = 0, mem_used = 0;
-
-    svcGetInfo(&mem_available, InfoType_TotalMemorySize, CUR_PROCESS_HANDLE, 0);
-    svcGetInfo(&mem_used, InfoType_UsedMemorySize, CUR_PROCESS_HANDLE, 0);
-
-    if (mem_available > mem_used+0x200000)
-        size = (mem_available - mem_used - 0x200000) & ~0x1FFFFF;
-    if (size == 0)
-        size = 0x2000000*16;
-
-    Result rc = svcSetHeapSize(&addr, size);
-
-    if (R_FAILED(rc) || addr==NULL)
-        diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_HeapAllocFailed));
-
-    extern char* fake_heap_start;
-    extern char* fake_heap_end;
-
-    fake_heap_start = (char*)addr;
-    fake_heap_end   = (char*)addr + size;
-}
-
 
 // Overide the heap initialization function.
 void __libnx_initheap(void)
@@ -266,20 +239,20 @@ void userAppInit()
             rc = fsdevMountSaveData("save", cur_progid, userID);
         }
     }
-    
+	
+				
+
     romfsInit();
+											 
+											 
+																 
+												
+										   
+											 
 
-    // 🔊 ВАЖНО: инициализация аудио
-    //setenv("SDL_AUDIODRIVER", "audren", 1);
-    //setenv("SDL_VIDEODRIVER", "switch", 1);
-    // Эти параметры можно оставить — они подскажут SDL желаемые настройки
-    //setenv("SDL_AUDIO_FREQUENCY", "48000", 1);
-    //setenv("SDL_AUDIO_CHANNELS", "2", 1);
-    //setenv("SDL_AUDIO_SAMPLES", "1024", 1);
-
-    // Инициализируем SDL (видео + аудио). Аудио теперь инициализируется правильно через драйвер audren внутри SDL.
-    //SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
-    
+																																 
+												
+	
     socketInitializeDefault();
 }
 
@@ -287,7 +260,7 @@ void userAppExit()
 {
     fsdevCommitDevice("save");
     fsdevUnmountDevice("save");
-    
+	
     socketExit();
     romfsExit();
 }
@@ -303,9 +276,9 @@ char python_error_buffer[0x400];
 
 void show_error(const char* message, int exit)
 {
-    //if (exit == 1) {
+    if (exit == 1) {
         Py_Finalize();
-    //}
+    }
     char* first_line = (char*)message;
     char* end = strchr(message, '\n');
     if (end != NULL)
@@ -317,9 +290,9 @@ void show_error(const char* message, int exit)
     ErrorSystemConfig c;
     errorSystemCreate(&c, (const char*)first_line, message);
     errorSystemShow(&c);
-    //if (exit == 1) {
+    if (exit == 1) {
         Py_Exit(1);
-    //}
+    }
 }
 
 
@@ -441,13 +414,14 @@ int main(int argc, char* argv[])
     {
         show_error("Could not find renpy.py.\n\nPlease ensure that you have extracted the files correctly so that the \"renpy.py\" file is in the same directory as the nsp file.", 1);
     }
-    
-    fclose(sysconfigdata_file);
-    Py_SetPythonHome("romfs:/Contents");
-    PyImport_ExtendInittab(builtins);
-    Py_InitializeEx(0);
-					   
 
+    fclose(sysconfigdata_file);
+	
+										
+									 
+    Py_InitializeEx(0);
+    Py_SetPythonHome("romfs:/Contents/lib.zip");
+    PyImport_ExtendInittab(builtins);
 
     char* pyargs[] = {
         "romfs:/Contents/renpy.py",
@@ -478,7 +452,7 @@ int main(int argc, char* argv[])
     x("encodings");
 
 #undef x
-    
+
     python_result = PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1);
 
     if (python_result == -1)

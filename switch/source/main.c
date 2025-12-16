@@ -269,7 +269,7 @@ void userAppInit()
         }
     }			
 
-    romfsInit()									 							 
+    romfsInit();									 							 
 																 											
     socketInitializeDefault();
 }

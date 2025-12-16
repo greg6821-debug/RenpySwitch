@@ -128,7 +128,7 @@ PyMODINIT_FUNC initrenpy_text_ftfont();
 PyMODINIT_FUNC initrenpy_text_textsupport();
 PyMODINIT_FUNC initrenpy_text_texwrap();
 
-PyMODINIT_FUNC initrenpy_compat_dictviews();
+//PyMODINIT_FUNC initrenpy_compat_dictviews();
 PyMODINIT_FUNC initrenpy_gl2_gl2draw();
 PyMODINIT_FUNC initrenpy_gl2_gl2mesh();
 PyMODINIT_FUNC initrenpy_gl2_gl2mesh2();
@@ -403,6 +403,17 @@ int main(int argc, char* argv[])
     };
     PySys_SetArgvEx(1, pyargs, 1);
 
+	PyRun_SimpleString(
+        "import builtins\n"
+        "import os\n"
+        "def _switch_open(path, *args, **kwargs):\n"
+        "    if isinstance(path, str) and path.startswith('save://'):\n"
+        "        path = 'save:/' + path[7:]\n"
+        "    return _orig_open(path, *args, **kwargs)\n"
+        "_orig_open = builtins.open\n"
+        "builtins.open = _switch_open\n"
+    );
+	
     /* sys.path */
     if (PyRun_SimpleString(
             "import sys\n"

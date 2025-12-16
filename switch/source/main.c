@@ -435,12 +435,14 @@ int main(int argc, char* argv[])
     //    NULL
     //};
     //PySys_SetArgvEx(1, pyargs, 1);
-
+    setenv("HOME", "/save", 1);
     PyRun_SimpleString(
-        "import os\n"
-        "if not hasattr(os, 'getuid'):\n"
-        "    os.getuid = lambda: 0\n"
-        "os.environ['HOME'] = '/'\n"
+        "try:\n"
+        "    import os\n"
+        "    if not hasattr(os, 'getuid'):\n"
+        "        os.getuid = lambda: 0\n"
+        "except ImportError:\n"
+        "    pass\n"
     );
 	
     // Устанавливаем argv 

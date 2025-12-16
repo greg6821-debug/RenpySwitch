@@ -335,6 +335,7 @@ static void on_applet_hook(AppletHookType hook, void *param)
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
+	setenv("SDL_AUDIODRIVER", "switch", 1);
 
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
@@ -464,15 +465,7 @@ int main(int argc, char* argv[])
     PyEval_InitThreads();
     //PyThreadState* mainThreadState = PyEval_SaveThread();
 
-    PyRun_SimpleString(
-        "import renpy.fs\n"
-        "renpy.fs.mount('save', 'save:/')\n"
-    );
 
-	PyRun_SimpleString(
-        "import renpy.config\n"
-        "renpy.config.has_background_threads = False\n"
-    );
 	
     /* запуск Ren'Py */
     //PyEval_RestoreThread(mainThreadState);

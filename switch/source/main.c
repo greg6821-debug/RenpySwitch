@@ -57,14 +57,6 @@ static PyMethodDef NxMethods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-static struct PyModuleDef nxmodule = {
-    PyModuleDef_HEAD_INIT,
-    "_nx",   // имя модуля
-    NULL,    // docstring
-    -1,      // размер состояния модуля
-    NxMethods
-};
-
 
 
 static PyObject* startboost(PyObject* self, PyObject* args)

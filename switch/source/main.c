@@ -463,22 +463,7 @@ int main(int argc, char* argv[])
     PyEval_InitThreads();
     //PyThreadState* mainThreadState = PyEval_SaveThread();
 
-    // Запускаем Ren'Py с обработкой ошибок потоков
-    if (PyRun_SimpleString(
-            "import sys\n"
-            "import traceback\n"
-            "\n"
-            "def excepthook(type, value, tb):\n"
-            "    # Игнорируем ошибки потоков 10000\n"
-            "    if isinstance(value, IOError) and value.errno == 10000:\n"
-            "        return\n"
-            "    sys.__excepthook__(type, value, tb)\n"
-            "\n"
-            "sys.excepthook = excepthook\n"
-        ) == -1)
-    {
-        show_error("Failed to set excepthook", 1);
-	}
+
 	
     /* запуск Ren'Py */
     //PyEval_RestoreThread(mainThreadState);
@@ -486,6 +471,9 @@ int main(int argc, char* argv[])
     {
         show_error("Uncaught exception in renpy.py", 1);
     }
+
+	/* Сохраняем главный thread state и ОТПУСКАЕМ GIL */
+    PyThreadState* mainThreadState = PyEval_SaveThread();
 
     Py_Exit(0);
 	userAppExit();

@@ -438,31 +438,6 @@ int main(int argc, char* argv[])
         "except ImportError:\n"
         "    pass\n"
     );
-
-	PyRun_SimpleString(
-        "import threading\n"
-        "import time\n"
-        "\n"
-        "# Patch Condition.wait for libnx compatibility\n"
-        "_original_condition_wait = threading.Condition.wait\n"
-        "def _patched_condition_wait(self, timeout=None):\n"
-        "    # Use a simple sleep-based wait instead\n"
-        "    if timeout is not None:\n"
-        "        time.sleep(timeout)\n"
-        "        return False  # Indicate timeout occurred\n"
-        "    else:\n"
-        "        # For indefinite wait, use a short, interruptible sleep.\n"
-        "        # In practice, Ren'Py threads check conditions in loops.\n"
-        "        time.sleep(0.016)  # ~60 FPS interval\n"
-        "        return True\n"
-        "threading.Condition.wait = _patched_condition_wait\n"
-        "\n"
-        "# Also patch Event.wait as it can have similar issues\n"
-        "_original_event_wait = threading.Event.wait\n"
-        "threading.Event.wait = _patched_condition_wait\n"
-        "\n"
-        "print('Threading patched for libnx')\n"
-    );
 	
     /* ---------- argv ---------- */
     char* pyargs[] = {

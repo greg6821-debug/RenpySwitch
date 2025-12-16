@@ -128,7 +128,7 @@ PyMODINIT_FUNC initrenpy_text_ftfont();
 PyMODINIT_FUNC initrenpy_text_textsupport();
 PyMODINIT_FUNC initrenpy_text_texwrap();
 
-//PyMODINIT_FUNC initrenpy_compat_dictviews();
+PyMODINIT_FUNC initrenpy_compat_dictviews();
 PyMODINIT_FUNC initrenpy_gl2_gl2draw();
 PyMODINIT_FUNC initrenpy_gl2_gl2mesh();
 PyMODINIT_FUNC initrenpy_gl2_gl2mesh2();
@@ -368,6 +368,7 @@ int main(int argc, char* argv[])
         {"pygame_sdl2.surface", initpygame_sdl2_surface},
         {"pygame_sdl2.transform", initpygame_sdl2_transform},
 
+	    {"renpy.compat.dictviews", initrenpy_compat_dictviews},
         {"_renpy", init_renpy},
         {"_renpybidi", init_renpybidi},
         {"renpy.audio.renpysound", initrenpy_audio_renpysound},
@@ -404,14 +405,17 @@ int main(int argc, char* argv[])
     PySys_SetArgvEx(1, pyargs, 1);
 
 	PyRun_SimpleString(
-        "import builtins\n"
+        "import __builtin__\n"
         "import os\n"
+        "\n"
+        "_orig_open = __builtin__.open\n"
+        "\n"
         "def _switch_open(path, *args, **kwargs):\n"
-        "    if isinstance(path, str) and path.startswith('save://'):\n"
+        "    if isinstance(path, basestring) and path.startswith('save://'):\n"
         "        path = 'save:/' + path[7:]\n"
         "    return _orig_open(path, *args, **kwargs)\n"
-        "_orig_open = builtins.open\n"
-        "builtins.open = _switch_open\n"
+        "\n"
+        "__builtin__.open = _switch_open\n"
     );
 	
     /* sys.path */

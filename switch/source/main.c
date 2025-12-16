@@ -435,6 +435,13 @@ int main(int argc, char* argv[])
     //    NULL
     //};
     //PySys_SetArgvEx(1, pyargs, 1);
+
+    PyRun_SimpleString(
+        "import os\n"
+        "if not hasattr(os, 'getuid'):\n"
+        "    os.getuid = lambda: 0\n"
+        "os.environ['HOME'] = '/'\n"
+    );
 	
     // Устанавливаем argv 
     wchar_t *argv_w[] = {L"romfs:/Contents/renpy.py", NULL};

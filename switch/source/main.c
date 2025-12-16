@@ -393,23 +393,19 @@ int main(int argc, char* argv[])
     if (!renpy_file)
         show_error("Could not find renpy.py", 1);
 
-
-
-    /* init python */
     Py_SetPythonHome("romfs:/Contents/lib.zip");
     PyImport_ExtendInittab(builtins);
     Py_InitializeEx(0);
 
-    /* threads MUST be initialized early */
-    PyEval_InitThreads();
-
-    /* argv */
+    /* sys.argv — ТОЛЬКО ЗДЕСЬ */
     char* pyargs[] = {
         "romfs:/Contents/renpy.py",
-        NULL,
+        NULL
     };
     PySys_SetArgvEx(1, pyargs, 1);
 
+
+	
     /* sys.path */
     if (PyRun_SimpleString(
             "import sys\n"
@@ -419,29 +415,17 @@ int main(int argc, char* argv[])
         show_error("Could not set Python path", 1);
     }
 
-    /* patch save:// for Python 2.7 */
-    PyRun_SimpleString(
-        "import __builtin__\n"
-        "_orig_open = __builtin__.open\n"
-        "def _switch_open(path, *args, **kwargs):\n"
-        "    if isinstance(path, basestring) and path.startswith('save://'):\n"
-        "        path = 'save:/' + path[7:]\n"
-        "    return _orig_open(path, *args, **kwargs)\n"
-        "__builtin__.open = _switch_open\n"
-    );
-
-    /* release GIL for other threads */
+    /* threads */
+    PyEval_InitThreads();
     PyThreadState* mainThreadState = PyEval_SaveThread();
 
-    /* run Ren'Py */
+    /* запуск Ren'Py */
     PyEval_RestoreThread(mainThreadState);
     if (PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1) == -1)
     {
         show_error("Uncaught exception in renpy.py", 1);
     }
 
-    /* exit */
     Py_Exit(0);
     return 0;
-    }
-
+}

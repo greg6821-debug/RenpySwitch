@@ -346,9 +346,7 @@ int main(int argc, char* argv[])
     Py_OptimizeFlag = 2;
 
     static struct _inittab builtins[] = {
-
         {"_otrhlibnx", init_otrh_libnx},
-
         {"pygame_sdl2.color", initpygame_sdl2_color},
         {"pygame_sdl2.controller", initpygame_sdl2_controller},
         {"pygame_sdl2.display", initpygame_sdl2_display},
@@ -383,113 +381,49 @@ int main(int argc, char* argv[])
         {"renpy.gl.gltexture", initrenpy_gl_gltexture},
         {"renpy.pydict", initrenpy_pydict},
         {"renpy.style", initrenpy_style},
-        {"renpy.styledata.style_activate_functions", initrenpy_styledata_style_activate_functions},
-        {"renpy.styledata.style_functions", initrenpy_styledata_style_functions},
-        {"renpy.styledata.style_hover_functions", initrenpy_styledata_style_hover_functions},
-        {"renpy.styledata.style_idle_functions", initrenpy_styledata_style_idle_functions},
-        {"renpy.styledata.style_insensitive_functions", initrenpy_styledata_style_insensitive_functions},
-        {"renpy.styledata.style_selected_activate_functions", initrenpy_styledata_style_selected_activate_functions},
-        {"renpy.styledata.style_selected_functions", initrenpy_styledata_style_selected_functions},
-        {"renpy.styledata.style_selected_hover_functions", initrenpy_styledata_style_selected_hover_functions},
-        {"renpy.styledata.style_selected_idle_functions", initrenpy_styledata_style_selected_idle_functions},
-        {"renpy.styledata.style_selected_insensitive_functions", initrenpy_styledata_style_selected_insensitive_functions},
-        {"renpy.styledata.styleclass", initrenpy_styledata_styleclass},
-        {"renpy.styledata.stylesets", initrenpy_styledata_stylesets},
-        {"renpy.text.ftfont", initrenpy_text_ftfont},
-        {"renpy.text.textsupport", initrenpy_text_textsupport},
-        {"renpy.text.texwrap", initrenpy_text_texwrap},
-
-        {"renpy.compat.dictviews", initrenpy_compat_dictviews},
-        {"renpy.gl2.gl2draw", initrenpy_gl2_gl2draw},
-        {"renpy.gl2.gl2mesh", initrenpy_gl2_gl2mesh},
-        {"renpy.gl2.gl2mesh2", initrenpy_gl2_gl2mesh2},
-        {"renpy.gl2.gl2mesh3", initrenpy_gl2_gl2mesh3},
-        {"renpy.gl2.gl2model", initrenpy_gl2_gl2model},
-        {"renpy.gl2.gl2polygon", initrenpy_gl2_gl2polygon},
-        {"renpy.gl2.gl2shader", initrenpy_gl2_gl2shader},
-        {"renpy.gl2.gl2texture", initrenpy_gl2_gl2texture},
-        {"renpy.uguu.gl", initrenpy_uguu_gl},
-        {"renpy.uguu.uguu", initrenpy_uguu_uguu},
-        
-
         {"renpy.parsersupport", initrenpy_parsersupport},
         {"pygame_sdl2.font", initpygame_sdl2_font},
         {"pygame_sdl2.mixer", initpygame_sdl2_mixer},
         {"pygame_sdl2.mixer_music", initpygame_sdl2_mixer_music},
-
         {NULL, NULL}
     };
 
-    FILE* sysconfigdata_file = fopen("romfs:/Contents/lib.zip", "rb");
     FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
+    if (!renpy_file)
+        show_error("Could not find renpy.py", 1);
 
-    if (sysconfigdata_file == NULL)
-    {
-        show_error("Could not find lib.zip.\n\nPlease ensure that you have extracted the files correctly so that the \"lib.zip\" file is in the same directory as the nsp file.", 1);
-    }
-
-    if (renpy_file == NULL)
-    {
-        show_error("Could not find renpy.py.\n\nPlease ensure that you have extracted the files correctly so that the \"renpy.py\" file is in the same directory as the nsp file.", 1);
-    }
-
-    fclose(sysconfigdata_file);
-	
-										
-	Py_SetPythonHome("romfs:/Contents/lib.zip");
-    PyImport_ExtendInittab(builtins);								 
+    Py_SetPythonHome("romfs:/Contents/lib.zip");
+    PyImport_ExtendInittab(builtins);
     Py_InitializeEx(0);
-    PyEval_InitThreads();
 
-	/* Захватываем GIL */
-    PyGILState_STATE gil_state = PyGILState_Ensure();
-
-    /* Сохраняем main thread state и ОТПУСКАЕМ GIL */
-    PyThreadState* mainThreadState = PyEval_SaveThread();
-
+    /* sys.argv — ТОЛЬКО ЗДЕСЬ */
     char* pyargs[] = {
         "romfs:/Contents/renpy.py",
-        NULL,
+        NULL
     };
-
     PySys_SetArgvEx(1, pyargs, 1);
 
-    int python_result;
-    PyEval_RestoreThread(mainThreadState);
-    python_result = PyRun_SimpleString("import sys\nsys.path = ['romfs:/Contents/lib.zip']");
-
-    if (python_result == -1)
+    /* sys.path */
+    if (PyRun_SimpleString(
+            "import sys\n"
+            "sys.path = ['romfs:/Contents/lib.zip']"
+        ) == -1)
     {
-        show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.", 1);
+        show_error("Could not set Python path", 1);
     }
 
-#define x(lib) \
-    { \
-        if (PyRun_SimpleString("import " lib) == -1) \
-        { \
-            show_error("Could not import python library " lib ".\n\nPlease ensure that you have extracted the files correctly so that the \"lib\" folder is in the same directory as the nsp file, and that the \"lib\" folder contains the folder \"python2.7\". \nInside that folder, the file \"" lib ".py\" or folder \"" lib "\" needs to exist.", 1); \
-        } \
-    }
+    /* threads */
+    PyEval_InitThreads();
+    PyThreadState* mainThreadState = PyEval_SaveThread();
 
-	PyEval_RestoreThread(mainThreadState);
-    x("os");
-	PyEval_RestoreThread(mainThreadState);
-    x("pygame_sdl2");
-	PyEval_RestoreThread(mainThreadState);
-    x("encodings");
-
-#undef x
+    /* запуск Ren'Py */
     PyEval_RestoreThread(mainThreadState);
-    python_result = PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1);
-
-    if (python_result == -1)
+    if (PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1) == -1)
     {
-        show_error("An uncaught Python exception occurred during renpy.py execution.\n\nPlease look in the save:// folder for more information about this exception.", 1);
+        show_error("Uncaught exception in renpy.py", 1);
     }
 
-	PyGILState_STATE gil = PyGILState_Ensure();
-    PyGILState_Release(gil);
-	
     Py_Exit(0);
     return 0;
 }
+

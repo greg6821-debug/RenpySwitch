@@ -429,12 +429,6 @@ int main(int argc, char* argv[])
 	
     Py_InitializeEx(0);
 
-    /* sys.argv — ТОЛЬКО ЗДЕСЬ */
-    //char* pyargs[] = {
-    //    "romfs:/Contents/renpy.py",
-    //    NULL
-    //};
-    //PySys_SetArgvEx(1, pyargs, 1);
     setenv("HOME", "/save", 1);
     PyRun_SimpleString(
         "try:\n"
@@ -446,8 +440,12 @@ int main(int argc, char* argv[])
     );
 	
     /* ---------- argv ---------- */
-    wchar_t *argv_w[] = { L"romfs:/Contents/renpy.py", NULL };
-    PySys_SetArgv(1, argv_w);
+    char* pyargs[] = {
+        "romfs:/Contents/renpy.py",
+        NULL
+    };
+    //PySys_SetArgvEx(1, pyargs, 1);
+	PySys_SetArgv(1, pyargs);
 
     /* ---------- sys.path ---------- */
     PyRun_SimpleString(
@@ -476,12 +474,6 @@ int main(int argc, char* argv[])
     );
 
     /* ---------- run Ren'Py ---------- */
-    FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
-    if (!renpy_file) {
-        PyErr_Print();
-        return 1;
-    }
-
     if (PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1) == -1) {
         PyErr_Print();
     }

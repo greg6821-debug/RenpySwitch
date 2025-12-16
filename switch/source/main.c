@@ -445,37 +445,53 @@ int main(int argc, char* argv[])
         "    pass\n"
     );
 	
-    // Устанавливаем argv 
-    wchar_t *argv_w[] = {L"romfs:/Contents/renpy.py", NULL};
+    /* ---------- argv ---------- */
+    wchar_t *argv_w[] = { L"romfs:/Contents/renpy.py", NULL };
     PySys_SetArgv(1, argv_w);
 
-	
-    /* sys.path */
-    if (PyRun_SimpleString(
-            "import sys\n"
-            "sys.path = ['romfs:/Contents/lib.zip']"
-        ) == -1)
-    {
-        show_error("Could not set Python path", 1);
-    }
+    /* ---------- sys.path ---------- */
+    PyRun_SimpleString(
+        "import sys\n"
+        "sys.path = ['romfs:/Contents/lib.zip']\n"
+    );
 
-    /* threads */
+    /* ---------- threads (CRITICAL) ---------- */
     PyEval_InitThreads();
-    //PyThreadState* mainThreadState = PyEval_SaveThread();
 
+    /* RELEASE GIL IMMEDIATELY */
+    PyThreadState *mainThreadState = PyEval_SaveThread();
 
-	
-    /* запуск Ren'Py */
-    //PyEval_RestoreThread(mainThreadState);
-    if (PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1) == -1)
-    {
-        show_error("Uncaught exception in renpy.py", 1);
+    /* ---------- back to python ---------- */
+    PyEval_RestoreThread(mainThreadState);
+
+    /* ---------- libnx threading FIX ---------- */
+    PyRun_SimpleString(
+        "import threading, time\n"
+        "def _nx_wait(self, timeout=None):\n"
+        "    if timeout is not None:\n"
+        "        time.sleep(timeout)\n"
+        "    else:\n"
+        "        time.sleep(0)\n"
+        "threading.Condition.wait = _nx_wait\n"
+    );
+
+    /* ---------- run Ren'Py ---------- */
+    FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
+    if (!renpy_file) {
+        PyErr_Print();
+        return 1;
     }
 
-	/* Сохраняем главный thread state и ОТПУСКАЕМ GIL */
-    PyThreadState* mainThreadState = PyEval_SaveThread();
+    if (PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1) == -1) {
+        PyErr_Print();
+    }
 
-    Py_Exit(0);
-	userAppExit();
+    /* ---------- release again ---------- */
+    mainThreadState = PyEval_SaveThread();
+
+    /* ---------- shutdown ---------- */
+    PyEval_RestoreThread(mainThreadState);
+    Py_Finalize();
+
     return 0;
 }

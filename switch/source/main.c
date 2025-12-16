@@ -381,6 +381,7 @@ int main(int argc, char* argv[])
         {"renpy.gl.glrtt_fbo", initrenpy_gl_glrtt_fbo},
         {"renpy.gl.gltexture", initrenpy_gl_gltexture},
         {"renpy.pydict", initrenpy_pydict},
+
         {"renpy.style", initrenpy_style},
         {"renpy.parsersupport", initrenpy_parsersupport},
 
@@ -423,14 +424,19 @@ int main(int argc, char* argv[])
 
     Py_SetPythonHome("romfs:/Contents/lib.zip");
     PyImport_ExtendInittab(builtins);
+
+    // Устанавливаем argv ПЕРЕД инициализацией
+    wchar_t *argv_w[] = {L"romfs:/Contents/renpy.py", NULL};
+    PySys_SetArgv(1, argv_w);
+	
     Py_InitializeEx(0);
 
     /* sys.argv — ТОЛЬКО ЗДЕСЬ */
-    char* pyargs[] = {
-        "romfs:/Contents/renpy.py",
-        NULL
-    };
-    PySys_SetArgvEx(1, pyargs, 1);
+    //char* pyargs[] = {
+    //    "romfs:/Contents/renpy.py",
+    //    NULL
+    //};
+    //PySys_SetArgvEx(1, pyargs, 1);
 
 
 	
@@ -445,7 +451,7 @@ int main(int argc, char* argv[])
 
     /* threads */
     PyEval_InitThreads();
-    PyThreadState* mainThreadState = PyEval_SaveThread();
+    //PyThreadState* mainThreadState = PyEval_SaveThread();
 
     PyRun_SimpleString(
         "import renpy.fs\n"
@@ -453,7 +459,7 @@ int main(int argc, char* argv[])
     );
 	
     /* запуск Ren'Py */
-    PyEval_RestoreThread(mainThreadState);
+    //PyEval_RestoreThread(mainThreadState);
     if (PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1) == -1)
     {
         show_error("Uncaught exception in renpy.py", 1);

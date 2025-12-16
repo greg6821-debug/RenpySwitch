@@ -335,7 +335,6 @@ static void on_applet_hook(AppletHookType hook, void *param)
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
-	setenv("SDL_AUDIODRIVER", "switch", 1);
 
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
@@ -464,7 +463,22 @@ int main(int argc, char* argv[])
     PyEval_InitThreads();
     //PyThreadState* mainThreadState = PyEval_SaveThread();
 
-
+    // Запускаем Ren'Py с обработкой ошибок потоков
+    if (PyRun_SimpleString(
+            "import sys\n"
+            "import traceback\n"
+            "\n"
+            "def excepthook(type, value, tb):\n"
+            "    # Игнорируем ошибки потоков 10000\n"
+            "    if isinstance(value, IOError) and value.errno == 10000:\n"
+            "        return\n"
+            "    sys.__excepthook__(type, value, tb)\n"
+            "\n"
+            "sys.excepthook = excepthook\n"
+        ) == -1)
+    {
+        show_error("Failed to set excepthook", 1);
+	}
 	
     /* запуск Ren'Py */
     //PyEval_RestoreThread(mainThreadState);

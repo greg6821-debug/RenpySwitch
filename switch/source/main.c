@@ -400,7 +400,6 @@ int main(int argc, char* argv[])
         {"renpy.text.textsupport", initrenpy_text_textsupport},
         {"renpy.text.texwrap", initrenpy_text_texwrap},
 
-        {"renpy.compat.dictviews", initrenpy_compat_dictviews},
         {"renpy.gl2.gl2draw", initrenpy_gl2_gl2draw},
         {"renpy.gl2.gl2mesh", initrenpy_gl2_gl2mesh},
         {"renpy.gl2.gl2mesh2", initrenpy_gl2_gl2mesh2},
@@ -461,5 +460,6 @@ int main(int argc, char* argv[])
     }
 
     Py_Exit(0);
+	userAppExit();
     return 0;
 }

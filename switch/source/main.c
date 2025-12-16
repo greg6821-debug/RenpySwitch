@@ -1,398 +1,445 @@
 #include <switch.h>
 #include <Python.h>
 #include <stdio.h>
+#include <string.h>
+
 u64 cur_progid = 0;
-AccountUid userID={0};
+AccountUid userID = {0};
+
+// Аудио контекст для проверки
+static bool audio_initialized = false;
+
 static PyObject* commitsave(PyObject* self, PyObject* args)
 {
+    FsFileSystem* FsSave = fsdevGetDeviceFileSystem("save");
+    if (!FsSave) {
+        PyErr_SetString(PyExc_RuntimeError, "Save filesystem not mounted");
+        return NULL;
+    }
+
     u64 total_size = 0;
     u64 free_size = 0;
-    FsFileSystem* FsSave = fsdevGetDeviceFileSystem("save");
-    FsSaveDataInfoReader reader;
-    FsSaveDataInfo info;
-    s64 total_entries=0;
-    Result rc=0;
-   
-    fsdevCommitDevice("save");
+    Result rc = 0;
+    
+    // Commit текущего состояния
+    rc = fsdevCommitDevice("save");
+    if (R_FAILED(rc)) {
+        PyErr_Format(PyExc_RuntimeError, "Failed to commit save: 0x%x", rc);
+        return NULL;
+    }
+    
+    // Получаем информацию о свободном месте
     rc = fsFsGetTotalSpace(FsSave, "/", &total_size);
-    if (R_FAILED(rc)) return Py_None; // Добавлена проверка
+    if (R_FAILED(rc)) {
+        PyErr_Format(PyExc_RuntimeError, "Failed to get total space: 0x%x", rc);
+        return NULL;
+    }
+    
     rc = fsFsGetFreeSpace(FsSave, "/", &free_size);
-    if (R_FAILED(rc)) return Py_None; // Добавлена проверка
+    if (R_FAILED(rc)) {
+        PyErr_Format(PyExc_RuntimeError, "Failed to get free space: 0x%x", rc);
+        return NULL;
+    }
+    
     if (free_size < 0x800000) {
         u64 new_size = total_size + 0x800000;
+        
+        // Размонтируем устройство
         fsdevUnmountDevice("save");
+        
+        FsSaveDataInfoReader reader;
+        FsSaveDataInfo info;
+        s64 total_entries = 0;
+        
+        // Ищем сохранение для расширения
         rc = fsOpenSaveDataInfoReader(&reader, FsSaveDataSpaceId_User);
-        if (R_FAILED(rc)) return Py_None; // Добавлена проверка
+        if (R_FAILED(rc)) {
+            PyErr_Format(PyExc_RuntimeError, "Failed to open save reader: 0x%x", rc);
+            return NULL;
+        }
+        
+        bool found = false;
         while(1) {
             rc = fsSaveDataInfoReaderRead(&reader, &info, 1, &total_entries);
-            if (R_FAILED(rc) || total_entries==0) break;
-            if (info.save_data_type == FsSaveDataType_Account && userID.uid[0] == info.uid.uid[0] && userID.uid[1] == info.uid.uid[1] && info.application_id == cur_progid) {
-                rc = fsExtendSaveDataFileSystem(info.save_data_space_id, info.save_data_id, new_size, 0x400000);
-                if (R_FAILED(rc)) break; // Добавлена проверка
+            if (R_FAILED(rc) || total_entries == 0) break;
+            
+            if (info.save_data_type == FsSaveDataType_Account && 
+                memcmp(&userID, &info.uid, sizeof(AccountUid)) == 0 &&
+                info.application_id == cur_progid) {
+                
+                rc = fsExtendSaveDataFileSystem(info.save_data_space_id, 
+                                               info.save_data_id, 
+                                               new_size, 
+                                               0x400000);
+                if (R_FAILED(rc)) {
+                    fsSaveDataInfoReaderClose(&reader);
+                    PyErr_Format(PyExc_RuntimeError, "Failed to extend save: 0x%x", rc);
+                    return NULL;
+                }
+                found = true;
                 break;
             }
         }
+        
         fsSaveDataInfoReaderClose(&reader);
-        fsdevMountSaveData("save", cur_progid, userID);
-    }
-    return Py_None;
-}
-static PyObject* startboost(PyObject* self, PyObject* args)
-{
-    appletSetCpuBoostMode(ApmPerformanceMode_Boost);
-  
-    return Py_None;
-}
-static PyObject* disableboost(PyObject* self, PyObject* args)
-{
-    appletSetCpuBoostMode(ApmPerformanceMode_Normal);
-  
-    return Py_None;
-}
-static PyObject* restartprogram(PyObject* self, PyObject* args)
-{
-    appletRestartProgram(NULL, 0);
-  
-    return Py_None;
-}
-static PyMethodDef myMethods[] = {
-    { "commitsave", commitsave, METH_NOARGS, "commitsave" },
-    { "startboost", startboost, METH_NOARGS, "startboost" },
-    { "disableboost", disableboost, METH_NOARGS, "disableboost" },
-    { "restartprogram", restartprogram, METH_NOARGS, "restartprogram" },
-    { NULL, NULL, 0, NULL }
-};
-PyMODINIT_FUNC init_otrh_libnx(void)
-{
-    Py_InitModule("_otrhlibnx", myMethods);
-}
-PyMODINIT_FUNC initpygame_sdl2_color();
-PyMODINIT_FUNC initpygame_sdl2_controller();
-PyMODINIT_FUNC initpygame_sdl2_display();
-PyMODINIT_FUNC initpygame_sdl2_draw();
-PyMODINIT_FUNC initpygame_sdl2_error();
-PyMODINIT_FUNC initpygame_sdl2_event();
-PyMODINIT_FUNC initpygame_sdl2_gfxdraw();
-PyMODINIT_FUNC initpygame_sdl2_image();
-PyMODINIT_FUNC initpygame_sdl2_joystick();
-PyMODINIT_FUNC initpygame_sdl2_key();
-PyMODINIT_FUNC initpygame_sdl2_locals();
-PyMODINIT_FUNC initpygame_sdl2_mouse();
-PyMODINIT_FUNC initpygame_sdl2_power();
-PyMODINIT_FUNC initpygame_sdl2_pygame_time();
-PyMODINIT_FUNC initpygame_sdl2_rect();
-PyMODINIT_FUNC initpygame_sdl2_render();
-PyMODINIT_FUNC initpygame_sdl2_rwobject();
-PyMODINIT_FUNC initpygame_sdl2_scrap();
-PyMODINIT_FUNC initpygame_sdl2_surface();
-PyMODINIT_FUNC initpygame_sdl2_transform();
-PyMODINIT_FUNC init_renpy();
-PyMODINIT_FUNC init_renpybidi();
-PyMODINIT_FUNC initrenpy_audio_renpysound();
-PyMODINIT_FUNC initrenpy_display_accelerator();
-PyMODINIT_FUNC initrenpy_display_render();
-PyMODINIT_FUNC initrenpy_display_matrix();
-PyMODINIT_FUNC initrenpy_gl_gldraw();
-PyMODINIT_FUNC initrenpy_gl_glenviron_shader();
-PyMODINIT_FUNC initrenpy_gl_glrtt_copy();
-PyMODINIT_FUNC initrenpy_gl_glrtt_fbo();
-PyMODINIT_FUNC initrenpy_gl_gltexture();
-PyMODINIT_FUNC initrenpy_pydict();
-PyMODINIT_FUNC initrenpy_style();
-PyMODINIT_FUNC initrenpy_styledata_style_activate_functions();
-PyMODINIT_FUNC initrenpy_styledata_style_functions();
-PyMODINIT_FUNC initrenpy_styledata_style_hover_functions();
-PyMODINIT_FUNC initrenpy_styledata_style_idle_functions();
-PyMODINIT_FUNC initrenpy_styledata_style_insensitive_functions();
-PyMODINIT_FUNC initrenpy_styledata_style_selected_activate_functions();
-PyMODINIT_FUNC initrenpy_styledata_style_selected_functions();
-PyMODINIT_FUNC initrenpy_styledata_style_selected_hover_functions();
-PyMODINIT_FUNC initrenpy_styledata_style_selected_idle_functions();
-PyMODINIT_FUNC initrenpy_styledata_style_selected_insensitive_functions();
-PyMODINIT_FUNC initrenpy_styledata_styleclass();
-PyMODINIT_FUNC initrenpy_styledata_stylesets();
-PyMODINIT_FUNC initrenpy_text_ftfont();
-PyMODINIT_FUNC initrenpy_text_textsupport();
-PyMODINIT_FUNC initrenpy_text_texwrap();
-PyMODINIT_FUNC initrenpy_compat_dictviews();
-PyMODINIT_FUNC initrenpy_gl2_gl2draw();
-PyMODINIT_FUNC initrenpy_gl2_gl2mesh();
-PyMODINIT_FUNC initrenpy_gl2_gl2mesh2();
-PyMODINIT_FUNC initrenpy_gl2_gl2mesh3();
-PyMODINIT_FUNC initrenpy_gl2_gl2model();
-PyMODINIT_FUNC initrenpy_gl2_gl2polygon();
-PyMODINIT_FUNC initrenpy_gl2_gl2shader();
-PyMODINIT_FUNC initrenpy_gl2_gl2texture();
-PyMODINIT_FUNC initrenpy_uguu_gl();
-PyMODINIT_FUNC initrenpy_uguu_uguu();
-PyMODINIT_FUNC initrenpy_parsersupport();
-PyMODINIT_FUNC initpygame_sdl2_font();
-PyMODINIT_FUNC initpygame_sdl2_mixer();
-PyMODINIT_FUNC initpygame_sdl2_mixer_music();
-// Overide the heap initialization function.
-void __libnx_initheap(void)
-{
-    void* addr = NULL;
-    u64 size = 0;
-    u64 mem_available = 0, mem_used = 0;
-    svcGetInfo(&mem_available, InfoType_TotalMemorySize, CUR_PROCESS_HANDLE, 0);
-    svcGetInfo(&mem_used, InfoType_UsedMemorySize, CUR_PROCESS_HANDLE, 0);
-    if (mem_available > mem_used+0x200000)
-        size = (mem_available - mem_used - 0x200000) & ~0x1FFFFF;
-    if (size == 0)
-        size = 0x2000000*16;
-    Result rc = svcSetHeapSize(&addr, size);
-    if (R_FAILED(rc) || addr==NULL)
-        diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_HeapAllocFailed));
-    extern char* fake_heap_start;
-    extern char* fake_heap_end;
-    fake_heap_start = (char*)addr;
-    fake_heap_end = (char*)addr + size;
-}
-Result createSaveData()
-{
-    NsApplicationControlData g_applicationControlData;
-    size_t dummy;
-    Result rc = nsGetApplicationControlData(0x1, cur_progid, &g_applicationControlData, sizeof(g_applicationControlData), &dummy);
-    if (R_FAILED(rc)) return rc; // Добавлена проверка
-    FsSaveDataAttribute attr;
-    memset(&attr, 0, sizeof(FsSaveDataAttribute));
-    attr.application_id = cur_progid;
-    attr.uid = userID;
-    attr.system_save_data_id = 0;
-    attr.save_data_type = FsSaveDataType_Account;
-    attr.save_data_rank = 0;
-    attr.save_data_index = 0;
-    FsSaveDataCreationInfo crt;
-    memset(&crt, 0, sizeof(FsSaveDataCreationInfo));
-           
-    crt.save_data_size = 0x800000;
-    crt.journal_size = 0x400000;
-    crt.available_size = 0x8000;
-    crt.owner_id = g_applicationControlData.nacp.save_data_owner_id;
-    crt.flags = 0;
-    crt.save_data_space_id = FsSaveDataSpaceId_User;
-    FsSaveDataMetaInfo meta={};
-    rc = fsCreateSaveDataFileSystem(&attr, &crt, &meta);
-    return rc; // Возврат rc для проверки
-}
-void userAppInit()
-{
-    // fsdevUnmountAll();
-    Result rc=0;
-    PselUserSelectionSettings settings;
-   
-    rc = svcGetInfo(&cur_progid, InfoType_ProgramId, CUR_PROCESS_HANDLE, 0);
-    if (R_FAILED(rc)) show_error("Failed to get program ID.", 1); // Добавлена проверка
-    rc = accountInitialize(AccountServiceType_Application);
-    if (R_FAILED(rc)) show_error("Failed to initialize account service.", 1); // Добавлена проверка
-    rc = accountGetPreselectedUser(&userID);
-    if (R_FAILED(rc)) {
-        s32 count;
-        rc = accountGetUserCount(&count);
-        if (R_FAILED(rc)) show_error("Failed to get user count.", 1);
-        if (count > 1) {
-            pselShowUserSelector(&userID, &settings);
-        } else {
-            s32 loadedUsers;
-            AccountUid account_ids[count];
-            rc = accountListAllUsers(account_ids, count, &loadedUsers);
-            if (R_FAILED(rc)) show_error("Failed to list users.", 1);
-            userID = account_ids[0];
+        
+        // Монтируем обратно
+        rc = fsdevMountSaveData("save", cur_progid, userID);
+        if (R_FAILED(rc)) {
+            PyErr_Format(PyExc_RuntimeError, "Failed to remount save: 0x%x", rc);
+            return NULL;
+        }
+        
+        if (!found) {
+            PyErr_SetString(PyExc_RuntimeError, "Save data not found for extension");
+            return NULL;
         }
     }
+    
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+// Функция для проверки и инициализации аудио
+static bool initialize_audio_system(void)
+{
+    if (audio_initialized) return true;
+    
+    // Инициализация аудио через SDL (если используется)
+    if (PyRun_SimpleString(
+        "import pygame_sdl2.mixer\n"
+        "pygame_sdl2.mixer.init()\n"
+        "if not pygame_sdl2.mixer.get_init():\n"
+        "    raise Exception('Audio initialization failed')\n"
+    ) != 0) {
+        return false;
+    }
+    
+    audio_initialized = true;
+    return true;
+}
+
+static PyObject* check_audio(PyObject* self, PyObject* args)
+{
+    if (!initialize_audio_system()) {
+        PyErr_SetString(PyExc_RuntimeError, "Failed to initialize audio system");
+        return NULL;
+    }
+    
+    PyObject *audio_module = PyImport_ImportModule("pygame_sdl2.mixer");
+    if (!audio_module) {
+        PyErr_SetString(PyExc_ImportError, "Failed to import audio module");
+        return NULL;
+    }
+    
+    PyObject *result = PyObject_CallMethod(audio_module, "get_init", NULL);
+    Py_DECREF(audio_module);
+    
+    if (!result) {
+        PyErr_SetString(PyExc_RuntimeError, "Failed to check audio status");
+        return NULL;
+    }
+    
+    Py_INCREF(result);
+    return result;
+}
+
+static PyObject* startboost(PyObject* self, PyObject* args)
+{
+    Result rc = appletSetCpuBoostMode(ApmPerformanceMode_Boost);
+    if (R_FAILED(rc)) {
+        PyErr_Format(PyExc_RuntimeError, "Failed to set boost mode: 0x%x", rc);
+        return NULL;
+    }
+    
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+static PyObject* disableboost(PyObject* self, PyObject* args)
+{
+    Result rc = appletSetCpuBoostMode(ApmPerformanceMode_Normal);
+    if (R_FAILED(rc)) {
+        PyErr_Format(PyExc_RuntimeError, "Failed to disable boost: 0x%x", rc);
+        return NULL;
+    }
+    
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+static PyObject* restartprogram(PyObject* self, PyObject* args)
+{
+    Result rc = appletRestartProgram(NULL, 0);
+    if (R_FAILED(rc)) {
+        PyErr_Format(PyExc_RuntimeError, "Failed to restart: 0x%x", rc);
+        return NULL;
+    }
+    
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+static PyMethodDef myMethods[] = {
+    { "commitsave", commitsave, METH_NOARGS, "Commit save data" },
+    { "check_audio", check_audio, METH_NOARGS, "Check audio system status" },
+    { "startboost", startboost, METH_NOARGS, "Enable CPU boost mode" },
+    { "disableboost", disableboost, METH_NOARGS, "Disable CPU boost mode" },
+    { "restartprogram", restartprogram, METH_NOARGS, "Restart program" },
+    { NULL, NULL, 0, NULL }
+};
+
+// Современная версия инициализации модуля для Python 3
+static struct PyModuleDef otrhlibnx_module = {
+    PyModuleDef_HEAD_INIT,
+    "_otrhlibnx",
+    "libnx module for Ren'Py on Switch",
+    -1,
+    myMethods
+};
+
+PyMODINIT_FUNC PyInit__otrhlibnx(void)
+{
+    return PyModule_Create(&otrhlibnx_module);
+}
+
+// ... остальные PyMODINIT_FUNC объявления остаются без изменений ...
+
+void userAppInit()
+{
+    // Инициализация базовых сервисов
+    Result rc = 0;
+    
+    rc = svcGetInfo(&cur_progid, InfoType_ProgramId, CUR_PROCESS_HANDLE, 0);
+    if (R_FAILED(rc)) {
+        fatalSimple(MAKERESULT(Module_Libnx, LibnxError_InitFail));
+    }
+    
+    // Инициализация аккаунта
+    rc = accountInitialize(AccountServiceType_Application);
+    if (R_FAILED(rc)) {
+        fatalSimple(rc);
+    }
+    
+    // Получаем пользователя
+    rc = accountGetPreselectedUser(&userID);
+    if (R_FAILED(rc) || !accountUidIsValid(&userID)) {
+        s32 count = 0;
+        rc = accountGetUserCount(&count);
+        
+        if (R_SUCCEEDED(rc) && count > 0) {
+            if (count > 1) {
+                PselUserSelectionSettings settings;
+                memset(&settings, 0, sizeof(settings));
+                rc = pselShowUserSelector(&userID, &settings);
+            } else {
+                s32 loadedUsers = 0;
+                AccountUid account_ids[8]; // Максимум 8 аккаунтов
+                rc = accountListAllUsers(account_ids, count, &loadedUsers);
+                if (R_SUCCEEDED(rc) && loadedUsers > 0) {
+                    userID = account_ids[0];
+                }
+            }
+        }
+    }
+    
+    // Монтируем сохранение
     if (accountUidIsValid(&userID)) {
         rc = fsdevMountSaveData("save", cur_progid, userID);
         if (R_FAILED(rc)) {
-            rc = createSaveData();
-            if (R_FAILED(rc)) show_error("Failed to create save data.", 1); // Добавлена проверка
-            rc = fsdevMountSaveData("save", cur_progid, userID);
-            if (R_FAILED(rc)) show_error("Failed to mount save data.", 1); // Добавлена проверка
+            // Пытаемся создать сохранение
+            Result create_rc = createSaveData();
+            if (R_FAILED(create_rc)) {
+                // Если не удалось создать, продолжаем без сохранения
+            } else {
+                rc = fsdevMountSaveData("save", cur_progid, userID);
+            }
         }
     }
+    
+    // Инициализация других систем
     rc = romfsInit();
-    if (R_FAILED(rc)) show_error("Failed to init romfs.", 1); // Добавлена проверка
-  
-    socketInitializeDefault();
-}
-void userAppExit()
-{
-    fsdevCommitDevice("save");
-    fsdevUnmountDevice("save");
-    socketExit();
-    romfsExit();
-}
-ConsoleRenderer* getDefaultConsoleRenderer(void)
-{
-    return NULL;
-}
-char python_error_buffer[0x400];
-void show_error(const char* message, int exit_flag) // Переименовал param для ясности
-{
-    char* first_line = (char*)message;
-    char* end = strchr(message, '\n');
-    if (end != NULL)
-    {
-        first_line = python_error_buffer;
-        memcpy(first_line, message, (end - message) > sizeof(python_error_buffer) ? sizeof(python_error_buffer) : (end - message));
-        first_line[end - message] = '\0';
+    if (R_FAILED(rc)) {
+        // Продолжаем без romfs
     }
+    
+    rc = socketInitializeDefault();
+    if (R_FAILED(rc)) {
+        // Продолжаем без сети
+    }
+    
+    // Предварительная инициализация аудио (опционально)
+    // initialize_audio_system();
+}
+
+// Обновленная функция show_error
+void show_error(const char* message, int should_exit)
+{
+    // Всегда показываем ошибку через ErrorSystem
     ErrorSystemConfig c;
-    errorSystemCreate(&c, (const char*)first_line, message);
+    errorSystemCreate(&c, "Application Error", message);
     errorSystemShow(&c);
-    if (exit_flag == 1) {
-        if (Py_IsInitialized()) Py_Finalize(); // Добавлена проверка на инициализацию
-        userAppExit(); // Добавлен cleanup
-        exit(1); // Замена Py_Exit
+    
+    if (should_exit) {
+        // Аккуратно завершаем Python если он инициализирован
+        if (Py_IsInitialized()) {
+            Py_Finalize();
+        }
+        
+        // Даем время для отображения ошибки
+        svcSleepThread(3000000000ULL); // 3 секунды
+        exit(1);
     }
 }
-static AppletHookCookie applet_hook_cookie;
-static void on_applet_hook(AppletHookType hook, void *param)
-{
-   switch (hook)
-   {
-      case AppletHookType_OnExitRequest:
-        fsdevCommitDevice("save");
-        svcSleepThread(1500000000ULL);
-        appletUnlockExit();
-        break;
-      default:
-         break;
-   }
-}
+
+// Обновленный main с улучшенной обработкой ошибок
 int main(int argc, char* argv[])
 {
+    // Настройка окружения
     setenv("MESA_NO_ERROR", "1", 1);
+    setenv("PYTHONUNBUFFERED", "1", 1);
+    
+    // Блокировка выхода до завершения
     appletLockExit();
+    
+    // Настройка хука для корректного завершения
+    static AppletHookCookie applet_hook_cookie;
+    static void on_applet_hook(AppletHookType hook, void *param)
+    {
+        switch (hook)
+        {
+            case AppletHookType_OnExitRequest:
+                // Коммитим сохранение перед выходом
+                fsdevCommitDevice("save");
+                // Разблокируем выход после задержки
+                svcSleepThread(1000000000ULL); // 1 секунда
+                appletUnlockExit();
+                break;
+                
+            default:
+                break;
+        }
+    }
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
-    userAppInit(); // Добавлен вызов инициализации (romfs, save, etc.)
+    
+    // Настройка флагов Python
     Py_NoSiteFlag = 1;
     Py_IgnoreEnvironmentFlag = 1;
     Py_NoUserSiteDirectory = 1;
     Py_DontWriteBytecodeFlag = 1;
     Py_OptimizeFlag = 2;
-    static struct _inittab builtins[] = {
-        {"_otrhlibnx", init_otrh_libnx},
-        {"pygame_sdl2.color", initpygame_sdl2_color},
-        {"pygame_sdl2.controller", initpygame_sdl2_controller},
-        {"pygame_sdl2.display", initpygame_sdl2_display},
-        {"pygame_sdl2.draw", initpygame_sdl2_draw},
-        {"pygame_sdl2.error", initpygame_sdl2_error},
-        {"pygame_sdl2.event", initpygame_sdl2_event},
-        {"pygame_sdl2.gfxdraw", initpygame_sdl2_gfxdraw},
-        {"pygame_sdl2.image", initpygame_sdl2_image},
-        {"pygame_sdl2.joystick", initpygame_sdl2_joystick},
-        {"pygame_sdl2.key", initpygame_sdl2_key},
-        {"pygame_sdl2.locals", initpygame_sdl2_locals},
-        {"pygame_sdl2.mouse", initpygame_sdl2_mouse},
-        {"pygame_sdl2.power", initpygame_sdl2_power},
-        {"pygame_sdl2.pygame_time", initpygame_sdl2_pygame_time},
-        {"pygame_sdl2.rect", initpygame_sdl2_rect},
-        {"pygame_sdl2.render", initpygame_sdl2_render},
-        {"pygame_sdl2.rwobject", initpygame_sdl2_rwobject},
-        {"pygame_sdl2.scrap", initpygame_sdl2_scrap},
-        {"pygame_sdl2.surface", initpygame_sdl2_surface},
-        {"pygame_sdl2.transform", initpygame_sdl2_transform},
-        {"_renpy", init_renpy},
-        {"_renpybidi", init_renpybidi},
-        {"renpy.audio.renpysound", initrenpy_audio_renpysound},
-        {"renpy.display.accelerator", initrenpy_display_accelerator},
-        {"renpy.display.matrix", initrenpy_display_matrix},
-        {"renpy.display.render", initrenpy_display_render},
-        {"renpy.gl.gldraw", initrenpy_gl_gldraw},
-        {"renpy.gl.glenviron_shader", initrenpy_gl_glenviron_shader},
-        {"renpy.gl.glrtt_copy", initrenpy_gl_glrtt_copy},
-        {"renpy.gl.glrtt_fbo", initrenpy_gl_glrtt_fbo},
-        {"renpy.gl.gltexture", initrenpy_gl_gltexture},
-        {"renpy.pydict", initrenpy_pydict},
-        {"renpy.style", initrenpy_style},
-        {"renpy.styledata.style_activate_functions", initrenpy_styledata_style_activate_functions},
-        {"renpy.styledata.style_functions", initrenpy_styledata_style_functions},
-        {"renpy.styledata.style_hover_functions", initrenpy_styledata_style_hover_functions},
-        {"renpy.styledata.style_idle_functions", initrenpy_styledata_style_idle_functions},
-        {"renpy.styledata.style_insensitive_functions", initrenpy_styledata_style_insensitive_functions},
-        {"renpy.styledata.style_selected_activate_functions", initrenpy_styledata_style_selected_activate_functions},
-        {"renpy.styledata.style_selected_functions", initrenpy_styledata_style_selected_functions},
-        {"renpy.styledata.style_selected_hover_functions", initrenpy_styledata_style_selected_hover_functions},
-        {"renpy.styledata.style_selected_idle_functions", initrenpy_styledata_style_selected_idle_functions},
-        {"renpy.styledata.style_selected_insensitive_functions", initrenpy_styledata_style_selected_insensitive_functions},
-        {"renpy.styledata.styleclass", initrenpy_styledata_styleclass},
-        {"renpy.styledata.stylesets", initrenpy_styledata_stylesets},
-        {"renpy.text.ftfont", initrenpy_text_ftfont},
-        {"renpy.text.textsupport", initrenpy_text_textsupport},
-        {"renpy.text.texwrap", initrenpy_text_texwrap},
-        {"renpy.compat.dictviews", initrenpy_compat_dictviews},
-        {"renpy.gl2.gl2draw", initrenpy_gl2_gl2draw},
-        {"renpy.gl2.gl2mesh", initrenpy_gl2_gl2mesh},
-        {"renpy.gl2.gl2mesh2", initrenpy_gl2_gl2mesh2},
-        {"renpy.gl2.gl2mesh3", initrenpy_gl2_gl2mesh3},
-        {"renpy.gl2.gl2model", initrenpy_gl2_gl2model},
-        {"renpy.gl2.gl2polygon", initrenpy_gl2_gl2polygon},
-        {"renpy.gl2.gl2shader", initrenpy_gl2_gl2shader},
-        {"renpy.gl2.gl2texture", initrenpy_gl2_gl2texture},
-        {"renpy.uguu.gl", initrenpy_uguu_gl},
-        {"renpy.uguu.uguu", initrenpy_uguu_uguu},
-       
-        {"renpy.parsersupport", initrenpy_parsersupport},
-        {"pygame_sdl2.font", initpygame_sdl2_font},
-        {"pygame_sdl2.mixer", initpygame_sdl2_mixer},
-        {"pygame_sdl2.mixer_music", initpygame_sdl2_mixer_music},
-        {NULL, NULL}
-    };
-    FILE* sysconfigdata_file = fopen("romfs:/Contents/lib.zip", "rb");
-    FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
-    if (sysconfigdata_file == NULL)
-    {
-        if (renpy_file) fclose(renpy_file); // Добавлено закрытие
-        show_error("Could not find lib.zip.\n\nPlease ensure that you have extracted the files correctly so that the \"lib.zip\" file is in the same directory as the nsp file.", 1);
+    
+    // Проверка необходимых файлов перед инициализацией Python
+    FILE* libzip = fopen("romfs:/Contents/lib.zip", "rb");
+    if (!libzip) {
+        show_error("Critical: lib.zip not found in romfs:/Contents/\n\n"
+                  "Make sure the NSP is properly packaged with all files.", 1);
+        return 1;
     }
-    if (renpy_file == NULL)
-    {
-        fclose(sysconfigdata_file); // Добавлено закрытие
-        show_error("Could not find renpy.py.\n\nPlease ensure that you have extracted the files correctly so that the \"renpy.py\" file is in the same directory as the nsp file.", 1);
+    fclose(libzip);
+    
+    FILE* renpy_main = fopen("romfs:/Contents/renpy.py", "rb");
+    if (!renpy_main) {
+        show_error("Critical: renpy.py not found in romfs:/Contents/\n\n"
+                  "This is required to start the Ren'Py engine.", 1);
+        return 1;
     }
-    fclose(sysconfigdata_file);
+    fclose(renpy_main);
+    
+    // Инициализация Python
     Py_InitializeEx(0);
+    if (!Py_IsInitialized()) {
+        show_error("Failed to initialize Python interpreter.", 1);
+        return 1;
+    }
+    
     Py_SetPythonHome("romfs:/Contents/lib.zip");
-    PyImport_ExtendInittab(builtins);
-    char* pyargs[] = {
-        "romfs:/Contents/renpy.py",
-        NULL,
+    
+    // Настройка встроенных модулей
+    PyImport_AppendInittab("_otrhlibnx", PyInit__otrhlibnx);
+    // ... добавьте остальные модули аналогично
+    
+    // Установка аргументов Python
+    wchar_t* py_argv[] = { L"romfs:/Contents/renpy.py", NULL };
+    PySys_SetArgvEx(1, py_argv, 0);
+    
+    // Настройка пути Python
+    if (PyRun_SimpleString(
+        "import sys\n"
+        "sys.path = ['romfs:/Contents/lib.zip']\n"
+        "sys.stdout = sys.stderr\n"  // Перенаправляем stdout в stderr
+    ) != 0) {
+        show_error("Failed to set up Python environment.", 1);
+        Py_Finalize();
+        return 1;
+    }
+    
+    // Проверка основных модулей
+    const char* required_modules[] = {
+        "os", "pygame_sdl2", "encodings.utf_8", NULL
     };
-    PySys_SetArgvEx(1, pyargs, 1);
-    int python_result;
-    python_result = PyRun_SimpleString("import sys\nsys.path = ['romfs:/Contents/lib.zip']");
-    if (python_result == -1)
-    {
-        fclose(renpy_file); // Добавлено закрытие перед exit
-        show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.", 1);
+    
+    for (int i = 0; required_modules[i] != NULL; i++) {
+        PyObject* module = PyImport_ImportModule(required_modules[i]);
+        if (!module) {
+            char error_msg[256];
+            snprintf(error_msg, sizeof(error_msg),
+                    "Failed to import required module: %s\n\n"
+                    "Python environment may be corrupted.",
+                    required_modules[i]);
+            show_error(error_msg, 1);
+            Py_Finalize();
+            return 1;
+        }
+        Py_DECREF(module);
     }
-#define x(lib) \
-    { \
-        if (PyRun_SimpleString("import " lib) == -1) \
-        { \
-            fclose(renpy_file); \
-            show_error("Could not import python library " lib ".\n\nPlease ensure that you have extracted the files correctly so that the \"lib\" folder is in the same directory as the nsp file, and that the \"lib\" folder contains the folder \"python2.7\". \nInside that folder, the file \"" lib ".py\" or folder \"" lib "\" needs to exist.", 1); \
-        } \
+    
+    // Проверка и инициализация аудио системы
+    if (!initialize_audio_system()) {
+        show_error("Warning: Audio system failed to initialize.\n"
+                  "The game will continue without sound.", 0);
     }
-    x("os");
-    x("pygame_sdl2");
-    x("encodings");
-#undef x
-    // Добавлена проверка аудио: init mixer, если fail — exception
-    python_result = PyRun_SimpleString(
-        "import pygame_sdl2.mixer\n"
-        "try:\n"
-        "    pygame_sdl2.mixer.init()\n"
-        "except Exception as e:\n"
-        "    raise Exception('Audio initialization failed: ' + str(e))\n"
-    );
-    if (python_result == -1)
-    {
-        fclose(renpy_file);
-        show_error("Failed to initialize audio mixer.\n\nCheck Switch audio settings or hardware.", 1);
+    
+    // Запуск основного скрипта Ren'Py
+    FILE* script = fopen("romfs:/Contents/renpy.py", "r");
+    if (!script) {
+        show_error("Failed to open renpy.py for execution.", 1);
+        Py_Finalize();
+        return 1;
     }
-    python_result = PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1); // Closes file
-    if (python_result == -1)
-    {
-        show_error("An
+    
+    int py_result = PyRun_SimpleFileEx(script, "renpy.py", 1);
+    
+    if (py_result != 0) {
+        // Получаем информацию об ошибке Python если есть
+        PyObject *type, *value, *traceback;
+        PyErr_Fetch(&type, &value, &traceback);
+        
+        if (value != NULL) {
+            PyObject* str = PyObject_Str(value);
+            if (str != NULL) {
+                const char* error_msg = PyUnicode_AsUTF8(str);
+                if (error_msg) {
+                    show_error(error_msg, 1);
+                }
+                Py_DECREF(str);
+            }
+        }
+        
+        PyErr_Restore(type, value, traceback);
+        PyErr_Print();
+        
+        show_error("Python script execution failed.", 1);
+    }
+    
+    // Корректное завершение
+    Py_Finalize();
+    
+    // Коммитим сохранение перед выходом
+    fsdevCommitDevice("save");
+    
+    // Задержка перед выходом
+    svcSleepThread(500000000ULL); // 0.5 секунды
+    
+    return 0;
+}

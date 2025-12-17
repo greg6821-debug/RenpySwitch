@@ -104,7 +104,7 @@ ln -sf $(realpath renpy-source/module/renpysound_core.h) include/module/renpysou
 ln -sf $(realpath renpy-source/module/steamcallbacks.h) include/module/steamcallbacks.h
 ln -sf $(realpath renpy-source/module/ttgsubtable.h) include/module/ttgsubtable.h
 
-#ln -sf $(realpath renpy-source/module/gen-static/renpy.compat.dictviews.c) source/module/renpy.compat.dictviews.c
+ln -sf $(realpath renpy-source/module/gen-static/renpy.compat.dictviews.c) source/module/renpy.compat.dictviews.c
 ln -sf $(realpath renpy-source/module/gen-static/renpy.gl2.gl2draw.c) source/module/renpy.gl2.gl2draw.c
 ln -sf $(realpath renpy-source/module/gen-static/renpy.gl2.gl2mesh.c) source/module/renpy.gl2.gl2mesh.c
 ln -sf $(realpath renpy-source/module/gen-static/renpy.gl2.gl2mesh2.c) source/module/renpy.gl2.gl2mesh2.c

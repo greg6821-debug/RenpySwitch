@@ -62,140 +62,35 @@ echo "=== [2.1.1] Поиск заголовков pygame_sdl2 ==="
 echo "Заголовочные файлы pygame_sdl2:"
 find /usr -name "pygame_sdl2.h" 2>/dev/null | head -5 || echo "   Не найдены"
 
-echo "=== [2.1.3] Подготовка заголовочных файлов ==="
+echo "=== [2.1.3] Создание правильной структуры директорий ==="
 
-# Проверяем несколько возможных мест
-HEADER_FOUND=false
-HEADER_PATHS=(
-    "../pygame_sdl2-source/src/pygame_sdl2/pygame_sdl2.h"
-    "../pygame_sdl2-source/pygame_sdl2/pygame_sdl2.h"
-    "pygame_sdl2-source/src/pygame_sdl2/pygame_sdl2.h"
-    "../../pygame_sdl2-source/src/pygame_sdl2/pygame_sdl2.h"
-)
+# Создаем вложенную структуру pygame_sdl2/pygame_sdl2/
+rm -rf pygame_sdl2
+mkdir -p pygame_sdl2/pygame_sdl2
 
-for path in "${HEADER_PATHS[@]}"; do
-    if [ -f "$path" ]; then
-        echo "✅ Найден pygame_sdl2.h: $path"
-        HEADER_FOUND=true
-        HEADER_PATH="$path"
-        break
+HEADER_DIR="../../pygame_sdl2-source/src/pygame_sdl2"
+
+if [ -d "$HEADER_DIR" ]; then
+    echo "Копирование файлов в pygame_sdl2/pygame_sdl2/..."
+    
+    # Копируем все файлы во вложенную директорию
+    cp -r "$HEADER_DIR/"* pygame_sdl2/pygame_sdl2/ 2>/dev/null
+    
+    # Создаем основной .h файл на верхнем уровне
+    if [ -f "pygame_sdl2/pygame_sdl2/pygame_sdl2.h" ]; then
+        echo "Создание ссылки на верхнем уровне..."
+        ln -sf pygame_sdl2/pygame_sdl2.h pygame_sdl2/pygame_sdl2.h
     fi
-done
-
-if [ "$HEADER_FOUND" = false ]; then
-    echo "🔍 Поиск в файловой системе..."
-    # Рекурсивный поиск
-    find .. -name "pygame_sdl2.h" 2>/dev/null | head -5 | while read found; do
-        echo "   Найден: $found"
-        HEADER_FOUND=true
-        HEADER_PATH="$found"
-    done
     
-    if [ "$HEADER_FOUND" = false ]; then
-        echo "🔍 Глубокий поиск в исходниках..."
-        # Поиск в исходной распакованной структуре
-        if [ -d "../pygame_sdl2-source" ]; then
-            find ../pygame_sdl2-source -type f -name "*.h" | head -10 | while read file; do
-                echo "   Файл: $(basename "$file") -> $file"
-                if [[ "$(basename "$file")" == "pygame_sdl2.h" ]]; then
-                    HEADER_PATH="$file"
-                    HEADER_FOUND=true
-                fi
-            done
-        fi
-    fi
-fi
-
-if [ "$HEADER_FOUND" = true ] && [ -n "$HEADER_PATH" ]; then
-    echo "📁 Создание структуры заголовков..."
+    echo "✅ Структура создана:"
+    echo "  pygame_sdl2/pygame_sdl2.h -> ссылка"
+    echo "  pygame_sdl2/pygame_sdl2/  -> исходные файлы"
     
-    # Создаем директорию для заголовков
-    mkdir -p pygame_sdl2
-    
-    # Копируем основной заголовочный файл
-    cp "$HEADER_PATH" pygame_sdl2/
-    echo "✅ Скопирован: $(basename "$HEADER_PATH")"
-    
-    # Копируем ВСЕ заголовочные файлы из той же директории
-    HEADER_DIR=$(dirname "$HEADER_PATH")
-    echo "📂 Копирование файлов из: $HEADER_DIR"
-    
-    # Копируем все .h файлы
-    find "$HEADER_DIR" -name "*.h" -exec cp {} pygame_sdl2/ \; 2>/dev/null
-    echo "✅ Скопировано .h файлов: $(ls -1 pygame_sdl2/*.h 2>/dev/null | wc -l)"
-    
-    # Копируем все .pxd файлы (Cython)
-    find "$HEADER_DIR" -name "*.pxd" -exec cp {} pygame_sdl2/ \; 2>/dev/null
-    echo "✅ Скопировано .pxd файлов: $(ls -1 pygame_sdl2/*.pxd 2>/dev/null | wc -l)"
-    
-    # Проверяем содержимое
-    echo "📋 Содержимое pygame_sdl2/:"
-    ls -la pygame_sdl2/ 2>/dev/null || echo "   Директория пуста"
-    
-    # Если директория пуста, создаем минимальный заголовок
-    if [ ! -f "pygame_sdl2/pygame_sdl2.h" ] && [ -f "$HEADER_PATH" ]; then
-        echo "⚠️  Создание минимального заголовка..."
-        cp "$HEADER_PATH" pygame_sdl2/pygame_sdl2.h
-    fi
+    ls -la pygame_sdl2/
+    ls -la pygame_sdl2/pygame_sdl2/ | head -10
 else
-    echo "⚠️  pygame_sdl2.h не найден, пытаемся найти альтернативы..."
-    
-    # Ищем любые заголовочные файлы SDL
-    echo "🔍 Поиск SDL заголовков:"
-    find /usr -name "*SDL*.h" 2>/dev/null | grep -i sdl | head -5
-    
-    # Создаем минимальный заголовочный файл
-    echo "📝 Создание заглушки pygame_sdl2.h..."
-    mkdir -p pygame_sdl2
-    cat > pygame_sdl2/pygame_sdl2.h << 'EOF'
-/* Заглушка для pygame_sdl2.h */
-#ifndef PYGAME_SDL2_H
-#define PYGAME_SDL2_H
-
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_ttf.h>
-#include <SDL2/SDL_mixer.h>
-
-/* Базовые определения */
-typedef struct {
-    int dummy;
-} PygameSdl2Context;
-
-#endif /* PYGAME_SDL2_H */
-EOF
-    echo "✅ Создана заглушка pygame_sdl2.h"
+    echo "❌ Исходная директория не найдена"
 fi
-
-# Дополнительно: проверяем структуру pygame_sdl2-source
-echo "🔍 Проверка структуры pygame_sdl2-source..."
-if [ -d "../pygame_sdl2-source" ]; then
-    echo "Структура ../pygame_sdl2-source/:"
-    find "../pygame_sdl2-source" -type f -name "*.h" -o -name "*.pxd" | head -20 | while read file; do
-        echo "   $(basename "$file") -> ${file#../pygame_sdl2-source/}"
-    done
-    
-    # Если нашли src директорию
-    if [ -d "../pygame_sdl2-source/src" ]; then
-        echo "Копирование из src/..."
-        # Копируем всю структуру src/pygame_sdl2
-        if [ -d "../pygame_sdl2-source/src/pygame_sdl2" ]; then
-            cp -r "../pygame_sdl2-source/src/pygame_sdl2/"* pygame_sdl2/ 2>/dev/null || true
-        fi
-    fi
-    
-    # Альтернатива: создаем симлинк
-    echo "🔗 Создание симлинка на исходники..."
-    if [ -d "../pygame_sdl2-source/src/pygame_sdl2" ]; then
-        ln -sf ../pygame_sdl2-source/src/pygame_sdl2 .
-        echo "✅ Симлинк создан: pygame_sdl2 -> ../pygame_sdl2-source/src/pygame_sdl2"
-    elif [ -d "../pygame_sdl2-source/pygame_sdl2" ]; then
-        ln -sf ../pygame_sdl2-source/pygame_sdl2 .
-        echo "✅ Симлинк создан: pygame_sdl2 -> ../pygame_sdl2-source/pygame_sdl2"
-    fi
-fi
-
-echo "✅ Подготовка заголовочных файлов завершена"
 
 echo "=== [2.2] Обычная сборка Ren'Py ==="
 # Проверяем существование setup.py

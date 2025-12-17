@@ -1,58 +1,29 @@
 set -e
 
-# Fix: удаляем системную FriBidi, чтобы не было конфликта с bundled
-sudo apt-get update
-sudo apt-get remove -y libfribidi-dev || true
-sudo apt-get autoremove -y || true
-
 export DEVKITPRO=/opt/devkitpro
-#pushd pygame_sdl2-source
-#rm -rf gen gen-static
-#python2 setup.py || true
-#PYGAME_SDL2_STATIC=1 python2 setup.py || true
-#popd
-
-
-
-#pushd renpy-source/module
-#rm -rf gen gen-static
-
-#export CFLAGS="-I$(pwd)/fribidi-src/lib -I$(pwd)/fribidi-src $CFLAGS"
-#export CPPFLAGS="$CFLAGS"
-
-#RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build
-#RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python2 setup.py build
-#popd
-
-
-#pushd pygame_sdl2-source
-#python2 setup.py build
-#python2 setup.py install_headers
-#python2 setup.py install
-#popd
-
+pushd pygame_sdl2-source
+rm -rf gen gen-static
+python2 setup.py || true
+PYGAME_SDL2_STATIC=1 python2 setup.py || true
+popd
 
 pushd renpy-source/module
 rm -rf gen gen-static
-
-export PYTHONPATH=$(pwd)/..
-export RENPY_SKIP_SDL=1
-export CFLAGS="-I$(pwd)/fribidi-src/lib -I$(pwd)/fribidi-src"
-export CPPFLAGS="$CFLAGS"
-
-python2 setup.py build_ext --inplace
-
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py || true
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python2 setup.py || true
 popd
 
-#pushd renpy-source/module
-#export PYTHONPATH=$(pwd)/..
-#export CFLAGS="-I$(pwd)/fribidi-src/lib -I$(pwd)/fribidi-src $CFLAGS"
-#export CPPFLAGS="$CFLAGS"
 
-#RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build
-#RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py install
-#RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build_ext --inplace
-#popd
+pushd pygame_sdl2-source
+python2 setup.py build
+python2 setup.py install_headers
+python2 setup.py install
+popd
+
+pushd renpy-source/module
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py install
+popd
 
 
 bash link_sources.bash
@@ -61,12 +32,6 @@ export PREFIXARCHIVE=$(realpath renpy-switch-modules.tar.gz)
 
 rm -rf build-switch
 mkdir build-switch
-
-# Fix: исправляем include в renpybidicore.c для кросс-компиляции
-sed -i 's|#include <.*fribidi.h.*>|#include "fribidi.h"|' renpy-source/module/renpybidicore.c || true
-# Или более точная замена, если путь уже неправильный
-sed -i 's|#include <fribidi-src/lib/fribidi.h>|#include "fribidi.h"|' renpy-source/module/renpybidicore.c || true
-
 pushd build-switch
 mkdir local_prefix
 export LOCAL_PREFIX=$(realpath local_prefix)

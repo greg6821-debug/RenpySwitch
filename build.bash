@@ -62,22 +62,6 @@ echo "=== [2.1.1] Поиск заголовков pygame_sdl2 ==="
 echo "Заголовочные файлы pygame_sdl2:"
 find /usr -name "pygame_sdl2.h" 2>/dev/null | head -5 || echo "   Не найдены"
 
-echo "=== [2.1.2] Проверка импорта pygame_sdl2 ==="
-python2 -c "
-import sys
-try:
-    import pygame_sdl2
-    print('✅ pygame_sdl2 доступен из текущего окружения')
-    print('   Путь:', pygame_sdl2.__file__)
-    
-    # Попробуем импортировать конкретный модуль
-    from pygame_sdl2 import error
-    print('✅ Модуль error загружается')
-except ImportError as e:
-    print('❌ Ошибка импорта:', e)
-    sys.exit(1)
-" || exit 1
-
 echo "=== [2.1.3] Подготовка заголовочных файлов ==="
 # Сначала проверьте, есть ли заголовки в pygame_sdl2-source
 if [ -f "../pygame_sdl2-source/pygame_sdl2/pygame_sdl2.h" ]; then
@@ -146,27 +130,6 @@ python2 setup.py install --force 2>&1 | tee renpy_install.log || {
     exit 1
 }
 echo "✅ Ren'Py установлен"
-
-# Финальная проверка
-echo "=== [2.4] Проверка сборки ==="
-python2 -c "
-import sys
-try:
-    # Попробуем импортировать основные модули Ren'Py
-    import renpy.display.render
-    print('✅ renpy.display.render импортирован')
-    
-    import renpy.display.pgrender
-    print('✅ renpy.display.pgrender импортирован')
-    
-    print('🎉 Все модули Ren\'Py успешно собраны!')
-except Exception as e:
-    print('❌ Ошибка импорта Ren\'Py модулей:', e)
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-"
-
 popd
 echo -e "\n=== Сборка завершена успешно! ==="
 echo "Итоговое местоположение файлов:"

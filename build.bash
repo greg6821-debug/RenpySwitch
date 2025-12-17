@@ -89,7 +89,7 @@ cp ./renpy_sdk/*/renpy.sh ./renpy_clear/renpy.sh
 cp -r ./renpy_sdk/*/lib ./renpy_clear/lib
 mkdir ./renpy_clear/game
 cp -r ./renpy-source/module ./renpy_clear/module
-cp -r ./renpy-source/renpy ./renpy_clear/renpy
+cp -af ./renpy-source/renpy/ ./renpy_clear/renpy/
 cp ./renpy-source/renpy.py ./renpy_clear/renpy.py
 mv ./script.rpy ./renpy_clear/game/script.rpy
 cp ./renpy_sdk/*/*.exe ./renpy_clear/

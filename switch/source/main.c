@@ -465,6 +465,14 @@ int main(int argc, char* argv[])
         "sys.path.insert(0, 'romfs:/Contents/lib.zip')\n"
     );
 
+	// мы на Switch
+    int is_switch = 1;
+
+    char py_flag_code[128];
+    snprintf(py_flag_code, sizeof(py_flag_code), "renpy_switch = %d\n", is_switch);
+
+    PyRun_SimpleString(py_flag_code);
+
     /* ---------- run Ren'Py ---------- */
     if (PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1) == -1) {
         PyErr_Print();

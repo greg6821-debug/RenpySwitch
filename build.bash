@@ -270,7 +270,6 @@ python2 setup.py install --force 2>&1 | tee renpy_install.log || {
     exit 1
 }
 echo "✅ Ren'Py установлен"
-popd
 echo -e "\n=== Сборка завершена успешно! ==="
 echo "Итоговое местоположение файлов:"
 echo "  • pygame_sdl2: $(python2 -c 'import pygame_sdl2; print(pygame_sdl2.__file__)' 2>/dev/null || echo 'не установлен')"

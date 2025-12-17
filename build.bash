@@ -83,9 +83,9 @@ rm -rf switch include source pygame_sdl2-source
 
 rm -rf renpy_clear
 mkdir renpy_clear
-cp ./renpy_sdk/*/renpy ./renpy_clear/renpy
+cp -r ./renpy_sdk/*/renpy ./renpy_clear/renpy
 
-cp -r ./renpy_sdk/*/renpy.sh ./renpy_clear/renpy.sh
+cp ./renpy_sdk/*/renpy.sh ./renpy_clear/renpy.sh
 cp -r ./renpy_sdk/*/lib ./renpy_clear/lib
 mkdir ./renpy_clear/game
 cp -r ./renpy-source/module ./renpy_clear/module

@@ -96,6 +96,73 @@ else
     echo "❌ Исходная директория не найдена"
 fi
 
+
+echo "=== [2.1.9] Диагностика заголовков pygame_sdl2 ==="
+
+PYGAME_SRC="../../pygame_sdl2-source"
+GEN_DIR="$PYGAME_SRC/gen"
+SRC_DIR="$PYGAME_SRC/src/pygame_sdl2"
+
+echo "--- Проверка директорий ---"
+for d in "$PYGAME_SRC" "$GEN_DIR" "$SRC_DIR"; do
+    if [ -d "$d" ]; then
+        echo "✅ $d существует"
+    else
+        echo "❌ $d НЕ существует"
+    fi
+done
+
+echo
+echo "--- Содержимое gen/ ---"
+if [ -d "$GEN_DIR" ]; then
+    ls -la "$GEN_DIR"
+else
+    echo "gen/ отсутствует"
+fi
+
+echo
+echo "--- Поиск *_api.h ---"
+find "$PYGAME_SRC" -name "*_api.h" 2>/dev/null || echo "❌ *_api.h не найдены"
+
+echo
+echo "--- Поиск rwobject_api.h ---"
+find "$PYGAME_SRC" -name "pygame_sdl2.rwobject_api.h" 2>/dev/null \
+    || echo "❌ pygame_sdl2.rwobject_api.h не найден"
+
+echo
+echo "--- Поиск surface_api.h ---"
+find "$PYGAME_SRC" -name "pygame_sdl2.surface_api.h" 2>/dev/null \
+    || echo "❌ pygame_sdl2.surface_api.h не найден"
+
+echo
+echo "--- Поиск display_api.h ---"
+find "$PYGAME_SRC" -name "pygame_sdl2.display_api.h" 2>/dev/null \
+    || echo "❌ pygame_sdl2.display_api.h не найден"
+
+echo
+echo "--- Проверка include-пути для gcc ---"
+TEST_INCLUDE="$GEN_DIR/pygame_sdl2.rwobject_api.h"
+if [ -f "$TEST_INCLUDE" ]; then
+    echo "✅ gcc сможет включить: $TEST_INCLUDE"
+else
+    echo "❌ gcc НЕ сможет включить: $TEST_INCLUDE"
+fi
+
+echo
+echo "--- Проверка include из pygame_sdl2.h ---"
+MAIN_H="$SRC_DIR/pygame_sdl2.h"
+if [ -f "$MAIN_H" ]; then
+    echo "Найден $MAIN_H"
+    echo "Включаемые заголовки:"
+    grep '#include "pygame_sdl2/.*_api.h"' "$MAIN_H" || echo "  (include не найдены)"
+else
+    echo "❌ pygame_sdl2.h не найден"
+fi
+
+echo "=== [2.1.9] Конец диагностики ==="
+echo
+
+
 echo "=== [2.2] Обычная сборка Ren'Py ==="
 # Проверяем существование setup.py
 if [ ! -f "setup.py" ]; then

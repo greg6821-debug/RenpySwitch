@@ -6,11 +6,11 @@ sudo apt-get remove -y libfribidi-dev || true
 sudo apt-get autoremove -y || true
 
 export DEVKITPRO=/opt/devkitpro
-pushd pygame_sdl2-source
-rm -rf gen gen-static
-python2 setup.py || true
-PYGAME_SDL2_STATIC=1 python2 setup.py || true
-popd
+#pushd pygame_sdl2-source
+#rm -rf gen gen-static
+#python2 setup.py || true
+#PYGAME_SDL2_STATIC=1 python2 setup.py || true
+#popd
 
 
 
@@ -34,10 +34,14 @@ popd
 
 pushd renpy-source/module
 rm -rf gen gen-static
+
 export PYTHONPATH=$(pwd)/..
-export CFLAGS="-I$(pwd)/fribidi-src/lib -I$(pwd)/fribidi-src $CFLAGS"
+export RENPY_SKIP_SDL=1
+export CFLAGS="-I$(pwd)/fribidi-src/lib -I$(pwd)/fribidi-src"
 export CPPFLAGS="$CFLAGS"
+
 python2 setup.py build_ext --inplace
+
 popd
 
 #pushd renpy-source/module

@@ -79,6 +79,8 @@ if [ -d "$HEADER_DIR" ]; then
     
     # Копируем все файлы во вложенную директорию
     cp -r "$HEADER_DIR/"* pygame_sdl2/pygame_sdl2/ 2>/dev/null
+    # Простое копирование всех файлов
+    cp -r ../../pygame_sdl2-source/gen/* pygame_sdl2/pygame_sdl2/ 2>/dev/null
     
     # Создаем основной .h файл на верхнем уровне
     if [ -f "pygame_sdl2/pygame_sdl2/pygame_sdl2.h" ]; then
@@ -95,6 +97,9 @@ if [ -d "$HEADER_DIR" ]; then
 else
     echo "❌ Исходная директория не найдена"
 fi
+
+
+
 
 
 echo "=== [2.1.9] Диагностика заголовков pygame_sdl2 ==="
@@ -162,36 +167,6 @@ fi
 echo "=== [2.1.9] Конец диагностики ==="
 echo
 
-# Простое копирование всех файлов
-cp -r /pygame_sdl2-source/gen/* pygame_sdl2/ 2>/dev/null || true
-
-echo "=== [2.2] Обычная сборка Ren'Py ==="
-# Проверяем существование setup.py
-if [ ! -f "setup.py" ]; then
-    echo "❌ setup.py не найден в $(pwd)"
-    exit 1
-fi
-
-# Добавляем пути к заголовкам pygame_sdl2
-PYGAME_INCLUDE=""
-if [ -d "../pygame_sdl2-source" ]; then
-    PYGAME_INCLUDE="-I../pygame_sdl2-source"
-fi
-
-echo "Используемые переменные:"
-echo "  RENPY_DEPS_INSTALL: /usr/lib/x86_64-linux-gnu:/usr:/usr/local"
-echo "  PYGAME_INCLUDE: $PYGAME_INCLUDE"
-
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local \
-CFLAGS="$PYGAME_INCLUDE" \
-python2 setup.py build_ext --inplace 2>&1 | tee renpy_build.log || {
-    echo "❌ Ошибка сборки Ren'Py"
-    echo "Последние строки лога:"
-    tail -20 renpy_build.log
-    exit 1
-}
-echo "✅ Ren'Py собран"
-
 
 echo "=== [ДИАГНОСТИКА] Проверка модуля renpy.compat.dictviews ==="
 
@@ -253,6 +228,34 @@ for dir in gen gen-static; do
         echo "Директория $dir не существует"
     fi
 done
+
+
+echo "=== [2.2] Обычная сборка Ren'Py ==="
+# Проверяем существование setup.py
+if [ ! -f "setup.py" ]; then
+    echo "❌ setup.py не найден в $(pwd)"
+    exit 1
+fi
+
+# Добавляем пути к заголовкам pygame_sdl2
+PYGAME_INCLUDE=""
+if [ -d "../pygame_sdl2-source" ]; then
+    PYGAME_INCLUDE="-I../pygame_sdl2-source"
+fi
+
+echo "Используемые переменные:"
+echo "  RENPY_DEPS_INSTALL: /usr/lib/x86_64-linux-gnu:/usr:/usr/local"
+echo "  PYGAME_INCLUDE: $PYGAME_INCLUDE"
+
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local \
+CFLAGS="$PYGAME_INCLUDE" \
+python2 setup.py build_ext --inplace 2>&1 | tee renpy_build.log || {
+    echo "❌ Ошибка сборки Ren'Py"
+    echo "Последние строки лога:"
+    tail -20 renpy_build.log
+    exit 1
+}
+echo "✅ Ren'Py собран"
 
 
 echo "=== [2.3] Статическая сборка Ren'Py ==="

@@ -635,12 +635,21 @@ diff -Naur b/renpy/bootstrap.py a/renpy/bootstrap.py
  
      # Ditto for the Ren'Py module.
      try:
-@@ -266,11 +269,14 @@
+@@ -266,11 +269,23 @@
  
                  if renpy.android:
                      renpy.config.logdir = os.environ['ANDROID_PUBLIC']
 +                elif renpy.switch:
 +                    renpy.config.logdir = "save:/Logs/"
++                    # --- PATCH ---
++                    _orig_makedirs = os.makedirs
++
++                    def _switch_makedirs(path, mode=0o777):
++                        if isinstance(path, str) and (path.startswith("save:") or path.startswith("save://") or path.startswith("sdmc:")):
++                            return
++                        return _orig_makedirs(path, mode)
++
++                    os.makedirs = _switch_makedirs
                  else:
                      renpy.config.logdir = basedir
  
@@ -1508,7 +1517,7 @@ diff -Naur b/renpy/log.py a/renpy/log.py
              return False
  
          if self.developer and not renpy.config.developer:
-@@ -158,6 +159,19 @@
+@@ -158,6 +159,23 @@
          Formats `s` with args, and writes it to the logfile.
          """
  
@@ -1521,8 +1530,12 @@ diff -Naur b/renpy/log.py a/renpy/log.py
 +                except Exception:
 +                    s = repr((s,) + args)
 +                s += "\n"
-+            with real_open("save://Logs/log.log", "a+") as f:
-+                f.write(str(s))
++            # Патч: игнорируем ошибки записи
++            try:
++                with real_open("save://Logs/log.log", "a+") as f:
++                    f.write(str(s))
++            except Exception:
++                pass  # пропускаем любые ошибки записи
 +            return
 +
          if self.open():
@@ -1549,6 +1562,30 @@ diff -Naur b/renpy/main.py a/renpy/main.py
  
      # Find the common directory.
      commondir = renpy.__main__.path_to_common(renpy.config.renpy_base) # E1101 @UndefinedVariable
+@@ -392,8 +392,21 @@
+         android_searchpath()
+ 
+     # Load Ren'Py extensions.
+-    for dir in renpy.config.searchpath: # @ReservedAssignment
+-        for fn in os.listdir(dir):
++    for dir in renpy.config.searchpath:  # @ReservedAssignment
++        try:
++            if sys.platform == "horizon":
++                # На Switch игнорируем save:// и sdmc: директории
++                if dir.startswith("save:") or dir.startswith("sdmc:"):
++                    files = []
++                else:
++                    files = os.listdir(dir)
++            else:
++                files = os.listdir(dir)
++        except OSError:
++            # Директория недоступна, просто пропускаем
++            files = []
++
++        for fn in files:
+             if fn.lower().endswith(".rpe"):
+                 load_rpe(dir + "/" + fn)
+ 
 @@ -501,7 +501,8 @@
              renpy.game.script.load_script()
  

@@ -465,13 +465,14 @@ int main(int argc, char* argv[])
         "sys.path.insert(0, 'romfs:/Contents/lib.zip')\n"
     );
 
-	// мы на Switch
-    int is_switch = 1;
-
-    char py_flag_code[128];
-    snprintf(py_flag_code, sizeof(py_flag_code), "renpy_switch = %d\n", is_switch);
-
-    PyRun_SimpleString(py_flag_code);
+	/* ---------- Добавляем switch в существующий модуль renpy ---------- */
+    PyObject *renpy_module = PyImport_ImportModule("renpy");
+    if (renpy_module) {
+        PyObject *py_val = PyBool_FromLong(1);  // True
+        PyObject_SetAttrString(renpy_module, "switch", py_val);
+        Py_DECREF(py_val);
+        Py_DECREF(renpy_module);
+    }
 
     /* ---------- run Ren'Py ---------- */
     if (PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1) == -1) {

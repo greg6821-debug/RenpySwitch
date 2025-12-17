@@ -1,29 +1,192 @@
-set -e
-echo "=== ---1--- ==="
+set -e  # Останавливаться при ошибках
+
+echo "=== [1] Настройка окружения ==="
 export DEVKITPRO=/opt/devkitpro
-echo "=== ---1.1--- ==="
+echo "DEVKITPRO установлен: $DEVKITPRO"
+
+echo "=== [1.1] Сборка pygame_sdl2 ==="
+if [ ! -d "pygame_sdl2-source" ]; then
+    echo "❌ Ошибка: pygame_sdl2-source не найден!"
+    exit 1
+fi
+
 pushd pygame_sdl2-source
-echo "=== ---1.2--- ==="
-rm -rf gen gen-static
-echo "=== ---1.3--- ==="
-python2 setup.py build
-echo "=== ---1.4--- ==="
-PYGAME_SDL2_STATIC=1 python2 setup.py install
+echo "Текущая директория: $(pwd)"
+
+echo "=== [1.2] Очистка старых файлов ==="
+rm -rf gen gen-static build dist *.egg-info
+find . -name "*.pyc" -delete
+find . -name "*.so" -delete
+echo "Очистка завершена"
+
+echo "=== [1.3] Обычная сборка pygame_sdl2 ==="
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local \
+python2 setup.py build_ext --inplace 2>&1 | tee build.log || {
+    echo "❌ Ошибка сборки pygame_sdl2"
+    exit 1
+}
+echo "✅ pygame_sdl2 собран локально"
+
+echo "=== [1.4] Статическая сборка и установка ==="
+# Сначала проверим, существует ли setup.py
+if [ ! -f "setup.py" ]; then
+    echo "❌ setup.py не найден!"
+    exit 1
+fi
+
+# Установка с принудительной перезаписью
+PYGAME_SDL2_STATIC=1 \
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local \
+python2 setup.py install --force 2>&1 | tee install.log || {
+    echo "❌ Ошибка установки pygame_sdl2"
+    exit 1
+}
+echo "✅ pygame_sdl2 установлен"
+
+# Проверка установки
+echo "=== [1.5] Проверка установки pygame_sdl2 ==="
+python2 -c "
+import sys
+try:
+    import pygame_sdl2
+    print('✅ pygame_sdl2 импортирован успешно')
+    print('   Версия:', pygame_sdl2.__version__)
+    print('   Путь:', pygame_sdl2.__file__)
+except Exception as e:
+    print('❌ Ошибка импорта pygame_sdl2:', e)
+    sys.exit(1)
+"
+
 popd
-echo "=== ---2--- ==="
+echo "Возврат в: $(pwd)"
+
+echo -e "\n=== [2] Сборка Ren'Py модулей ==="
+if [ ! -d "renpy-source/module" ]; then
+    echo "❌ Ошибка: renpy-source/module не найден!"
+    exit 1
+fi
+
 pushd renpy-source/module
-echo "=== ---2.1--- ==="
-rm -rf gen gen-static
-echo "=== ---2.1.1--- ==="
-find /usr -name "pygame_sdl2.h" 2>/dev/null
-echo "=== ---2.1.2--- ==="
-python2 -c "import pygame_sdl2; print(pygame_sdl2.__file__)"  
-echo "=== ---2.1.3--- ==="
-cp -r ../pygame_sdl2-source/pygame_sdl2 .
-echo "=== ---2.2--- ==="
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build
-echo "=== ---2.3--- ==="
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python2 setup.py install
+echo "Текущая директория: $(pwd)"
+
+echo "=== [2.1] Очистка Ren'Py ==="
+rm -rf gen gen-static build
+echo "Очистка завершена"
+
+echo "=== [2.1.1] Поиск заголовков pygame_sdl2 ==="
+echo "Заголовочные файлы pygame_sdl2:"
+find /usr -name "pygame_sdl2.h" 2>/dev/null | head -5 || echo "   Не найдены"
+
+echo "=== [2.1.2] Проверка импорта pygame_sdl2 ==="
+python2 -c "
+import sys
+try:
+    import pygame_sdl2
+    print('✅ pygame_sdl2 доступен из текущего окружения')
+    print('   Путь:', pygame_sdl2.__file__)
+    
+    # Попробуем импортировать конкретный модуль
+    from pygame_sdl2 import error
+    print('✅ Модуль error загружается')
+except ImportError as e:
+    print('❌ Ошибка импорта:', e)
+    sys.exit(1)
+" || exit 1
+
+echo "=== [2.1.3] Подготовка заголовочных файлов ==="
+# Сначала проверьте, есть ли заголовки в pygame_sdl2-source
+if [ -f "../pygame_sdl2-source/pygame_sdl2/pygame_sdl2.h" ]; then
+    echo "Найден pygame_sdl2.h в исходниках"
+    
+    # Создаем директорию pygame_sdl2 если ее нет
+    mkdir -p pygame_sdl2
+    
+    # Копируем заголовочные файлы
+    cp -r ../pygame_sdl2-source/pygame_sdl2/*.h pygame_sdl2/ 2>/dev/null || true
+    cp -r ../pygame_sdl2-source/pygame_sdl2/*.pxd pygame_sdl2/ 2>/dev/null || true
+    
+    # Или создаем симлинк
+    # ln -sf ../pygame_sdl2-source/pygame_sdl2 .
+    
+    echo "Заголовочные файлы скопированы"
+else
+    echo "⚠️  pygame_sdl2.h не найден в исходниках, пытаемся найти в системе..."
+    # Пытаемся найти и скопировать из системы
+    SYSTEM_HEADER=$(find /usr -name "pygame_sdl2.h" 2>/dev/null | head -1)
+    if [ -n "$SYSTEM_HEADER" ]; then
+        mkdir -p pygame_sdl2
+        cp "$SYSTEM_HEADER" pygame_sdl2/
+        echo "Скопирован системный заголовок: $SYSTEM_HEADER"
+    else
+        echo "⚠️  Заголовки не найдены, сборка может завершиться ошибкой"
+    fi
+fi
+
+echo "=== [2.2] Обычная сборка Ren'Py ==="
+# Проверяем существование setup.py
+if [ ! -f "setup.py" ]; then
+    echo "❌ setup.py не найден в $(pwd)"
+    exit 1
+fi
+
+# Добавляем пути к заголовкам pygame_sdl2
+PYGAME_INCLUDE=""
+if [ -d "../pygame_sdl2-source" ]; then
+    PYGAME_INCLUDE="-I../pygame_sdl2-source"
+fi
+
+echo "Используемые переменные:"
+echo "  RENPY_DEPS_INSTALL: /usr/lib/x86_64-linux-gnu:/usr:/usr/local"
+echo "  PYGAME_INCLUDE: $PYGAME_INCLUDE"
+
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local \
+CFLAGS="$PYGAME_INCLUDE" \
+python2 setup.py build_ext --inplace 2>&1 | tee renpy_build.log || {
+    echo "❌ Ошибка сборки Ren'Py"
+    echo "Последние строки лога:"
+    tail -20 renpy_build.log
+    exit 1
+}
+echo "✅ Ren'Py собран"
+
+echo "=== [2.3] Статическая сборка Ren'Py ==="
+# Устанавливаем Ren'Py модули
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local \
+RENPY_STATIC=1 \
+CFLAGS="$PYGAME_INCLUDE" \
+python2 setup.py install --force 2>&1 | tee renpy_install.log || {
+    echo "❌ Ошибка установки Ren'Py"
+    echo "Последние строки лога:"
+    tail -20 renpy_install.log
+    exit 1
+}
+echo "✅ Ren'Py установлен"
+
+# Финальная проверка
+echo "=== [2.4] Проверка сборки ==="
+python2 -c "
+import sys
+try:
+    # Попробуем импортировать основные модули Ren'Py
+    import renpy.display.render
+    print('✅ renpy.display.render импортирован')
+    
+    import renpy.display.pgrender
+    print('✅ renpy.display.pgrender импортирован')
+    
+    print('🎉 Все модули Ren\'Py успешно собраны!')
+except Exception as e:
+    print('❌ Ошибка импорта Ren\'Py модулей:', e)
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+"
+
+popd
+echo -e "\n=== Сборка завершена успешно! ==="
+echo "Итоговое местоположение файлов:"
+echo "  • pygame_sdl2: $(python2 -c 'import pygame_sdl2; print(pygame_sdl2.__file__)' 2>/dev/null || echo 'не установлен')"
+echo "  • renpy модули: /usr/local/lib/python2.7/dist-packages/renpy/"
 popd
 echo "=== ---3--- ==="
 pushd pygame_sdl2-source

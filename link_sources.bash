@@ -83,7 +83,7 @@ ln -sf $(realpath pygame_sdl2-source/gen-static/pygame_sdl2.surface_api.h) inclu
 ln -sf $(realpath pygame_sdl2-source/src/SDL2_rotozoom.h) include/module/SDL2_rotozoom.h
 ln -sf $(realpath pygame_sdl2-source/src/SDL_gfxPrimitives.h) include/module/SDL_gfxPrimitives.h
 ln -sf $(realpath pygame_sdl2-source/src/SDL_gfxPrimitives_font.h) include/module/SDL_gfxPrimitives_font.h
-#ln -sf $(realpath pygame_sdl2-source/src/pygame_sdl2/pygame_sdl2.h) include/module/pygame_sdl2/pygame_sdl2.h
+ln -sf $(realpath pygame_sdl2-source/src/pygame_sdl2/pygame_sdl2.h) include/module/pygame_sdl2/pygame_sdl2.h
 ln -sf $(realpath pygame_sdl2-source/src/python_threads.h) include/module/python_threads.h
 ln -sf $(realpath pygame_sdl2-source/src/surface.h) include/module/src/surface.h
 ln -sf $(realpath pygame_sdl2-source/src/write_jpeg.h) include/module/write_jpeg.h

@@ -48,7 +48,15 @@ static PyObject* py_nx_sleep(PyObject* self, PyObject* args) {
     double seconds;
     if (!PyArg_ParseTuple(args, "d", &seconds))
         return NULL;
-    svcSleepThread((uint64_t)(seconds * 1000000000ULL));  // секунды → наносекунды
+
+    // преобразуем секунды в наносекунды
+    uint64_t ns = (uint64_t)(seconds * 1000000000ULL);
+
+    // Отпускаем GIL, чтобы другие Python-потоки могли выполняться
+    Py_BEGIN_ALLOW_THREADS
+    svcSleepThread(ns);
+    Py_END_ALLOW_THREADS
+
     Py_RETURN_NONE;
 }
 

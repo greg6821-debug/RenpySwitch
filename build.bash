@@ -14,10 +14,16 @@ echo "=== ---2--- ==="
 pushd renpy-source/module
 echo "=== ---2.1--- ==="
 rm -rf gen gen-static
+echo "=== ---2.1.1--- ==="
+find /usr -name "pygame_sdl2.h" 2>/dev/null
+echo "=== ---2.1.2--- ==="
+python2 -c "import pygame_sdl2; print(pygame_sdl2.__file__)"  
+echo "=== ---2.1.3--- ==="
+cp -r ../pygame_sdl2-source/pygame_sdl2 .
 echo "=== ---2.2--- ==="
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local:/usr/local/lib/python2.7/dist-packages:/usr/local/lib/python2.7/dist-packages/pygame_sdl2-2.1.0_for_renpy_7.5.3-py2.7-linux-x86_64.egg python2 setup.py build
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build
 echo "=== ---2.3--- ==="
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local:/usr/local/lib/python2.7/dist-packages:/usr/local/lib/python2.7/dist-packages/pygame_sdl2-2.1.0_for_renpy_7.5.3-py2.7-linux-x86_64.egg RENPY_STATIC=1 python2 setup.py install
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python2 setup.py install
 popd
 echo "=== ---3--- ==="
 pushd pygame_sdl2-source

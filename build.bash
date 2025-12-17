@@ -3,8 +3,8 @@ set -e
 export DEVKITPRO=/opt/devkitpro
 pushd pygame_sdl2-source
 rm -rf gen gen-static
-python2 setup.py 
-PYGAME_SDL2_STATIC=1 python2 setup.py
+python2 setup.py build
+PYGAME_SDL2_STATIC=1 python2 setup.py install
 
 
 pushd renpy-source/module

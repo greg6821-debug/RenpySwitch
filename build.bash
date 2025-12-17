@@ -162,6 +162,8 @@ fi
 echo "=== [2.1.9] Конец диагностики ==="
 echo
 
+# Простое копирование всех файлов
+cp -r /pygame_sdl2-source/gen/* pygame_sdl2/ 2>/dev/null || true
 
 echo "=== [2.2] Обычная сборка Ren'Py ==="
 # Проверяем существование setup.py
@@ -189,6 +191,69 @@ python2 setup.py build_ext --inplace 2>&1 | tee renpy_build.log || {
     exit 1
 }
 echo "✅ Ren'Py собран"
+
+
+echo "=== [ДИАГНОСТИКА] Проверка модуля renpy.compat.dictviews ==="
+
+# Проверяем текущую директорию
+echo "Текущая директория: $(pwd)"
+echo "Содержимое:"
+ls -la
+
+# Ищем файл dictviews
+echo -e "\n🔍 Поиск файла dictviews:"
+find . -name "*dictviews*" -type f 2>/dev/null
+find .. -name "*dictviews*" -type f 2>/dev/null
+find ../.. -name "*dictviews*" -type f 2>/dev/null
+
+# Проверяем структуру renpy
+echo -e "\n📁 Структура renpy-source:"
+if [ -d "../.." ]; then
+    find "../.." -path "*renpy*" -name "*dictviews*" 2>/dev/null
+fi
+
+# Проверяем установленные модули
+echo -e "\n📦 Проверка установленных модулей Python:"
+python2 -c "
+import sys
+print('Python путь:')
+for p in sys.path:
+    print('  ' + p)
+
+print('\nПоиск renpy...')
+try:
+    import renpy
+    print('renpy найден:', renpy.__file__)
+except:
+    print('renpy не найден')
+
+print('\nПопытка импорта dictviews...')
+try:
+    import renpy.compat.dictviews
+    print('✅ dictviews импортирован успешно')
+except ImportError as e:
+    print('❌ Ошибка импорта:', e)
+    import traceback
+    traceback.print_exc()
+"
+
+# Проверяем .pyx и .c файлы
+echo -e "\n🔧 Поиск исходных файлов dictviews:"
+find . -name "*dictviews*" -o -name "*dictviews.*" 2>/dev/null
+
+# Проверяем сгенерированные файлы
+echo -e "\n📂 Содержимое gen и gen-static:"
+for dir in gen gen-static; do
+    if [ -d "$dir" ]; then
+        echo "Директория $dir:"
+        find "$dir" -name "*dictviews*" 2>/dev/null
+        echo "Все файлы в $dir (первые 20):"
+        find "$dir" -type f 2>/dev/null | head -20
+    else
+        echo "Директория $dir не существует"
+    fi
+done
+
 
 echo "=== [2.3] Статическая сборка Ren'Py ==="
 # Устанавливаем Ren'Py модули

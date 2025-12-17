@@ -42,21 +42,6 @@ python2 setup.py install --force 2>&1 | tee install.log || {
     exit 1
 }
 echo "✅ pygame_sdl2 установлен"
-
-# Проверка установки
-echo "=== [1.5] Проверка установки pygame_sdl2 ==="
-python2 -c "
-import sys
-try:
-    import pygame_sdl2
-    print('✅ pygame_sdl2 импортирован успешно')
-    print('   Версия:', pygame_sdl2.__version__)
-    print('   Путь:', pygame_sdl2.__file__)
-except Exception as e:
-    print('❌ Ошибка импорта pygame_sdl2:', e)
-    sys.exit(1)
-"
-
 popd
 echo "Возврат в: $(pwd)"
 

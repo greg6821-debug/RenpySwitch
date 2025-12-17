@@ -38,44 +38,26 @@ rm python27-switch.tar.gz
 
 /bin/bash -c 'sed -i'"'"'.bak'"'"' '"'"'s/set(CMAKE_EXE_LINKER_FLAGS_INIT "/set(CMAKE_EXE_LINKER_FLAGS_INIT "-fPIC /'"'"' $DEVKITPRO/switch.cmake'
 
-rm -rf /root/.cache/
 
-set -e
+curl -LOC - https://www.renpy.org/dl/$RENPY_VER/pygame_sdl2-$PYGAME_SDL2_VER-for-renpy-$RENPY_VER.tar.gz
+curl -LOC - https://www.renpy.org/dl/$RENPY_VER/renpy-$RENPY_VER-sdk.zip
+curl -LOC - https://www.renpy.org/dl/$RENPY_VER/renpy-$RENPY_VER-source.tar.bz2
+#curl -LOC - https://dl.otorh.in/github/rawproject.zip
+curl -LOC - https://github.com/greg6821-debug/scripts/releases/download/1.0-scripts/rawproject.zip
 
-# ---------- download ----------
-echo "== Downloading pygame_sdl2 =="
-curl -fL -o pygame_sdl2.tar.gz \
-  https://www.renpy.org/dl/$RENPY_VER/pygame_sdl2-$PYGAME_SDL2_VER-for-renpy-$RENPY_VER.tar.gz
-ls -lh pygame_sdl2.tar.gz
-echo "== Downloading Ren'Py SDK =="
-curl -fL -o renpy-sdk.zip \
-  https://www.renpy.org/dl/$RENPY_VER/renpy-$RENPY_VER-sdk.zip
-ls -lh renpy-sdk.zip
-echo "== Downloading Ren'Py source =="
-curl -fL -o renpy-source.tar.bz2 \
-  https://www.renpy.org/dl/$RENPY_VER/renpy-$RENPY_VER-source.tar.bz2
-ls -lh renpy-source.tar.bz2
-echo "== Downloading rawproject =="
-curl -fL -o rawproject.zip \
-  https://github.com/greg6821-debug/scripts/releases/download/1.0-scripts/rawproject.zip
-ls -lh rawproject.zip
-
-# ---------- extract pygame_sdl2 ----------
-rm -rf pygame_sdl2-source
-tar -xf pygame_sdl2.tar.gz
+rm -rf pygame_sdl2-$PYGAME_SDL2_VER-for-renpy-$RENPY_VER pygame_sdl2-source
+tar -xf pygame_sdl2-$PYGAME_SDL2_VER-for-renpy-$RENPY_VER.tar.gz
 mv pygame_sdl2-$PYGAME_SDL2_VER-for-renpy-$RENPY_VER pygame_sdl2-source
-rm pygame_sdl2.tar.gz
+rm pygame_sdl2-$PYGAME_SDL2_VER-for-renpy-$RENPY_VER.tar.gz
 
-# ---------- extract renpy source ----------
-rm -rf renpy-source
-tar -xf renpy-source.tar.bz2
+rm -rf renpy-$RENPY_VER-source renpy-source
+tar -xf renpy-$RENPY_VER-source.tar.bz2
 mv renpy-$RENPY_VER-source renpy-source
-rm renpy-source.tar.bz2
+rm renpy-$RENPY_VER-source.tar.bz2
 
-# ---------- extract renpy sdk ----------
-rm -rf renpy_sdk
-unzip -q renpy-sdk.zip -d renpy_sdk
-rm renpy-sdk.zip
+rm -rf renpy-$RENPY_VER-sdk renpy_sdk
+unzip -qq renpy-$RENPY_VER-sdk.zip -d renpy_sdk
+rm renpy-$RENPY_VER-sdk.zip
 
 rm -rf raw
 unzip -qq rawproject.zip -d raw

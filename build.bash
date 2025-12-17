@@ -21,6 +21,10 @@ echo "Очистка завершена"
 
 echo "=== [1.3] Обычная сборка pygame_sdl2 ==="
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local \
+python2 setup.py build
+# Проверяем, что заголовки появились
+ls gen | grep rwobject_api.h
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local \
 python2 setup.py build_ext --inplace 2>&1 | tee build.log || {
     echo "❌ Ошибка сборки pygame_sdl2"
     exit 1

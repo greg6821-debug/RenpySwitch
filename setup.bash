@@ -38,6 +38,7 @@ rm python27-switch.tar.gz
 
 /bin/bash -c 'sed -i'"'"'.bak'"'"' '"'"'s/set(CMAKE_EXE_LINKER_FLAGS_INIT "/set(CMAKE_EXE_LINKER_FLAGS_INIT "-fPIC /'"'"' $DEVKITPRO/switch.cmake'
 
+rm -rf /root/.cache/
 
 set -e
 

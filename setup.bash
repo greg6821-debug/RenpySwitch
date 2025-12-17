@@ -43,14 +43,22 @@ rm -rf /root/.cache/
 set -e
 
 # ---------- download ----------
+echo "== Downloading pygame_sdl2 =="
 curl -fL -o pygame_sdl2.tar.gz \
   https://www.renpy.org/dl/$RENPY_VER/pygame_sdl2-$PYGAME_SDL2_VER-for-renpy-$RENPY_VER.tar.gz
+ls -lh pygame_sdl2.tar.gz
+echo "== Downloading Ren'Py SDK =="
 curl -fL -o renpy-sdk.zip \
   https://www.renpy.org/dl/$RENPY_VER/renpy-$RENPY_VER-sdk.zip
+ls -lh renpy-sdk.zip
+echo "== Downloading Ren'Py source =="
 curl -fL -o renpy-source.tar.bz2 \
   https://www.renpy.org/dl/$RENPY_VER/renpy-$RENPY_VER-source.tar.bz2
+ls -lh renpy-source.tar.bz2
+echo "== Downloading rawproject =="
 curl -fL -o rawproject.zip \
   https://github.com/greg6821-debug/scripts/releases/download/1.0-scripts/rawproject.zip
+ls -lh rawproject.zip
 
 # ---------- extract pygame_sdl2 ----------
 rm -rf pygame_sdl2-source

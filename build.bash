@@ -36,8 +36,9 @@ export PYTHONPATH=$(pwd)/..
 export CFLAGS="-I$(pwd)/fribidi-src/lib -I$(pwd)/fribidi-src $CFLAGS"
 export CPPFLAGS="$CFLAGS"
 
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py install
+#RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build
+#RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py install
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build_ext --inplace
 popd
 
 

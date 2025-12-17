@@ -1,27 +1,40 @@
 set -e
 echo "=== ---1--- ==="
 export DEVKITPRO=/opt/devkitpro
+echo "=== ---1.1--- ==="
 pushd pygame_sdl2-source
+echo "=== ---1.2--- ==="
 rm -rf gen gen-static
+echo "=== ---1.3--- ==="
 python2 setup.py build
+echo "=== ---1.4--- ==="
 PYGAME_SDL2_STATIC=1 python2 setup.py install
 popd
 echo "=== ---2--- ==="
 pushd renpy-source/module
+echo "=== ---2.1--- ==="
 rm -rf gen gen-static
+echo "=== ---2.2--- ==="
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build
+echo "=== ---2.3--- ==="
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python2 setup.py install
 popd
 echo "=== ---3--- ==="
 pushd pygame_sdl2-source
+echo "=== ---3.1--- ==="
 python2 setup.py build
+echo "=== ---3.2--- ==="
 python2 setup.py install_headers
+echo "=== ---3.3--- ==="
 python2 setup.py install
 popd
 echo "=== ---4--- ==="
 pushd renpy-source/module
+echo "=== ---4.1--- ==="
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build
+echo "=== ---4.2--- ==="
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py install
+echo "=== ---4.3--- ==="
 popd
 echo "=== ---5--- ==="
 

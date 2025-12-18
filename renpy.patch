@@ -1530,12 +1530,12 @@ diff -Naur b/renpy/log.py a/renpy/log.py
 +                except Exception:
 +                    s = repr((s,) + args)
 +                s += "\n"
-+            # Патч: игнорируем ошибки записи
++            
 +            try:
 +                with real_open("save://Logs/log.log", "a+") as f:
 +                    f.write(str(s))
 +            except Exception:
-+                pass  # пропускаем любые ошибки записи
++                pass
 +            return
 +
          if self.open():
@@ -1571,7 +1571,7 @@ diff -Naur b/renpy/main.py a/renpy/main.py
 +    for dir in renpy.config.searchpath:  # @ReservedAssignment
 +        try:
 +            if sys.platform == "horizon":
-+                # На Switch игнорируем save:// и sdmc: директории
++                
 +                if dir.startswith("save:") or dir.startswith("sdmc:"):
 +                    files = []
 +                else:
@@ -1579,7 +1579,7 @@ diff -Naur b/renpy/main.py a/renpy/main.py
 +            else:
 +                files = os.listdir(dir)
 +        except OSError:
-+            # Директория недоступна, просто пропускаем
++      
 +            files = []
 +
 +        for fn in files:

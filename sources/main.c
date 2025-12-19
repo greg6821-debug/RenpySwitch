@@ -213,68 +213,66 @@ void show_error(const char* message)
    Main
 ------------------------------------------------------- */
 
-#include <Python.h>
-#include <wchar.h>
-
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
-
+    
+    // Initialize ROMFS
+    Result rc = romfsInit();
+    if (R_FAILED(rc)) {
+        show_error("romfsInit failed");
+    }
+    
     /* ---- builtin modules ---- */
     static struct _inittab builtins[] = {
         {"_nx", PyInit__nx},
         {"_otrhlibnx", PyInit__otrhlibnx},
         {NULL, NULL}
     };
-
     PyImport_ExtendInittab(builtins);
-
+    
     /* ---- PyConfig ---- */
     PyConfig config;
     PyConfig_InitPythonConfig(&config);
-
     config.isolated = 1;
     config.use_environment = 0;
     config.site_import = 0;
     config.write_bytecode = 0;
-
+    
     /* PYTHONHOME */
     PyConfig_SetString(&config, &config.home, L"romfs:/Contents");
-
+    
     /* program_name / sys.executable */
     PyConfig_SetString(&config, &config.program_name, L"python3");
-
+    
     /* sys.prefix / sys.exec_prefix */
     PyConfig_SetString(&config, &config.prefix, L"romfs:/Contents");
     PyConfig_SetString(&config, &config.exec_prefix, L"romfs:/Contents");
-
+    
     /* sys.path */
-    PyWideStringList_Append(&config.module_search_paths,
-                            L"romfs:/Contents/lib/python39.zip");
+    // Removed zip path since you switched to directory
     PyWideStringList_Append(&config.module_search_paths,
                             L"romfs:/Contents/lib/python3.9");
     PyWideStringList_Append(&config.module_search_paths,
                             L"romfs:/Contents/lib/python3.9/lib-dynload");
     PyWideStringList_Append(&config.module_search_paths,
                             L"romfs:/Contents");
-
     config.module_search_paths_set = 1;
-
+    
     /* argv */
     wchar_t* pyargv[] = {
         L"renpy.py", // Имя скрипта, НЕ полный путь
         NULL
     };
     PyConfig_SetArgv(&config, 1, pyargv);
-
+    
     /* ---- init Python ---- */
     PyStatus status = Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
-
     if (PyStatus_Exception(status)) {
         Py_ExitStatusException(status);
     }
-
+    
     /* ---- mark platform ---- */
     PyObject* renpy = PyImport_ImportModule("renpy");
     if (renpy) {
@@ -283,17 +281,16 @@ int main(int argc, char* argv[])
         Py_DECREF(v);
         Py_DECREF(renpy);
     }
-
+    
     /* ---- run Ren'Py ---- */
     FILE* f = fopen("romfs:/Contents/renpy.py", "rb");
     if (!f) {
         show_error("Could not find renpy.py");
     }
-
     if (PyRun_SimpleFileEx(f, "renpy.py", 1) != 0) {
         show_error("Ren'Py execution failed");
     }
-
+    
     Py_Finalize();
     return 0;
 }

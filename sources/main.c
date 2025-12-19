@@ -213,8 +213,7 @@ void show_error(const char* message)
    Main
 ------------------------------------------------------- */
 
-#include <sys/stat.h> // Для fstat
-#include <dirent.h>  // Для opendir, readdir (если нужно перечислить)
+#include <dirent.h>  // Для opendir, closedir, readdir
 
 int main(int argc, char* argv[])
 {
@@ -228,23 +227,21 @@ int main(int argc, char* argv[])
         show_error(err_msg);
     }
     
-    // 2. Проверка существования директории encodings
-    FsFileSystem* fs = fsdevGetDeviceFileSystem("romfs");
-    if (fs == NULL) {
-        show_error("Failed to get ROMFS device filesystem");
-    }
-    FsDir dir;
-    rc = fsFsOpenDirectory(fs, "/Contents/lib/python3.9/encodings", FsDirOpenMode_ReadDirs | FsDirOpenMode_ReadFiles, &dir);
-    if (R_FAILED(rc)) {
-        char err_msg[64];
-        snprintf(err_msg, sizeof(err_msg), "Failed to open directory romfs:/Contents/lib/python3.9/encodings: 0x%08x", rc);
+    // 2. Проверка существования директории encodings с помощью opendir (POSIX)
+    const char* dir_path = "romfs:/Contents/lib/python3.9/encodings";
+    DIR* dir = opendir(dir_path);
+    if (!dir) {
+        char err_msg[128];
+        snprintf(err_msg, sizeof(err_msg), "Failed to open directory %s - check ROMFS build or path", dir_path);
         show_error(err_msg);
     }
-    // Опционально: Прочитать содержимое директории для проверки (закомментируй если не нужно)
-    // FsDirEntry entry;
-    // u64 total_entries = 0;
-    // fsDirRead(&dir, &total_entries, 1, &entry);  // Читаем одну запись для теста
-    fsDirClose(&dir);
+    // Опционально: Прочитать одну запись для проверки (не обязательно, но полезно)
+    struct dirent* entry = readdir(dir);
+    if (!entry) {
+        closedir(dir);
+        show_error("Directory encodings is empty or unreadable");
+    }
+    closedir(dir);
     
     // 3. Проверка открытия файла __init__.py
     const char* test_file = "romfs:/Contents/lib/python3.9/encodings/__init__.py";
@@ -267,13 +264,13 @@ int main(int argc, char* argv[])
     // 5. Проверка чтения содержимого файла
     char buffer[10];  // Читаем первые 10 байт для теста
     size_t read_bytes = fread(buffer, 1, sizeof(buffer), test);
-    if (read_bytes < 10) {  // Если файл меньше, ок, но если 0 — ошибка
+    if (read_bytes == 0) {  // Если ничего не прочитано — ошибка
         fclose(test);
         show_error("Failed to read from encodings/__init__.py");
     }
     fclose(test);
     
-    // Если все тесты прошли, выводим успех (опционально, если есть консоль)
+    // Если все тесты прошли, можно добавить лог (если есть консоль)
     // printf("All file checks passed!\n");
     
     /* ---- builtin modules ---- */
@@ -291,7 +288,7 @@ int main(int argc, char* argv[])
     config.use_environment = 0;
     config.site_import = 0;
     config.write_bytecode = 0;
-    config.verbose = 2;  // 6. Включаем verbose для детальных логов импортов
+    config.verbose = 2;  // Включаем verbose для детальных логов импортов
     
     /* PYTHONHOME */
     PyConfig_SetString(&config, &config.home, L"romfs:/Contents");
@@ -345,6 +342,6 @@ int main(int argc, char* argv[])
     }
     
     Py_Finalize();
-    // Опционально: romfsExit(); если нужно
+    // romfsExit(); если нужно (обычно не обязательно)
     return 0;
 }

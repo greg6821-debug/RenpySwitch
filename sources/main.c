@@ -2,6 +2,7 @@
 #include <Python.h>
 #include <stdio.h>
 #include <string.h>
+#include <wchar.h>
 
 /* -------------------------------------------------------
    Globals
@@ -222,7 +223,12 @@ int main(int argc, char* argv[])
         {"_otrhlibnx", PyInit__otrhlibnx},
         {NULL, NULL}
     };
-
+   
+    //Py_SetPythonHome(L"romfs:/Contents/lib.zip");
+    // 1. Установите PYTHONHOME правильно
+    wchar_t python_home[] = L"romfs:/Contents";
+    Py_SetPythonHome(python_home);
+   
     Py_NoSiteFlag = 1;
     Py_IgnoreEnvironmentFlag = 1;
     Py_DontWriteBytecodeFlag = 1;
@@ -233,7 +239,8 @@ int main(int argc, char* argv[])
 
     PyImport_ExtendInittab(builtins);
 
-    Py_SetPythonHome(L"romfs:/Contents/lib.zip");
+    
+   
     Py_Initialize();
 
     /* ---- argv ---- */
@@ -243,6 +250,16 @@ int main(int argc, char* argv[])
     };
     PySys_SetArgvEx(1, pyargv, 1);
 
+
+    //  Добавьте правильные пути к sys.path
+    PyObject* sys = PyImport_ImportModule("sys");
+    PyObject* path = PyObject_GetAttrString(sys, "path");
+    // Добавьте необходимые пути
+    PyList_Append(path, PyUnicode_FromString("romfs:/Contents/lib.zip"));
+    PyList_Append(path, PyUnicode_FromString("romfs:/Contents/lib/python39.zip"));
+    PyList_Append(path, PyUnicode_FromString("romfs:/Contents/lib/python3.9"));
+
+   
     /* ---- sys.path ---- */
     PyRun_SimpleString(
         "import sys\n"

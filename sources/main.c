@@ -213,15 +213,68 @@ void show_error(const char* message)
    Main
 ------------------------------------------------------- */
 
+#include <sys/stat.h> // Для fstat
+#include <dirent.h>  // Для opendir, readdir (если нужно перечислить)
+
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
     
-    // Initialize ROMFS
+    // 1. Initialize ROMFS и проверка
     Result rc = romfsInit();
     if (R_FAILED(rc)) {
-        show_error("romfsInit failed");
+        char err_msg[64];
+        snprintf(err_msg, sizeof(err_msg), "romfsInit failed with code: 0x%08x", rc);
+        show_error(err_msg);
     }
+    
+    // 2. Проверка существования директории encodings
+    FsFileSystem* fs = fsdevGetDeviceFileSystem("romfs");
+    if (fs == NULL) {
+        show_error("Failed to get ROMFS device filesystem");
+    }
+    FsDir dir;
+    rc = fsFsOpenDirectory(fs, "/Contents/lib/python3.9/encodings", FsDirOpenMode_ReadDirs | FsDirOpenMode_ReadFiles, &dir);
+    if (R_FAILED(rc)) {
+        char err_msg[64];
+        snprintf(err_msg, sizeof(err_msg), "Failed to open directory romfs:/Contents/lib/python3.9/encodings: 0x%08x", rc);
+        show_error(err_msg);
+    }
+    // Опционально: Прочитать содержимое директории для проверки (закомментируй если не нужно)
+    // FsDirEntry entry;
+    // u64 total_entries = 0;
+    // fsDirRead(&dir, &total_entries, 1, &entry);  // Читаем одну запись для теста
+    fsDirClose(&dir);
+    
+    // 3. Проверка открытия файла __init__.py
+    const char* test_file = "romfs:/Contents/lib/python3.9/encodings/__init__.py";
+    FILE* test = fopen(test_file, "rb");
+    if (!test) {
+        show_error("Cannot open romfs:/Contents/lib/python3.9/encodings/__init__.py - file may not exist or ROMFS issue");
+    }
+    
+    // 4. Проверка stat файла
+    struct stat st;
+    if (fstat(fileno(test), &st) != 0) {
+        fclose(test);
+        show_error("fstat failed on encodings/__init__.py");
+    }
+    if (st.st_size <= 0) {
+        fclose(test);
+        show_error("encodings/__init__.py is empty or size=0");
+    }
+    
+    // 5. Проверка чтения содержимого файла
+    char buffer[10];  // Читаем первые 10 байт для теста
+    size_t read_bytes = fread(buffer, 1, sizeof(buffer), test);
+    if (read_bytes < 10) {  // Если файл меньше, ок, но если 0 — ошибка
+        fclose(test);
+        show_error("Failed to read from encodings/__init__.py");
+    }
+    fclose(test);
+    
+    // Если все тесты прошли, выводим успех (опционально, если есть консоль)
+    // printf("All file checks passed!\n");
     
     /* ---- builtin modules ---- */
     static struct _inittab builtins[] = {
@@ -238,6 +291,7 @@ int main(int argc, char* argv[])
     config.use_environment = 0;
     config.site_import = 0;
     config.write_bytecode = 0;
+    config.verbose = 2;  // 6. Включаем verbose для детальных логов импортов
     
     /* PYTHONHOME */
     PyConfig_SetString(&config, &config.home, L"romfs:/Contents");
@@ -250,7 +304,6 @@ int main(int argc, char* argv[])
     PyConfig_SetString(&config, &config.exec_prefix, L"romfs:/Contents");
     
     /* sys.path */
-    // Removed zip path since you switched to directory
     PyWideStringList_Append(&config.module_search_paths,
                             L"romfs:/Contents/lib/python3.9");
     PyWideStringList_Append(&config.module_search_paths,
@@ -292,5 +345,6 @@ int main(int argc, char* argv[])
     }
     
     Py_Finalize();
+    // Опционально: romfsExit(); если нужно
     return 0;
 }

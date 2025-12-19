@@ -217,54 +217,53 @@ int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
 
-    /* ---- register builtin modules ---- */
+    /* ---- builtin modules ---- */
     static struct _inittab builtins[] = {
         {"_nx", PyInit__nx},
         {"_otrhlibnx", PyInit__otrhlibnx},
         {NULL, NULL}
     };
-   
-    //Py_SetPythonHome(L"romfs:/Contents/lib.zip");
-    // 1. Установите PYTHONHOME правильно
-    wchar_t python_home[] = L"romfs:/Contents";
-    Py_SetPythonHome(python_home);
-   
-    Py_NoSiteFlag = 1;
-    Py_IgnoreEnvironmentFlag = 1;
-    Py_DontWriteBytecodeFlag = 1;
-
-    Py_SetPath(
-        L"romfs:/Contents/lib.zip"
-    );
 
     PyImport_ExtendInittab(builtins);
 
-    
-   
-    Py_Initialize();
+    /* ---- PyConfig ---- */
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
 
-    /* ---- argv ---- */
+    config.isolated = 1;
+    config.use_environment = 0;
+    config.site_import = 0;
+    config.write_bytecode = 0;
+
+    /* PYTHONHOME */
+    PyConfig_SetString(&config, &config.home, L"romfs:/Contents");
+
+    /* sys.path — ВАЖНО */
+    PyWideStringList_Append(&config.module_search_paths,
+                            L"romfs:/Contents/lib/python39.zip");
+    PyWideStringList_Append(&config.module_search_paths,
+                            L"romfs:/Contents/lib/python3.9");
+    PyWideStringList_Append(&config.module_search_paths,
+                            L"romfs:/Contents/lib/python3.9/lib-dynload");
+    PyWideStringList_Append(&config.module_search_paths,
+                            L"romfs:/Contents");
+
+    config.module_search_paths_set = 1;
+
+    /* argv */
     wchar_t* pyargv[] = {
         L"romfs:/Contents/renpy.py",
         NULL
     };
-    PySys_SetArgvEx(1, pyargv, 1);
+    PyConfig_SetArgv(&config, 1, pyargv);
 
+    /* ---- init Python ---- */
+    PyStatus status = Py_InitializeFromConfig(&config);
+    PyConfig_Clear(&config);
 
-    //  Добавьте правильные пути к sys.path
-    PyObject* sys = PyImport_ImportModule("sys");
-    PyObject* path = PyObject_GetAttrString(sys, "path");
-    // Добавьте необходимые пути
-    PyList_Append(path, PyUnicode_FromString("romfs:/Contents/lib.zip"));
-    PyList_Append(path, PyUnicode_FromString("romfs:/Contents/lib/python39.zip"));
-    PyList_Append(path, PyUnicode_FromString("romfs:/Contents/lib/python3.9"));
-
-   
-    /* ---- sys.path ---- */
-    PyRun_SimpleString(
-        "import sys\n"
-        "sys.path.insert(0, 'romfs:/Contents/lib.zip')\n"
-    );
+    if (PyStatus_Exception(status)) {
+        Py_ExitStatusException(status);
+    }
 
     /* ---- mark platform ---- */
     PyObject* renpy = PyImport_ImportModule("renpy");
@@ -277,11 +276,13 @@ int main(int argc, char* argv[])
 
     /* ---- run Ren'Py ---- */
     FILE* f = fopen("romfs:/Contents/renpy.py", "rb");
-    if (!f)
+    if (!f) {
         show_error("Could not find renpy.py");
+    }
 
-    if (PyRun_SimpleFileEx(f, "renpy.py", 1) != 0)
+    if (PyRun_SimpleFileEx(f, "renpy.py", 1) != 0) {
         show_error("Ren'Py execution failed");
+    }
 
     Py_Finalize();
     return 0;

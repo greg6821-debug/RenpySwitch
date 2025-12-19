@@ -213,6 +213,9 @@ void show_error(const char* message)
    Main
 ------------------------------------------------------- */
 
+#include <Python.h>
+#include <wchar.h>
+
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
@@ -238,7 +241,14 @@ int main(int argc, char* argv[])
     /* PYTHONHOME */
     PyConfig_SetString(&config, &config.home, L"romfs:/Contents");
 
-    /* sys.path — ВАЖНО */
+    /* program_name / sys.executable */
+    PyConfig_SetString(&config, &config.program_name, L"python3");
+
+    /* sys.prefix / sys.exec_prefix */
+    PyConfig_SetString(&config, &config.prefix, L"romfs:/Contents");
+    PyConfig_SetString(&config, &config.exec_prefix, L"romfs:/Contents");
+
+    /* sys.path */
     PyWideStringList_Append(&config.module_search_paths,
                             L"romfs:/Contents/lib/python39.zip");
     PyWideStringList_Append(&config.module_search_paths,
@@ -252,7 +262,7 @@ int main(int argc, char* argv[])
 
     /* argv */
     wchar_t* pyargv[] = {
-        L"romfs:/Contents/renpy.py",
+        L"renpy.py", // Имя скрипта, НЕ полный путь
         NULL
     };
     PyConfig_SetArgv(&config, 1, pyargv);

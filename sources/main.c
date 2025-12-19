@@ -227,6 +227,10 @@ int main(int argc, char* argv[])
     Py_IgnoreEnvironmentFlag = 1;
     Py_DontWriteBytecodeFlag = 1;
 
+    Py_SetPath(
+        L"romfs:/Contents/lib.zip"
+    );
+
     PyImport_ExtendInittab(builtins);
 
     Py_SetPythonHome(L"romfs:/Contents/lib.zip");

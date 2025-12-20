@@ -227,29 +227,6 @@ int main(int argc, char* argv[])
         show_error(err_msg);
     }
     
-    // 2. Проверка существования директории encodings с помощью opendir (POSIX)
-    const char* dir_path = "romfs:/Contents/lib/python3.9/encodings";
-    DIR* dir = opendir(dir_path);
-    if (!dir) {
-        char err_msg[128];
-        snprintf(err_msg, sizeof(err_msg), "Failed to open directory %s - check ROMFS build or path", dir_path);
-        show_error(err_msg);
-    }
-    // Опционально: Прочитать одну запись для проверки (не обязательно, но полезно)
-    struct dirent* entry = readdir(dir);
-    if (!entry) {
-        closedir(dir);
-        show_error("Directory encodings is empty or unreadable");
-    }
-    closedir(dir);
-    
-    // 3. Проверка открытия файла __init__.py
-    const char* test_file = "romfs:/Contents/lib/python3.9/encodings/__init__.py";
-    FILE* test = fopen(test_file, "rb");
-    if (!test) {
-        show_error("Cannot open romfs:/Contents/lib/python3.9/encodings/__init__.py - file may not exist or ROMFS issue");
-    }
-    
     // 4. Проверка stat файла
     struct stat st;
     if (fstat(fileno(test), &st) != 0) {
@@ -283,8 +260,6 @@ int main(int argc, char* argv[])
     
     /* ---- PyConfig ---- */
     PyConfig config;
-    PyConfig_SetString(&config, &config.filesystem_encoding, L"utf-8");
-    PyConfig_SetString(&config, &config.filesystem_errors, L"surrogatepass");
     PyConfig_InitPythonConfig(&config);
     config.isolated = 1;
     config.use_environment = 0;
@@ -297,6 +272,9 @@ int main(int argc, char* argv[])
     
     /* program_name / sys.executable */
     PyConfig_SetString(&config, &config.program_name, L"python3");
+
+    PyConfig_SetString(&config, &config.filesystem_encoding, L"utf-8");
+    PyConfig_SetString(&config, &config.filesystem_errors, L"surrogatepass");
     
     /* sys.prefix / sys.exec_prefix */
     PyConfig_SetString(&config, &config.prefix, L"romfs:/Contents");
@@ -336,7 +314,24 @@ int main(int argc, char* argv[])
         Py_DECREF(renpy);
     }
     
-    /* ---- run Ren'Py ---- */
+    // 5. Инициализация Python
+    PyStatus status = Py_InitializeFromConfig(&config);
+    PyConfig_Clear(&config);
+    if (PyStatus_Exception(status)) {
+        Py_ExitStatusException(status);
+    }
+    
+    // 6. Тестовый запуск Python
+    PyRun_SimpleString(
+        "import sys\n"
+        "print('=== Python Initialized ===')\n"
+        "print('Version:', sys.version)\n"
+        "print('Platform:', sys.platform)\n"
+        "print('Paths:', sys.path)\n"
+        "print('Encodings fs:', sys.getfilesystemencoding())\n"
+    );
+    
+    // 7. Запуск Ren'Py
     FILE* f = fopen("romfs:/Contents/renpy.py", "rb");
     if (!f) {
         show_error("Could not find renpy.py");

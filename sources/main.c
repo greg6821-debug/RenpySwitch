@@ -283,6 +283,8 @@ int main(int argc, char* argv[])
     
     /* ---- PyConfig ---- */
     PyConfig config;
+    PyConfig_SetString(&config, &config.filesystem_encoding, L"utf-8");
+    PyConfig_SetString(&config, &config.filesystem_errors, L"surrogatepass");
     PyConfig_InitPythonConfig(&config);
     config.isolated = 1;
     config.use_environment = 0;
@@ -301,8 +303,10 @@ int main(int argc, char* argv[])
     PyConfig_SetString(&config, &config.exec_prefix, L"romfs:/Contents");
     
     /* sys.path */
-    PyWideStringList_Append(&config.module_search_paths,
-                            L"romfs:/Contents/lib/python3.9");
+    PyWideStringList_Append(
+    &config.module_search_paths,
+    L"romfs:/python39.zip"
+    );
     PyWideStringList_Append(&config.module_search_paths,
                             L"romfs:/Contents/lib/python3.9/lib-dynload");
     PyWideStringList_Append(&config.module_search_paths,

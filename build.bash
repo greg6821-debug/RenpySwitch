@@ -174,11 +174,9 @@ mkdir -p ./raw/switchlibs
 if [ -d "lib-dynload" ]; then
     echo "Копируем lib-dynload в ./raw/switchlibs"
     
-    # Вариант 1: Копировать всю папку с содержимым
+    # Копировать всю папку с содержимым
     cp -r lib-dynload ./raw/switchlibs/
     
-    # ИЛИ Вариант 2: Копировать только содержимое папки
-    # cp -r lib-dynload/* ./raw/switchlibs/
     
     echo "Проверяем результат:"
     echo "Исходная папка: $(realpath lib-dynload)"
@@ -203,7 +201,7 @@ cp -r ./renpy_clear/renpy/common ./raw/switch/romfs/Contents/renpy/
 cp ./renpy_clear/renpy.py ./raw/switch/romfs/Contents/
 #unzip -qq ./raw/lib.zip -d ./raw/lib/
 #rm ./raw/lib.zip
-cp -r $DEVKITPRO/portlibs/switch/. ./raw/switchlibs
+
 #cp -r $DEVKITPRO/portlibs/switch/. ./raw/switchlibs
 cp -r ./renpy_clear/lib/python3.9/. ./raw/lib
 cp -r ./renpy_clear/renpy ./raw/lib

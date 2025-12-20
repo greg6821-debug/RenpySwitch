@@ -8,29 +8,81 @@ if [ ! -d "python-build" ]; then
     pushd python-build
     echo "=== Текущая директория: $(pwd) ==="
     
-    # Скачивание Python 3.9.22 (если не скачан)
+    # Скачивание Python 3.9.22
     if [ ! -f "Python-3.9.22.tgz" ]; then
         wget https://www.python.org/ftp/python/3.9.22/Python-3.9.22.tgz
     fi
     
-    # Распаковка и конфигурация
+    # Распаковка
     tar -xzf Python-3.9.22.tgz
     cd Python-3.9.22
+    
     echo "=== Конфигурация Python в: $(pwd) ==="
-    # Ключевое изменение: --enable-shared для создания lib-dynload
+    
+    # Конфигурация с shared библиотеками
     ./configure --prefix=$PWD/install --enable-shared --disable-ipv6 \
         --without-ensurepip --with-system-ffi --with-system-expat
     
-    # Компиляция (только библиотеки, без установки)
+    echo "=== Начало сборки Python ==="
+    
+    # Компиляция
     make
     
-    # Копируем lib-dynload в ожидаемое место
-    mkdir -p ../../lib-dynload
-    cp -r build/lib.*/lib-dynload/* ../../lib-dynload/
-    echo "=== Текущая папка до выхода: $(pwd) ==="
+    echo "=== Поиск lib-dynload после сборки ==="
+    echo "Содержимое build:"
+    find ./build -type d -name "*lib*" 2>/dev/null | head -20
+    
+    # Ищем правильный путь к lib-dynload
+    LIB_DYNLOAD_PATH=$(find ./build -type d -name "lib-dynload" 2>/dev/null | head -1)
+    
+    if [ -z "$LIB_DYNLOAD_PATH" ]; then
+        # Альтернативный поиск - возможно, в build/lib.*
+        echo "Поиск альтернативных путей..."
+        LIB_PATTERN=$(find ./build -type d -name "lib.*" 2>/dev/null | head -1)
+        if [ -n "$LIB_PATTERN" ]; then
+            LIB_DYNLOAD_PATH="${LIB_PATTERN}/lib-dynload"
+            echo "Проверяем: $LIB_DYNLOAD_PATH"
+        fi
+    fi
+    
+    if [ -n "$LIB_DYNLOAD_PATH" ] && [ -d "$LIB_DYNLOAD_PATH" ]; then
+        echo "✓ Найден lib-dynload: $(realpath "$LIB_DYNLOAD_PATH" 2>/dev/null || echo "$LIB_DYNLOAD_PATH")"
+        echo "  Содержимое:"
+        ls -la "$LIB_DYNLOAD_PATH/" 2>/dev/null | head -5 || echo "    (не удалось получить список)"
+        
+        # Создаем целевую директорию
+        TARGET_PATH="../../lib-dynload"
+        mkdir -p "$TARGET_PATH"
+        echo "  Копируем из: $LIB_DYNLOAD_PATH"
+        echo "  Копируем в: $(realpath "$TARGET_PATH" 2>/dev/null || echo "$TARGET_PATH")"
+        
+        # Копируем содержимое
+        cp -r "$LIB_DYNLOAD_PATH"/* "$TARGET_PATH"/ 2>/dev/null || {
+            echo "  Попытка копирования файлов по одному..."
+            find "$LIB_DYNLOAD_PATH" -type f -name "*.so" -exec cp {} "$TARGET_PATH"/ \;
+        }
+        
+        echo "  Проверяем результат:"
+        if [ -d "$TARGET_PATH" ] && [ "$(ls -A "$TARGET_PATH" 2>/dev/null | wc -l)" -gt 0 ]; then
+            echo "  ✓ Успешно скопировано файлов: $(ls "$TARGET_PATH" | wc -l)"
+            ls -la "$TARGET_PATH/" | head -5
+        else
+            echo "  ✗ Не удалось скопировать файлы"
+            echo "  Создаем пустую папку для совместимости..."
+            mkdir -p "$TARGET_PATH"
+            touch "$TARGET_PATH/.placeholder"
+        fi
+    else
+        echo "✗ lib-dynload не найден"
+        echo "  Попытка найти build директорию..."
+        find . -name "Makefile" -o -name "config.status" | head -5
+        echo "  Создаем пустую папку lib-dynload для совместимости..."
+        mkdir -p "../../lib-dynload"
+        touch "../../lib-dynload/.placeholder"
+    fi
     
     popd
-    echo "=== Текущая папка после выхода: $(pwd) ==="
+    echo "=== Вернулись в директорию: $(pwd) ==="
 fi
 
 mkdir -p source/module

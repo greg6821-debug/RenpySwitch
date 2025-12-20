@@ -273,7 +273,7 @@ int main(int argc, char* argv[])
     PyConfig config;
     PyConfig_InitPythonConfig(&config);
     
-    config.isolated = 1;
+    config.isolated = 0;
     config.use_environment = 0;
     config.site_import = 0;
     config.write_bytecode = 0;
@@ -285,7 +285,12 @@ int main(int argc, char* argv[])
     PyConfig_SetString(&config, &config.stdio_encoding, L"utf-8");
     
     // Основные пути
-    PyConfig_SetString(&config, &config.home, L"romfs:/Contents");
+    //PyConfig_SetString(&config, &config.home, L"romfs:/Contents");
+    PyConfig_SetString(
+    &config,
+    &config.stdlib_dir,
+    L"romfs:/Contents/lib/python3.9"
+    );
     PyConfig_SetString(&config, &config.program_name, L"python3");
     PyConfig_SetString(&config, &config.prefix, L"romfs:/Contents");
     PyConfig_SetString(&config, &config.exec_prefix, L"romfs:/Contents");

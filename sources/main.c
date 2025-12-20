@@ -99,6 +99,32 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
     return PyModule_Create(&otrh_module);
 }
 
+/* pygame_sdl2 */
+extern PyObject* PyInit_pygame_sdl2_color(void);
+extern PyObject* PyInit_pygame_sdl2_controller(void);
+extern PyObject* PyInit_pygame_sdl2_display(void);
+extern PyObject* PyInit_pygame_sdl2_draw(void);
+extern PyObject* PyInit_pygame_sdl2_error(void);
+extern PyObject* PyInit_pygame_sdl2_event(void);
+extern PyObject* PyInit_pygame_sdl2_gfxdraw(void);
+extern PyObject* PyInit_pygame_sdl2_image(void);
+extern PyObject* PyInit_pygame_sdl2_joystick(void);
+extern PyObject* PyInit_pygame_sdl2_key(void);
+extern PyObject* PyInit_pygame_sdl2_locals(void);
+extern PyObject* PyInit_pygame_sdl2_mouse(void);
+extern PyObject* PyInit_pygame_sdl2_power(void);
+extern PyObject* PyInit_pygame_sdl2_pygame_time(void);
+extern PyObject* PyInit_pygame_sdl2_rect(void);
+extern PyObject* PyInit_pygame_sdl2_render(void);
+extern PyObject* PyInit_pygame_sdl2_rwobject(void);
+extern PyObject* PyInit_pygame_sdl2_scrap(void);
+extern PyObject* PyInit_pygame_sdl2_surface(void);
+extern PyObject* PyInit_pygame_sdl2_transform(void);
+
+/* renpy */
+extern PyObject* PyInit__renpy(void);
+extern PyObject* PyInit__renpybidi(void);
+
 /* -------------------------------------------------------
    Heap override
 ------------------------------------------------------- */
@@ -284,7 +310,7 @@ int main(int argc, char* argv[])
         {"_nx", PyInit__nx},
         {"_otrhlibnx", PyInit__otrhlibnx},
 
-        /*{"pygame_sdl2.color", PyInit_pygame_sdl2_color},
+        {"pygame_sdl2.color", PyInit_pygame_sdl2_color},
         {"pygame_sdl2.controller", PyInit_pygame_sdl2_controller},
         {"pygame_sdl2.display", PyInit_pygame_sdl2_display},
         {"pygame_sdl2.draw", PyInit_pygame_sdl2_draw},
@@ -306,7 +332,7 @@ int main(int argc, char* argv[])
         {"pygame_sdl2.transform", PyInit_pygame_sdl2_transform},
 
         {"_renpy", PyInit__renpy},
-        {"_renpybidi", PyInit__renpybidi},*/
+        {"_renpybidi", PyInit__renpybidi},
 
         {NULL, NULL}
     };

@@ -209,6 +209,22 @@ void show_error(const char* message)
     Py_Exit(1);
 }
 
+static AppletHookCookie applet_hook_cookie;
+static void on_applet_hook(AppletHookType hook, void *param)
+{
+   switch (hook)
+   {
+      case AppletHookType_OnExitRequest:
+        fsdevCommitDevice("save");
+        svcSleepThread(1500000000ULL);
+        appletUnlockExit();
+        break;
+
+      default:
+         break;
+   }
+}
+
 /* -------------------------------------------------------
    Main
 ------------------------------------------------------- */
@@ -300,13 +316,13 @@ int main(int argc, char* argv[])
     /* ---- Sanity check ---- */
     FILE* libzip = fopen("romfs:/Contents/lib.zip", "rb");
     if (!libzip) {
-        show_error("Could not find lib.zip", 1);
+        show_error("Could not find lib.zip");
     }
     fclose(libzip);
 
     FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
     if (!renpy_file) {
-        show_error("Could not find renpy.py", 1);
+        show_error("Could not find renpy.py");
     }
 
     /* ---- Initialize Python ---- */
@@ -322,7 +338,7 @@ int main(int argc, char* argv[])
     );
 
     if (rc != 0) {
-        show_error("Ren'Py execution failed", 1);
+        show_error("Ren'Py execution failed");
     }
 
     Py_Finalize();
@@ -333,142 +349,10 @@ exception:
     if (PyStatus_IsExit(status)) {
         return status.exitcode;
     }
-    show_error(status.err_msg, 0);
+    show_error(status.err_msg);
     Py_ExitStatusException(status);
 }
 
 
 
 
-int main(int argc, char* argv[])
-{
-    setenv("MESA_NO_ERROR", "1", 1);
-    
-    // 1. Initialize ROMFS
-    Result rc = romfsInit();
-    if (R_FAILED(rc)) {
-        char err_msg[64];
-        snprintf(err_msg, sizeof(err_msg), "romfsInit failed: 0x%08x", rc);
-        show_error(err_msg);
-    }
-    
-    // 2. Проверки ROMFS
-    const char* dir_path = "romfs:/Contents/lib/python3.9/encodings";
-    DIR* dir = opendir(dir_path);
-    if (!dir) {
-        char err_msg[128];
-        snprintf(err_msg, sizeof(err_msg), "Failed to open directory %s", dir_path);
-        show_error(err_msg);
-    }
-    struct dirent* entry = readdir(dir);
-    if (!entry) {
-        closedir(dir);
-        show_error("Directory encodings is empty");
-    }
-    closedir(dir);
-    
-    const char* test_file = "romfs:/Contents/lib/python3.9/encodings/__init__.py";
-    FILE* test = fopen(test_file, "rb");
-    if (!test) {
-        show_error("Cannot open __init__.py");
-    }
-    
-    struct stat st;
-    if (fstat(fileno(test), &st) != 0 || st.st_size <= 0) {
-        fclose(test);
-        show_error("__init__.py is empty or stat failed");
-    }
-    
-    char buffer[10];
-    if (fread(buffer, 1, sizeof(buffer), test) == 0) {
-        fclose(test);
-        show_error("Failed to read from __init__.py");
-    }
-    fclose(test);
-    
-    // 3. Builtin modules
-    static struct _inittab builtins[] = {
-        {"_nx", PyInit__nx},
-        {"_otrhlibnx", PyInit__otrhlibnx},
-        {NULL, NULL}
-    };
-    PyImport_ExtendInittab(builtins);
-    
-    // 4. PyConfig
-    PyConfig config;
-    PyConfig_InitPythonConfig(&config);
-    
-    config.isolated = 0;
-    config.use_environment = 0;
-    config.site_import = 0;
-    config.write_bytecode = 0;
-    config.verbose = 2;  // Оставляем verbose для отладки
-    
-    // Кодировки - КРИТИЧЕСКИ ВАЖНО
-    PyConfig_SetString(&config, &config.filesystem_encoding, L"utf-8");
-    PyConfig_SetString(&config, &config.filesystem_errors, L"surrogateescape");
-    PyConfig_SetString(&config, &config.stdio_encoding, L"utf-8");
-    
-    // Основные пути
-    //PyConfig_SetString(&config, &config.home, L"romfs:/Contents");
-    PyConfig_SetString(&config, &config.program_name, L"python3");
-    PyConfig_SetString(&config, &config.prefix, L"romfs:/Contents");
-    PyConfig_SetString(&config, &config.exec_prefix, L"romfs:/Contents");
-    
-    // sys.path - КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ!
-    // 1. Уберите python39.zip если его нет
-    // PyWideStringList_Append(&config.module_search_paths, L"romfs:/python39.zip");
-    
-    // 2. ГЛАВНОЕ: Добавьте основной путь к стандартной библиотеке
-    PyWideStringList_Append(&config.module_search_paths, L"romfs:/Contents/lib/python3.9");
-    
-    // 3. lib-dynload для C-расширений
-    PyWideStringList_Append(&config.module_search_paths, L"romfs:/Contents/lib/python3.9/lib-dynload");
-    
-    // 4. Не добавляйте romfs:/Contents в sys.path - это мешает поиску пакетов
-    // PyWideStringList_Append(&config.module_search_paths, L"romfs:/Contents");
-    
-    config.module_search_paths_set = 1;
-    
-    // argv
-    wchar_t* pyargv[] = { L"renpy.py", NULL };
-    PyConfig_SetArgv(&config, 1, pyargv);
-    
-    // 5. Инициализация Python
-    PyStatus status = Py_InitializeFromConfig(&config);
-    PyConfig_Clear(&config);
-    if (PyStatus_Exception(status)) {
-        Py_ExitStatusException(status);
-    }
-    
-    // 6. Отладочный вывод sys.path
-    PyRun_SimpleString(
-        "import sys\n"
-        "print('=== Python Initialized ===')\n"
-        "print('Python version:', sys.version)\n"
-        "print('Platform:', sys.platform)\n"
-        "print('Filesystem encoding:', sys.getfilesystemencoding())\n"
-        "print('\\nPython paths:')\n"
-        "for p in sys.path:\n"
-        "    print('  ', p)\n"
-        "\n"
-        "print('\\nTrying to import encodings...')\n"
-        "try:\n"
-        "    import encodings\n"
-        "    print('SUCCESS: encodings imported from:', encodings.__file__)\n"
-        "except Exception as e:\n"
-        "    print('FAILED:', e)\n"
-    );
-    
-    // 7. Запуск Ren'Py
-    FILE* f = fopen("romfs:/Contents/renpy.py", "rb");
-    if (!f) {
-        show_error("Could not find renpy.py");
-    }
-    if (PyRun_SimpleFileEx(f, "renpy.py", 1) != 0) {
-        show_error("Ren'Py execution failed");
-    }
-    
-    Py_Finalize();
-    return 0;
-}

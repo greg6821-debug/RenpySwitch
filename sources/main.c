@@ -291,13 +291,6 @@ int main(int argc, char* argv[])
         Py_DECREF(renpy);
     }
     
-    // 5. Инициализация Python
-    PyStatus status = Py_InitializeFromConfig(&config);
-    PyConfig_Clear(&config);
-    if (PyStatus_Exception(status)) {
-        Py_ExitStatusException(status);
-    }
-    
     // 6. Тестовый запуск Python
     PyRun_SimpleString(
         "import sys\n"

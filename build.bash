@@ -29,57 +29,50 @@ if [ ! -d "python-build" ]; then
     make
     
     echo "=== Поиск lib-dynload после сборки ==="
-    echo "Содержимое build:"
-    find ./build -type d -name "*lib*" 2>/dev/null | head -20
+echo "Содержимое build/lib.linux-x86_64-3.9:"
+ls -la ./build/lib.linux-x86_64-3.9/*.so 2>/dev/null || echo "  (файлы .so не найдены)"
+
+# Целевая папка
+TARGET_PATH="../../lib-dynload"
+mkdir -p "$TARGET_PATH"
+
+echo "=== Содержимое ./build/lib.linux-x86_64-3.9/ ==="
+echo "──────────────────────────────────────────────"
+if [ -d "./build/lib.linux-x86_64-3.9" ]; then
+    ls -la ./build/lib.linux-x86_64-3.9/ | head -20   # первые 20 строк, чтобы не заспамить лог
+    echo "──────────────────────────────────────────────"
+    echo "Всего файлов: $(ls ./build/lib.linux-x86_64-3.9/ | wc -l)"
     
-    # Ищем правильный путь к lib-dynload
-    LIB_DYNLOAD_PATH=$(find ./build -type d -name "lib-dynload" 2>/dev/null | head -1)
+    # Если хочешь видеть только .so-файлы (самое важное для lib-dynload)
+    echo ""
+    echo "Список .so-файлов:"
+    ls -la ./build/lib.linux-x86_64-3.9/*.so 2>/dev/null || echo "  .so-файлы не найдены"
+else
+    echo "✗ Директория ./build/lib.linux-x86_64-3.9/ НЕ существует!"
+fi
+
+# Копируем все .so-файлы из build/lib.linux-x86_64-3.9
+if [ -d "./build/lib.linux-x86_64-3.9" ]; then
+    echo "Копируем .so-файлы в $TARGET_PATH..."
+    cp -a ./build/lib.linux-x86_64-3.9/*.so "$TARGET_PATH"/ 2>/dev/null || {
+        echo "Копирование по одному..."
+        find ./build/lib.linux-x86_64-3.9 -type f -name "*.so" -exec cp -a {} "$TARGET_PATH"/ \;
+    }
     
-    if [ -z "$LIB_DYNLOAD_PATH" ]; then
-        # Альтернативный поиск - возможно, в build/lib.*
-        echo "Поиск альтернативных путей..."
-        LIB_PATTERN=$(find ./build -type d -name "lib.*" 2>/dev/null | head -1)
-        if [ -n "$LIB_PATTERN" ]; then
-            LIB_DYNLOAD_PATH="${LIB_PATTERN}/lib-dynload"
-            echo "Проверяем: $LIB_DYNLOAD_PATH"
-        fi
-    fi
-    
-    if [ -n "$LIB_DYNLOAD_PATH" ] && [ -d "$LIB_DYNLOAD_PATH" ]; then
-        echo "✓ Найден lib-dynload: $(realpath "$LIB_DYNLOAD_PATH" 2>/dev/null || echo "$LIB_DYNLOAD_PATH")"
-        echo "  Содержимое:"
-        ls -la "$LIB_DYNLOAD_PATH/" 2>/dev/null | head -5 || echo "    (не удалось получить список)"
-        
-        # Создаем целевую директорию
-        TARGET_PATH="../../lib-dynload"
-        mkdir -p "$TARGET_PATH"
-        echo "  Копируем из: $LIB_DYNLOAD_PATH"
-        echo "  Копируем в: $(realpath "$TARGET_PATH" 2>/dev/null || echo "$TARGET_PATH")"
-        
-        # Копируем содержимое
-        cp -r "$LIB_DYNLOAD_PATH"/* "$TARGET_PATH"/ 2>/dev/null || {
-            echo "  Попытка копирования файлов по одному..."
-            find "$LIB_DYNLOAD_PATH" -type f -name "*.so" -exec cp {} "$TARGET_PATH"/ \;
-        }
-        
-        echo "  Проверяем результат:"
-        if [ -d "$TARGET_PATH" ] && [ "$(ls -A "$TARGET_PATH" 2>/dev/null | wc -l)" -gt 0 ]; then
-            echo "  ✓ Успешно скопировано файлов: $(ls "$TARGET_PATH" | wc -l)"
-            ls -la "$TARGET_PATH/" | head -5
-        else
-            echo "  ✗ Не удалось скопировать файлы"
-            echo "  Создаем пустую папку для совместимости..."
-            mkdir -p "$TARGET_PATH"
-            touch "$TARGET_PATH/.placeholder"
-        fi
+    # Проверяем результат
+    if [ "$(ls -A "$TARGET_PATH"/*.so 2>/dev/null | wc -l)" -gt 0 ]; then
+        echo "✓ Успешно скопировано:"
+        ls -la "$TARGET_PATH" | head -8
     else
-        echo "✗ lib-dynload не найден"
-        echo "  Попытка найти build директорию..."
-        find . -name "Makefile" -o -name "config.status" | head -5
-        echo "  Создаем пустую папку lib-dynload для совместимости..."
-        mkdir -p "../../lib-dynload"
-        touch "../../lib-dynload/.placeholder"
+        echo "✗ Не удалось скопировать .so-файлы!"
+        mkdir -p "$TARGET_PATH"
+        touch "$TARGET_PATH/.placeholder"
     fi
+else
+    echo "✗ Директория build/lib.linux-x86_64-3.9 не найдена!"
+    mkdir -p "$TARGET_PATH"
+    touch "$TARGET_PATH/.placeholder"
+fi
     
     popd
     echo "=== Вернулись в директорию: $(pwd) ==="

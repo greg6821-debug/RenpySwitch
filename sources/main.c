@@ -286,11 +286,6 @@ int main(int argc, char* argv[])
     
     // Основные пути
     //PyConfig_SetString(&config, &config.home, L"romfs:/Contents");
-    PyConfig_SetString(
-    &config,
-    &config.stdlib_dir,
-    L"romfs:/Contents/lib/python3.9"
-    );
     PyConfig_SetString(&config, &config.program_name, L"python3");
     PyConfig_SetString(&config, &config.prefix, L"romfs:/Contents");
     PyConfig_SetString(&config, &config.exec_prefix, L"romfs:/Contents");

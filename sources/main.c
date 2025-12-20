@@ -226,30 +226,7 @@ int main(int argc, char* argv[])
         snprintf(err_msg, sizeof(err_msg), "romfsInit failed with code: 0x%08x", rc);
         show_error(err_msg);
     }
-    
-    // 4. Проверка stat файла
-    struct stat st;
-    if (fstat(fileno(test), &st) != 0) {
-        fclose(test);
-        show_error("fstat failed on encodings/__init__.py");
-    }
-    if (st.st_size <= 0) {
-        fclose(test);
-        show_error("encodings/__init__.py is empty or size=0");
-    }
-    
-    // 5. Проверка чтения содержимого файла
-    char buffer[10];  // Читаем первые 10 байт для теста
-    size_t read_bytes = fread(buffer, 1, sizeof(buffer), test);
-    if (read_bytes == 0) {  // Если ничего не прочитано — ошибка
-        fclose(test);
-        show_error("Failed to read from encodings/__init__.py");
-    }
-    fclose(test);
-    
-    // Если все тесты прошли, можно добавить лог (если есть консоль)
-    // printf("All file checks passed!\n");
-    
+      
     /* ---- builtin modules ---- */
     static struct _inittab builtins[] = {
         {"_nx", PyInit__nx},

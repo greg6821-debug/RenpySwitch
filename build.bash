@@ -50,7 +50,7 @@ if [ -d "./build/lib.linux-x86_64-3.9" ]; then
 else
     echo "✗ Директория ./build/lib.linux-x86_64-3.9/ НЕ существует!"
 fi
-
+echo "=== Текущая директория: $(pwd) ==="
 # Копируем все .so-файлы из build/lib.linux-x86_64-3.9
 if [ -d "./build/lib.linux-x86_64-3.9" ]; then
     echo "Копируем .so-файлы в $TARGET_PATH..."
@@ -166,9 +166,36 @@ python3 generate_private.py
 rm -rf private
 
 
+
+# Создаем целевую директорию (если не существует)
+mkdir -p ./raw/switchlibs
+
+# Проверяем, существует ли lib-dynload
+if [ -d "lib-dynload" ]; then
+    echo "Копируем lib-dynload в ./raw/switchlibs"
+    
+    # Вариант 1: Копировать всю папку с содержимым
+    cp -r lib-dynload ./raw/switchlibs/
+    
+    # ИЛИ Вариант 2: Копировать только содержимое папки
+    # cp -r lib-dynload/* ./raw/switchlibs/
+    
+    echo "Проверяем результат:"
+    echo "Исходная папка: $(realpath lib-dynload)"
+    echo "Целевая папка: $(realpath ./raw/switchlibs/lib-dynload)"
+    echo "Количество файлов: $(ls ./raw/switchlibs/lib-dynload/ 2>/dev/null | wc -l)"
+else
+    echo "Ошибка: lib-dynload не существует в текущей директории"
+    echo "Создаем пустую структуру для совместимости..."
+    mkdir -p ./raw/switchlibs/lib-dynload
+    touch ./raw/switchlibs/lib-dynload/.placeholder
+fi
+
+
+
 mkdir -p ./raw/switch/romfs/Contents/renpy
 mkdir -p ./raw/lib/sw
-mkdir -p ./raw/switchlibs/
+#mkdir -p ./raw/switchlibs/
 #mkdir -p ./raw/android/assets/renpy/common
 cp -r ./renpy_clear/renpy/common ./raw/switch/romfs/Contents/renpy/
 #cp -r ./renpy_clear/renpy/common ./raw/android/assets/renpy/
@@ -177,6 +204,7 @@ cp ./renpy_clear/renpy.py ./raw/switch/romfs/Contents/
 #unzip -qq ./raw/lib.zip -d ./raw/lib/
 #rm ./raw/lib.zip
 cp -r $DEVKITPRO/portlibs/switch/. ./raw/switchlibs
+#cp -r $DEVKITPRO/portlibs/switch/. ./raw/switchlibs
 cp -r ./renpy_clear/lib/python3.9/. ./raw/lib
 cp -r ./renpy_clear/renpy ./raw/lib
 rm -rf ./raw/lib/renpy/common/

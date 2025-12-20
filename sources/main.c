@@ -126,9 +126,7 @@ PyMODINIT_FUNC PyInit__renpybidi(void);
 
 
 /* pygame_sdl2 */
-extern PyObject* PyInit_pygame_sdl2(void);
-
-extern PyObject* PyInit_pygame_sdl2_color(void);
+/*extern PyObject* PyInit_pygame_sdl2_color(void);
 extern PyObject* PyInit_pygame_sdl2_controller(void);
 extern PyObject* PyInit_pygame_sdl2_display(void);
 extern PyObject* PyInit_pygame_sdl2_draw(void);
@@ -147,7 +145,7 @@ extern PyObject* PyInit_pygame_sdl2_render(void);
 extern PyObject* PyInit_pygame_sdl2_rwobject(void);
 extern PyObject* PyInit_pygame_sdl2_scrap(void);
 extern PyObject* PyInit_pygame_sdl2_surface(void);
-extern PyObject* PyInit_pygame_sdl2_transform(void);
+extern PyObject* PyInit_pygame_sdl2_transform(void);*/
 
 /* renpy */
 extern PyObject* PyInit__renpy(void);
@@ -337,8 +335,6 @@ int main(int argc, char* argv[])
 
         {"_nx", PyInit__nx},
         {"_otrhlibnx", PyInit__otrhlibnx},
-
-        {"pygame_sdl2", PyInit_pygame_sdl2},
 
         {"pygame_sdl2.color", PyInit_pygame_sdl2_color},
         {"pygame_sdl2.controller", PyInit_pygame_sdl2_controller},

@@ -330,7 +330,6 @@ int main(int argc, char* argv[])
     if (PyStatus_Exception(status)) goto exception;
     PyConfig_Clear(&config);
 
-    sys.path.insert(0, 'romfs:/Contents')
    
     /* ---- Run Ren'Py ---- */
     int rc = PyRun_SimpleFileEx(

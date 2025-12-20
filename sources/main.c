@@ -213,8 +213,133 @@ void show_error(const char* message)
    Main
 ------------------------------------------------------- */
 
-#include <dirent.h>  // Для opendir, closedir, readdir
-#include <sys/stat.h> // Для fstat
+int main(int argc, char* argv[])
+{
+    setenv("MESA_NO_ERROR", "1", 1);
+
+    appletLockExit();
+    appletHook(&applet_hook_cookie, on_applet_hook, NULL);
+
+    PyStatus status;
+    PyConfig config;
+
+    PyConfig_InitPythonConfig(&config);
+
+    /* ---- Critical for Python 3.9 embedded ---- */
+    config.isolated = 0;
+    config.use_environment = 0;
+    config.site_import = 0;
+    config.user_site_directory = 0;
+    config.write_bytecode = 0;
+    config.optimization_level = 2;
+    config.verbose = 0;
+
+    /* Filesystem encoding */
+    status = PyConfig_SetString(&config,
+                                &config.filesystem_encoding,
+                                L"utf-8");
+    if (PyStatus_Exception(status)) goto exception;
+
+    status = PyConfig_SetString(&config,
+                                &config.filesystem_errors,
+                                L"surrogateescape");
+    if (PyStatus_Exception(status)) goto exception;
+
+    /* ---- stdlib: ONLY lib.zip ---- */
+    config.module_search_paths_set = 1;
+
+    status = PyWideStringList_Append(
+        &config.module_search_paths,
+        L"romfs:/Contents/lib.zip"
+    );
+    if (PyStatus_Exception(status)) goto exception;
+
+    /* ---- argv ---- */
+    wchar_t* pyargv[] = {
+        L"romfs:/Contents/renpy.py",
+        NULL
+    };
+    status = PyConfig_SetArgv(&config, 1, pyargv);
+    if (PyStatus_Exception(status)) goto exception;
+
+    /* ---- Builtin modules ---- */
+    static struct _inittab builtins[] = {
+
+        {"_nx", PyInit__nx},
+        {"_otrhlibnx", PyInit__otrhlibnx},
+
+        /*{"pygame_sdl2.color", PyInit_pygame_sdl2_color},
+        {"pygame_sdl2.controller", PyInit_pygame_sdl2_controller},
+        {"pygame_sdl2.display", PyInit_pygame_sdl2_display},
+        {"pygame_sdl2.draw", PyInit_pygame_sdl2_draw},
+        {"pygame_sdl2.error", PyInit_pygame_sdl2_error},
+        {"pygame_sdl2.event", PyInit_pygame_sdl2_event},
+        {"pygame_sdl2.gfxdraw", PyInit_pygame_sdl2_gfxdraw},
+        {"pygame_sdl2.image", PyInit_pygame_sdl2_image},
+        {"pygame_sdl2.joystick", PyInit_pygame_sdl2_joystick},
+        {"pygame_sdl2.key", PyInit_pygame_sdl2_key},
+        {"pygame_sdl2.locals", PyInit_pygame_sdl2_locals},
+        {"pygame_sdl2.mouse", PyInit_pygame_sdl2_mouse},
+        {"pygame_sdl2.power", PyInit_pygame_sdl2_power},
+        {"pygame_sdl2.pygame_time", PyInit_pygame_sdl2_pygame_time},
+        {"pygame_sdl2.rect", PyInit_pygame_sdl2_rect},
+        {"pygame_sdl2.render", PyInit_pygame_sdl2_render},
+        {"pygame_sdl2.rwobject", PyInit_pygame_sdl2_rwobject},
+        {"pygame_sdl2.scrap", PyInit_pygame_sdl2_scrap},
+        {"pygame_sdl2.surface", PyInit_pygame_sdl2_surface},
+        {"pygame_sdl2.transform", PyInit_pygame_sdl2_transform},
+
+        {"_renpy", PyInit__renpy},
+        {"_renpybidi", PyInit__renpybidi},*/
+
+        {NULL, NULL}
+    };
+
+    PyImport_ExtendInittab(builtins);
+
+    /* ---- Sanity check ---- */
+    FILE* libzip = fopen("romfs:/Contents/lib.zip", "rb");
+    if (!libzip) {
+        show_error("Could not find lib.zip", 1);
+    }
+    fclose(libzip);
+
+    FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
+    if (!renpy_file) {
+        show_error("Could not find renpy.py", 1);
+    }
+
+    /* ---- Initialize Python ---- */
+    status = Py_InitializeFromConfig(&config);
+    if (PyStatus_Exception(status)) goto exception;
+    PyConfig_Clear(&config);
+
+    /* ---- Run Ren'Py ---- */
+    int rc = PyRun_SimpleFileEx(
+        renpy_file,
+        "romfs:/Contents/renpy.py",
+        1
+    );
+
+    if (rc != 0) {
+        show_error("Ren'Py execution failed", 1);
+    }
+
+    Py_Finalize();
+    return 0;
+
+exception:
+    PyConfig_Clear(&config);
+    if (PyStatus_IsExit(status)) {
+        return status.exitcode;
+    }
+    show_error(status.err_msg, 0);
+    Py_ExitStatusException(status);
+}
+
+
+
+
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);

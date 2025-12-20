@@ -214,13 +214,10 @@ void show_error(const char* message)
 ------------------------------------------------------- */
 
 #include <dirent.h>  // Для opendir, closedir, readdir
-
+#include <sys/stat.h> // Для fstat
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
-    
-    // Увеличиваем размер кучи для Switch
-    mallopt(M_ARENA_MAX, 4);
     
     // 1. Initialize ROMFS
     Result rc = romfsInit();
@@ -295,7 +292,7 @@ int main(int argc, char* argv[])
     
     // sys.path - КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ!
     // 1. Уберите python39.zip если его нет
-    PyWideStringList_Append(&config.module_search_paths, L"romfs:/python39.zip");
+    // PyWideStringList_Append(&config.module_search_paths, L"romfs:/python39.zip");
     
     // 2. ГЛАВНОЕ: Добавьте основной путь к стандартной библиотеке
     PyWideStringList_Append(&config.module_search_paths, L"romfs:/Contents/lib/python3.9");

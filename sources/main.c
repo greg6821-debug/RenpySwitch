@@ -99,7 +99,35 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
     return PyModule_Create(&otrh_module);
 }
 
+
+PyMODINIT_FUNC PyInit_pygame_sdl2_color(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_controller(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_display(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_draw(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_error(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_event(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_gfxdraw(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_image(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_joystick(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_key(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_locals(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_mouse(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_power(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_pygame_time(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_rect(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_render(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_rwobject(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_scrap(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_surface(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_transform(void);
+
+PyMODINIT_FUNC PyInit__renpy(void);
+PyMODINIT_FUNC PyInit__renpybidi(void);
+
+
 /* pygame_sdl2 */
+extern PyObject* PyInit_pygame_sdl2(void);
+
 extern PyObject* PyInit_pygame_sdl2_color(void);
 extern PyObject* PyInit_pygame_sdl2_controller(void);
 extern PyObject* PyInit_pygame_sdl2_display(void);
@@ -309,6 +337,8 @@ int main(int argc, char* argv[])
 
         {"_nx", PyInit__nx},
         {"_otrhlibnx", PyInit__otrhlibnx},
+
+        {"pygame_sdl2", PyInit_pygame_sdl2},
 
         {"pygame_sdl2.color", PyInit_pygame_sdl2_color},
         {"pygame_sdl2.controller", PyInit_pygame_sdl2_controller},

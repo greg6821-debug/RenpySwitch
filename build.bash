@@ -2,6 +2,37 @@ set -e
 
 export DEVKITPRO=/opt/devkitpro
 
+# 1. Сборка Python с поддержкой динамических библиотек
+if [ ! -d "python-build" ]; then
+    mkdir -p python-build
+    pushd python-build
+    echo "=== Текущая директория: $(pwd) ==="
+    
+    # Скачивание Python 3.9.22 (если не скачан)
+    if [ ! -f "Python-3.9.22.tgz" ]; then
+        wget https://www.python.org/ftp/python/3.9.22/Python-3.9.22.tgz
+    fi
+    
+    # Распаковка и конфигурация
+    tar -xzf Python-3.9.22.tgz
+    cd Python-3.9.22
+    echo "=== Конфигурация Python в: $(pwd) ==="
+    # Ключевое изменение: --enable-shared для создания lib-dynload
+    ./configure --prefix=$PWD/install --enable-shared --disable-ipv6 \
+        --without-ensurepip --with-system-ffi --with-system-expat
+    
+    # Компиляция (только библиотеки, без установки)
+    make
+    
+    # Копируем lib-dynload в ожидаемое место
+    mkdir -p ../../lib-dynload
+    cp -r build/lib.*/lib-dynload/* ../../lib-dynload/
+    echo "=== Текущая папка до выхода: $(pwd) ==="
+    
+    popd
+    echo "=== Текущая папка после выхода: $(pwd) ==="
+fi
+
 mkdir -p source/module
 mkdir -p include/module include/module/pygame_sdl2
 
@@ -100,7 +131,7 @@ cp -r ./renpy_clear/renpy/common ./raw/switch/romfs/Contents/renpy/
 cp ./renpy_clear/renpy.py ./raw/switch/romfs/Contents/
 #unzip -qq ./raw/lib.zip -d ./raw/lib/
 #rm ./raw/lib.zip
-#cp -r $DEVKITPRO/portlibs/switch/. ./raw/switchlibs
+cp -r $DEVKITPRO/portlibs/switch/. ./raw/switchlibs
 cp -r ./renpy_clear/lib/python3.9/. ./raw/lib
 cp -r ./renpy_clear/renpy ./raw/lib
 rm -rf ./raw/lib/renpy/common/

@@ -382,6 +382,22 @@ int main(int argc, char* argv[])
     if (PyStatus_Exception(status)) goto exception;
     PyConfig_Clear(&config);
 
+
+   #define x(lib) \
+    { \
+        if (PyRun_SimpleString("import " lib) == -1) \
+        { \
+            show_error("Could not import python library " lib ".\n\nPlease ensure that you have extracted the files correctly so that the \"lib\" folder is in the same directory as the nsp file, and that the \"lib\" folder contains the folder \"python2.7\". \nInside that folder, the file \"" lib ".py\" or folder \"" lib "\" needs to exist.", 1); \
+        } \
+    }
+
+    x("os");
+    x("pygame_sdl2");
+    x("encodings");
+
+    #undef x
+
+   
    
     /* ---- Run Ren'Py ---- */
     int rc = PyRun_SimpleFileEx(

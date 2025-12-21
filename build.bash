@@ -178,16 +178,16 @@ mkdir -p ./raw/switchlibs
 #     cp -r lib-dynload ./raw/switchlibs/
     
     
-    echo "Проверяем результат:"
-    echo "Исходная папка: $(realpath lib-dynload)"
-    echo "Целевая папка: $(realpath ./raw/switchlibs/lib-dynload)"
-    echo "Количество файлов: $(ls ./raw/switchlibs/lib-dynload/ 2>/dev/null | wc -l)"
-else
-    echo "Ошибка: lib-dynload не существует в текущей директории"
-    echo "Создаем пустую структуру для совместимости..."
-    mkdir -p ./raw/switchlibs/lib-dynload
-    touch ./raw/switchlibs/lib-dynload/.placeholder
-fi
+#     echo "Проверяем результат:"
+#     echo "Исходная папка: $(realpath lib-dynload)"
+#     echo "Целевая папка: $(realpath ./raw/switchlibs/lib-dynload)"
+#     echo "Количество файлов: $(ls ./raw/switchlibs/lib-dynload/ 2>/dev/null | wc -l)"
+# else
+#     echo "Ошибка: lib-dynload не существует в текущей директории"
+#     echo "Создаем пустую структуру для совместимости..."
+#     mkdir -p ./raw/switchlibs/lib-dynload
+#     touch ./raw/switchlibs/lib-dynload/.placeholder
+# fi
 
 
 

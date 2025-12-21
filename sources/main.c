@@ -385,7 +385,7 @@ int main(int argc, char* argv[])
    python_result = PyRun_SimpleString("import sys; sys.path = ['romfs:/Contents/lib.zip']");
    if (python_result == -1)
     {
-        show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.", 1);
+        show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.");
     }
    #define x(lib) \
     { \

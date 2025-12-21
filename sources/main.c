@@ -126,7 +126,7 @@ PyMODINIT_FUNC PyInit_pygame_sdl2_mixer_music(void);
 
 PyMODINIT_FUNC PyInit__renpy(void);
 PyMODINIT_FUNC PyInit__renpybidi(void);
-PyMODINIT_FUNC PyInit__renpytfd(void);
+//PyMODINIT_FUNC PyInit__renpytfd(void);
 
 PyMODINIT_FUNC PyInit_renpy_audio_filter(void);
 PyMODINIT_FUNC PyInit_renpy_audio_renpysound(void);
@@ -405,7 +405,7 @@ int main(int argc, char* argv[])
 
         {"_renpy", PyInit__renpy},
         {"_renpybidi", PyInit__renpybidi},
-        {"_renpytfd", PyInit__renpytfd},
+        //{"_renpytfd", PyInit__renpytfd},
 
         {"renpy.audio.filter", PyInit_renpy_audio_filter},
         {"renpy.audio.renpysound", PyInit_renpy_audio_renpysound},

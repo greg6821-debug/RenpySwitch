@@ -382,12 +382,16 @@ int main(int argc, char* argv[])
     if (PyStatus_Exception(status)) goto exception;
     PyConfig_Clear(&config);
 
-
+   python_result = PyRun_SimpleString("import sys; sys.path = ['romfs:/Contents/lib.zip']");
+   if (python_result == -1)
+    {
+        show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.", 1);
+    }
    #define x(lib) \
     { \
         if (PyRun_SimpleString("import " lib) == -1) \
         { \
-            show_error("Could not import python library " lib ".\n\nPlease ensure that you have extracted the files correctly so that the \"lib\" folder is in the same directory as the nsp file, and that the \"lib\" folder contains the folder \"python2.7\". \nInside that folder, the file \"" lib ".py\" or folder \"" lib "\" needs to exist."); \
+            show_error("Could not import python library " lib ".\n\nPlease ensure that you have extracted the files correctly so that the \"lib\" folder is in the same directory as the nsp file, and that the \"lib\" folder contains the folder \"python3.9\". \nInside that folder, the file \"" lib ".py\" or folder \"" lib "\" needs to exist."); \
         } \
     }
 

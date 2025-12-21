@@ -120,21 +120,30 @@ PyMODINIT_FUNC PyInit_pygame_sdl2_rwobject(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_scrap(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_surface(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_transform(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_mixer(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_mixer_music(void);
+
 
 PyMODINIT_FUNC PyInit__renpy(void);
 PyMODINIT_FUNC PyInit__renpybidi(void);
+PyMODINIT_FUNC PyInit__renpytfd(void);
+
+PyMODINIT_FUNC PyInit_renpy_audio_filter(void);
 PyMODINIT_FUNC PyInit_renpy_audio_renpysound(void);
+
 PyMODINIT_FUNC PyInit_renpy_display_accelerator(void);
-PyMODINIT_FUNC PyInit_renpy_display_render(void);
 PyMODINIT_FUNC PyInit_renpy_display_matrix(void);
-PyMODINIT_FUNC PyInit_renpy_gl_gl(void);
-PyMODINIT_FUNC PyInit_renpy_gl_gldraw(void);
-PyMODINIT_FUNC PyInit_renpy_gl_glenviron_shader(void);
-PyMODINIT_FUNC PyInit_renpy_gl_glrtt_copy(void);
-PyMODINIT_FUNC PyInit_renpy_gl_glrtt_fbo(void);
-PyMODINIT_FUNC PyInit_renpy_gl_gltexture(void);
+PyMODINIT_FUNC PyInit_renpy_display_quaternion(void);
+PyMODINIT_FUNC PyInit_renpy_display_render(void);
+
+PyMODINIT_FUNC PyInit_renpy_text_ftfont(void);
+PyMODINIT_FUNC PyInit_renpy_text_textsupport(void);
+PyMODINIT_FUNC PyInit_renpy_text_texwrap(void);
+
+PyMODINIT_FUNC PyInit_renpy_lexersupport(void);
 PyMODINIT_FUNC PyInit_renpy_pydict(void);
 PyMODINIT_FUNC PyInit_renpy_style(void);
+
 PyMODINIT_FUNC PyInit_renpy_styledata_style_activate_functions(void);
 PyMODINIT_FUNC PyInit_renpy_styledata_style_functions(void);
 PyMODINIT_FUNC PyInit_renpy_styledata_style_hover_functions(void);
@@ -147,11 +156,13 @@ PyMODINIT_FUNC PyInit_renpy_styledata_style_selected_idle_functions(void);
 PyMODINIT_FUNC PyInit_renpy_styledata_style_selected_insensitive_functions(void);
 PyMODINIT_FUNC PyInit_renpy_styledata_styleclass(void);
 PyMODINIT_FUNC PyInit_renpy_styledata_stylesets(void);
-PyMODINIT_FUNC PyInit_renpy_text_ftfont(void);
-PyMODINIT_FUNC PyInit_renpy_text_textsupport(void);
-PyMODINIT_FUNC PyInit_renpy_text_texwrap(void);
 
-PyMODINIT_FUNC PyInit_renpy_compat_dictviews(void);
+PyMODINIT_FUNC PyInit_renpy_gl_gldraw(void);
+PyMODINIT_FUNC PyInit_renpy_gl_glenviron_shader(void);
+PyMODINIT_FUNC PyInit_renpy_gl_glrtt_copy(void);
+PyMODINIT_FUNC PyInit_renpy_gl_glrtt_fbo(void);
+PyMODINIT_FUNC PyInit_renpy_gl_gltexture(void);
+
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2draw(void);
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2mesh(void);
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2mesh2(void);
@@ -160,13 +171,9 @@ PyMODINIT_FUNC PyInit_renpy_gl2_gl2model(void);
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2polygon(void);
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2shader(void);
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2texture(void);
+
 PyMODINIT_FUNC PyInit_renpy_uguu_gl(void);
-PyMODINIT_FUNC PyInit_renpy_uguu_uguu();
-
-PyMODINIT_FUNC PyInit_renpy_lexersupport(void);
-PyMODINIT_FUNC PyInit_renpy_display_quaternion(void);
-
-
+PyMODINIT_FUNC PyInit_renpy_uguu_uguu(void);
 
 /* renpy */
 extern PyObject* PyInit__renpy(void);
@@ -393,19 +400,24 @@ int main(int argc, char* argv[])
         {"pygame_sdl2.scrap", PyInit_pygame_sdl2_scrap},
         {"pygame_sdl2.surface", PyInit_pygame_sdl2_surface},
         {"pygame_sdl2.transform", PyInit_pygame_sdl2_transform},
+        {"pygame_sdl2.mixer", PyInit_pygame_sdl2_mixer},
+        {"pygame_sdl2.mixer_music", PyInit_pygame_sdl2_mixer_music},
 
         {"_renpy", PyInit__renpy},
         {"_renpybidi", PyInit__renpybidi},
+        {"_renpytfd", PyInit__renpytfd},
+
+        {"renpy.audio.filter", PyInit_renpy_audio_filter},
         {"renpy.audio.renpysound", PyInit_renpy_audio_renpysound},
         {"renpy.display.accelerator", PyInit_renpy_display_accelerator},
         {"renpy.display.matrix", PyInit_renpy_display_matrix},
+        {"renpy.display.quaternion", PyInit_renpy_display_quaternion},
         {"renpy.display.render", PyInit_renpy_display_render},
-        {"renpy.gl.gldraw", PyInit_renpy_gl_gldraw},
-        {"renpy.gl.glenviron_shader", PyInit_renpy_gl_glenviron_shader},
-        {"renpy.gl.glrtt_copy", PyInit_renpy_gl_glrtt_copy},
-        {"renpy.gl.glrtt_fbo", PyInit_renpy_gl_glrtt_fbo},
-        {"renpy.gl.gltexture", PyInit_renpy_gl_gltexture},
+        {"renpy.text.ftfont", PyInit_renpy_text_ftfont},
+        {"renpy.text.textsupport", PyInit_renpy_text_textsupport},
+        {"renpy.text.texwrap", PyInit_renpy_text_texwrap},
         {"renpy.pydict", PyInit_renpy_pydict},
+        {"renpy.lexersupport", PyInit_renpy_lexersupport},
         {"renpy.style", PyInit_renpy_style},
         {"renpy.styledata.style_activate_functions", PyInit_renpy_styledata_style_activate_functions},
         {"renpy.styledata.style_functions", PyInit_renpy_styledata_style_functions},
@@ -419,11 +431,13 @@ int main(int argc, char* argv[])
         {"renpy.styledata.style_selected_insensitive_functions", PyInit_renpy_styledata_style_selected_insensitive_functions},
         {"renpy.styledata.styleclass", PyInit_renpy_styledata_styleclass},
         {"renpy.styledata.stylesets", PyInit_renpy_styledata_stylesets},
-        {"renpy.text.ftfont", PyInit_renpy_text_ftfont},
-        {"renpy.text.textsupport", PyInit_renpy_text_textsupport},
-        {"renpy.text.texwrap", PyInit_renpy_text_texwrap},
 
-        {"renpy.compat.dictviews", PyInit_renpy_compat_dictviews},
+        {"renpy.gl.gldraw", PyInit_renpy_gl_gldraw},
+        {"renpy.gl.glenviron_shader", PyInit_renpy_gl_glenviron_shader},
+        {"renpy.gl.glrtt_copy", PyInit_renpy_gl_glrtt_copy},
+        {"renpy.gl.glrtt_fbo", PyInit_renpy_gl_glrtt_fbo},
+        {"renpy.gl.gltexture", PyInit_renpy_gl_gltexture},
+
         {"renpy.gl2.gl2draw", PyInit_renpy_gl2_gl2draw},
         {"renpy.gl2.gl2mesh", PyInit_renpy_gl2_gl2mesh},
         {"renpy.gl2.gl2mesh2", PyInit_renpy_gl2_gl2mesh2},
@@ -432,11 +446,9 @@ int main(int argc, char* argv[])
         {"renpy.gl2.gl2polygon", PyInit_renpy_gl2_gl2polygon},
         {"renpy.gl2.gl2shader", PyInit_renpy_gl2_gl2shader},
         {"renpy.gl2.gl2texture", PyInit_renpy_gl2_gl2texture},
+
         {"renpy.uguu.gl", PyInit_renpy_uguu_gl},
         {"renpy.uguu.uguu", PyInit_renpy_uguu_uguu},
-
-        {"renpy.lexersupport", PyInit_renpy_lexersupport},
-        {"renpy.display.quaternion", PyInit_renpy_display_quaternion},
 
         {NULL, NULL}
     };

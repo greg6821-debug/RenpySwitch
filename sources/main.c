@@ -163,7 +163,7 @@ PyMODINIT_FUNC PyInit_initrenpy_gl2_gl2texture(void);
 PyMODINIT_FUNC PyInit_initrenpy_uguu_gl(void);
 PyMODINIT_FUNC PyInit_initrenpy_uguu_uguu(void);
 
-PyMODINIT_FUNC PyInit_initrenpy_lexersupport(void);
+//PyMODINIT_FUNC PyInit_initrenpy_lexersupport(void);
 //PyMODINIT_FUNC PyInit_initrenpy_display_quaternion(void);
 
 
@@ -435,7 +435,7 @@ int main(int argc, char* argv[])
         {"renpy.uguu.gl", PyInit_initrenpy_uguu_gl},
         {"renpy.uguu.uguu", PyInit_initrenpy_uguu_uguu},
 
-        {"renpy.lexersupport", PyInit_initrenpy_lexersupport},
+        //{"renpy.lexersupport", PyInit_initrenpy_lexersupport},
         //{"renpy.display.quaternion", PyInit_initrenpy_display_quaternion},
 
         {NULL, NULL}

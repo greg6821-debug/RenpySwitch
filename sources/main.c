@@ -323,6 +323,7 @@ static PyObject* PyInit_pygame_sdl2(void)
 
 int main(int argc, char* argv[])
 {
+    chdir("romfs:/Contents");
     setlocale(LC_ALL, "C");
     setenv("MESA_NO_ERROR", "1", 1);
 
@@ -467,20 +468,27 @@ int main(int argc, char* argv[])
         show_error("Could not find renpy.py");
     }
 
-     PyImport_AppendInittab("_renpy", PyInit__renpy);
-     PyImport_AppendInittab("_renpybidi", PyInit__renpybidi);
+     SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
 
+     if (SDL_Init(SDL_INIT_VIDEO |
+             SDL_INIT_AUDIO |
+             SDL_INIT_GAMECONTROLLER) != 0)
+     {
+         printf("SDL_Init failed: %s\n", SDL_GetError());
+     }
+   
+   
     /* ---- Initialize Python ---- */
     status = Py_InitializeFromConfig(&config);
     if (PyStatus_Exception(status)) goto exception;
     PyConfig_Clear(&config);
 
-   int python_result;
+   /*int python_result;
    python_result = PyRun_SimpleString("import sys; sys.path = ['romfs:/Contents/lib.zip']");
    if (python_result == -1)
     {
         show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.");
-    }
+    }*/
    #define x(lib) \
     { \
         if (PyRun_SimpleString("import " lib) == -1) \

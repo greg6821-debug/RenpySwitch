@@ -314,6 +314,17 @@ static PyObject* PyInit_pygame_sdl2(void)
     PyObject* path = PyList_New(0);
     PyModule_AddObject(module, "__path__", path);
 
+    // Импортируем реальный подмодуль surface
+    PyObject* surface_module = PyImport_ImportModule("pygame_sdl2.surface");
+    if (!surface_module) return NULL;  // или обработать PyErr
+
+    // Берём объект Surface и добавляем в корень модуля
+    PyObject* surface_cls = PyObject_GetAttrString(surface_module, "Surface");
+    Py_DECREF(surface_module);
+    if (!surface_cls) return NULL;
+
+    PyModule_AddObject(module, "Surface", surface_cls);
+
     return module;
 }
 

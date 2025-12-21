@@ -123,29 +123,50 @@ PyMODINIT_FUNC PyInit_pygame_sdl2_transform(void);
 
 PyMODINIT_FUNC PyInit__renpy(void);
 PyMODINIT_FUNC PyInit__renpybidi(void);
+PyMODINIT_FUNC initrenpy_audio_renpysound();
+PyMODINIT_FUNC initrenpy_display_accelerator();
+PyMODINIT_FUNC initrenpy_display_render();
+PyMODINIT_FUNC initrenpy_display_matrix();
+PyMODINIT_FUNC initrenpy_gl_gl();
+PyMODINIT_FUNC initrenpy_gl_gldraw();
+PyMODINIT_FUNC initrenpy_gl_glenviron_shader();
+PyMODINIT_FUNC initrenpy_gl_glrtt_copy();
+PyMODINIT_FUNC initrenpy_gl_glrtt_fbo();
+PyMODINIT_FUNC initrenpy_gl_gltexture();
+PyMODINIT_FUNC initrenpy_pydict();
+PyMODINIT_FUNC initrenpy_style();
+PyMODINIT_FUNC initrenpy_styledata_style_activate_functions();
+PyMODINIT_FUNC initrenpy_styledata_style_functions();
+PyMODINIT_FUNC initrenpy_styledata_style_hover_functions();
+PyMODINIT_FUNC initrenpy_styledata_style_idle_functions();
+PyMODINIT_FUNC initrenpy_styledata_style_insensitive_functions();
+PyMODINIT_FUNC initrenpy_styledata_style_selected_activate_functions();
+PyMODINIT_FUNC initrenpy_styledata_style_selected_functions();
+PyMODINIT_FUNC initrenpy_styledata_style_selected_hover_functions();
+PyMODINIT_FUNC initrenpy_styledata_style_selected_idle_functions();
+PyMODINIT_FUNC initrenpy_styledata_style_selected_insensitive_functions();
+PyMODINIT_FUNC initrenpy_styledata_styleclass();
+PyMODINIT_FUNC initrenpy_styledata_stylesets();
+PyMODINIT_FUNC initrenpy_text_ftfont();
+PyMODINIT_FUNC initrenpy_text_textsupport();
+PyMODINIT_FUNC initrenpy_text_texwrap();
+
+PyMODINIT_FUNC initrenpy_compat_dictviews();
+PyMODINIT_FUNC initrenpy_gl2_gl2draw();
+PyMODINIT_FUNC initrenpy_gl2_gl2mesh();
+PyMODINIT_FUNC initrenpy_gl2_gl2mesh2();
+PyMODINIT_FUNC initrenpy_gl2_gl2mesh3();
+PyMODINIT_FUNC initrenpy_gl2_gl2model();
+PyMODINIT_FUNC initrenpy_gl2_gl2polygon();
+PyMODINIT_FUNC initrenpy_gl2_gl2shader();
+PyMODINIT_FUNC initrenpy_gl2_gl2texture();
+PyMODINIT_FUNC initrenpy_uguu_gl();
+PyMODINIT_FUNC initrenpy_uguu_uguu();
+
+PyMODINIT_FUNC initrenpy_lexersupport();
+PyMODINIT_FUNC initrenpy_display_quaternion();
 
 
-/* pygame_sdl2 */
-/*extern PyObject* PyInit_pygame_sdl2_color(void);
-extern PyObject* PyInit_pygame_sdl2_controller(void);
-extern PyObject* PyInit_pygame_sdl2_display(void);
-extern PyObject* PyInit_pygame_sdl2_draw(void);
-extern PyObject* PyInit_pygame_sdl2_error(void);
-extern PyObject* PyInit_pygame_sdl2_event(void);
-extern PyObject* PyInit_pygame_sdl2_gfxdraw(void);
-extern PyObject* PyInit_pygame_sdl2_image(void);
-extern PyObject* PyInit_pygame_sdl2_joystick(void);
-extern PyObject* PyInit_pygame_sdl2_key(void);
-extern PyObject* PyInit_pygame_sdl2_locals(void);
-extern PyObject* PyInit_pygame_sdl2_mouse(void);
-extern PyObject* PyInit_pygame_sdl2_power(void);
-extern PyObject* PyInit_pygame_sdl2_pygame_time(void);
-extern PyObject* PyInit_pygame_sdl2_rect(void);
-extern PyObject* PyInit_pygame_sdl2_render(void);
-extern PyObject* PyInit_pygame_sdl2_rwobject(void);
-extern PyObject* PyInit_pygame_sdl2_scrap(void);
-extern PyObject* PyInit_pygame_sdl2_surface(void);
-extern PyObject* PyInit_pygame_sdl2_transform(void);*/
 
 /* renpy */
 extern PyObject* PyInit__renpy(void);
@@ -375,6 +396,47 @@ int main(int argc, char* argv[])
 
         {"_renpy", PyInit__renpy},
         {"_renpybidi", PyInit__renpybidi},
+        {"renpy.audio.renpysound", initrenpy_audio_renpysound},
+        {"renpy.display.accelerator", initrenpy_display_accelerator},
+        {"renpy.display.matrix", initrenpy_display_matrix},
+        {"renpy.display.render", initrenpy_display_render},
+        {"renpy.gl.gldraw", initrenpy_gl_gldraw},
+        {"renpy.gl.glenviron_shader", initrenpy_gl_glenviron_shader},
+        {"renpy.gl.glrtt_copy", initrenpy_gl_glrtt_copy},
+        {"renpy.gl.glrtt_fbo", initrenpy_gl_glrtt_fbo},
+        {"renpy.gl.gltexture", initrenpy_gl_gltexture},
+        {"renpy.pydict", initrenpy_pydict},
+        {"renpy.style", initrenpy_style},
+        {"renpy.styledata.style_activate_functions", initrenpy_styledata_style_activate_functions},
+        {"renpy.styledata.style_functions", initrenpy_styledata_style_functions},
+        {"renpy.styledata.style_hover_functions", initrenpy_styledata_style_hover_functions},
+        {"renpy.styledata.style_idle_functions", initrenpy_styledata_style_idle_functions},
+        {"renpy.styledata.style_insensitive_functions", initrenpy_styledata_style_insensitive_functions},
+        {"renpy.styledata.style_selected_activate_functions", initrenpy_styledata_style_selected_activate_functions},
+        {"renpy.styledata.style_selected_functions", initrenpy_styledata_style_selected_functions},
+        {"renpy.styledata.style_selected_hover_functions", initrenpy_styledata_style_selected_hover_functions},
+        {"renpy.styledata.style_selected_idle_functions", initrenpy_styledata_style_selected_idle_functions},
+        {"renpy.styledata.style_selected_insensitive_functions", initrenpy_styledata_style_selected_insensitive_functions},
+        {"renpy.styledata.styleclass", initrenpy_styledata_styleclass},
+        {"renpy.styledata.stylesets", initrenpy_styledata_stylesets},
+        {"renpy.text.ftfont", initrenpy_text_ftfont},
+        {"renpy.text.textsupport", initrenpy_text_textsupport},
+        {"renpy.text.texwrap", initrenpy_text_texwrap},
+
+        {"renpy.compat.dictviews", initrenpy_compat_dictviews},
+        {"renpy.gl2.gl2draw", initrenpy_gl2_gl2draw},
+        {"renpy.gl2.gl2mesh", initrenpy_gl2_gl2mesh},
+        {"renpy.gl2.gl2mesh2", initrenpy_gl2_gl2mesh2},
+        {"renpy.gl2.gl2mesh3", initrenpy_gl2_gl2mesh3},
+        {"renpy.gl2.gl2model", initrenpy_gl2_gl2model},
+        {"renpy.gl2.gl2polygon", initrenpy_gl2_gl2polygon},
+        {"renpy.gl2.gl2shader", initrenpy_gl2_gl2shader},
+        {"renpy.gl2.gl2texture", initrenpy_gl2_gl2texture},
+        {"renpy.uguu.gl", initrenpy_uguu_gl},
+        {"renpy.uguu.uguu", initrenpy_uguu_uguu},
+
+        {"renpy.lexersupport", initrenpy_lexersupport},
+        {"renpy.display.quaternion", initrenpy_display_quaternion},
 
         {NULL, NULL}
     };

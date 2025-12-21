@@ -325,6 +325,7 @@ static PyObject* PyInit_pygame_sdl2(void)
 
 int main(int argc, char* argv[])
 {
+    setlocale(LC_ALL, "C");
     setenv("MESA_NO_ERROR", "1", 1);
 
     appletLockExit();
@@ -369,6 +370,7 @@ int main(int argc, char* argv[])
         L"romfs:/Contents/renpy.py",
         NULL
     };
+    Py_SetProgramName(pyargv[0]);
     status = PyConfig_SetArgv(&config, 1, pyargv);
     if (PyStatus_Exception(status)) goto exception;
 
@@ -466,6 +468,9 @@ int main(int argc, char* argv[])
     if (!renpy_file) {
         show_error("Could not find renpy.py");
     }
+
+     PyImport_AppendInittab("_renpy", PyInit__renpy);
+     PyImport_AppendInittab("_renpybidi", PyInit__renpybidi);
 
     /* ---- Initialize Python ---- */
     status = Py_InitializeFromConfig(&config);

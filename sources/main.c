@@ -277,6 +277,20 @@ static void on_applet_hook(AppletHookType hook, void *param)
    }
 }
 
+
+static PyObject* PyInit_pygame_sdl2(void)
+{
+    PyObject* module = PyModule_New("pygame_sdl2");
+    if (!module) return NULL;
+
+    // ВАЖНО: объявляем как package
+    PyObject* path = PyList_New(0);
+    PyModule_AddObject(module, "__path__", path);
+
+    return module;
+}
+
+
 /* -------------------------------------------------------
    Main
 ------------------------------------------------------- */
@@ -335,6 +349,8 @@ int main(int argc, char* argv[])
 
         {"_nx", PyInit__nx},
         {"_otrhlibnx", PyInit__otrhlibnx},
+
+        {"pygame_sdl2", PyInit_pygame_sdl2}, // <-- ВАЖНО
 
         {"pygame_sdl2.color", PyInit_pygame_sdl2_color},
         {"pygame_sdl2.controller", PyInit_pygame_sdl2_controller},

@@ -468,8 +468,6 @@ int main(int argc, char* argv[])
         show_error("Could not find renpy.py");
     }
 
-     SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
-
      if (SDL_Init(SDL_INIT_VIDEO |
              SDL_INIT_AUDIO |
              SDL_INIT_GAMECONTROLLER) != 0)

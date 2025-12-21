@@ -3,80 +3,80 @@ set -e
 export DEVKITPRO=/opt/devkitpro
 
 # 1. Сборка Python с поддержкой динамических библиотек
-if [ ! -d "python-build" ]; then
-    mkdir -p python-build
-    pushd python-build
-    echo "=== Текущая директория: $(pwd) ==="
+# if [ ! -d "python-build" ]; then
+#     mkdir -p python-build
+#     pushd python-build
+#     echo "=== Текущая директория: $(pwd) ==="
     
     # Скачивание Python 3.9.22
-    if [ ! -f "Python-3.9.22.tgz" ]; then
-        wget https://www.python.org/ftp/python/3.9.22/Python-3.9.22.tgz
-    fi
+#     if [ ! -f "Python-3.9.22.tgz" ]; then
+#         wget https://www.python.org/ftp/python/3.9.22/Python-3.9.22.tgz
+#     fi
     
-    # Распаковка
-    tar -xzf Python-3.9.22.tgz
-    cd Python-3.9.22
+#     # Распаковка
+#     tar -xzf Python-3.9.22.tgz
+#     cd Python-3.9.22
     
-    echo "=== Конфигурация Python в: $(pwd) ==="
+#     echo "=== Конфигурация Python в: $(pwd) ==="
     
-    # Конфигурация с shared библиотеками
-    ./configure --prefix=$PWD/install --enable-shared --disable-ipv6 \
-        --without-ensurepip --with-system-ffi --with-system-expat
+#     # Конфигурация с shared библиотеками
+#     ./configure --prefix=$PWD/install --enable-shared --disable-ipv6 \
+#         --without-ensurepip --with-system-ffi --with-system-expat
     
-    echo "=== Начало сборки Python ==="
+#     echo "=== Начало сборки Python ==="
     
-    # Компиляция
-    make
+#     # Компиляция
+#     make
     
-    echo "=== Поиск lib-dynload после сборки ==="
-echo "Содержимое build/lib.linux-x86_64-3.9:"
-ls -la ./build/lib.linux-x86_64-3.9/*.so 2>/dev/null || echo "  (файлы .so не найдены)"
+#     echo "=== Поиск lib-dynload после сборки ==="
+# echo "Содержимое build/lib.linux-x86_64-3.9:"
+# ls -la ./build/lib.linux-x86_64-3.9/*.so 2>/dev/null || echo "  (файлы .so не найдены)"
 
-# Целевая папка
-TARGET_PATH="../../lib-dynload"
-mkdir -p "$TARGET_PATH"
+# # Целевая папка
+# TARGET_PATH="../../lib-dynload"
+# mkdir -p "$TARGET_PATH"
 
-echo "=== Содержимое ./build/lib.linux-x86_64-3.9/ ==="
-echo "──────────────────────────────────────────────"
-if [ -d "./build/lib.linux-x86_64-3.9" ]; then
-    ls -la ./build/lib.linux-x86_64-3.9/ | head -20   # первые 20 строк, чтобы не заспамить лог
-    echo "──────────────────────────────────────────────"
-    echo "Всего файлов: $(ls ./build/lib.linux-x86_64-3.9/ | wc -l)"
+# echo "=== Содержимое ./build/lib.linux-x86_64-3.9/ ==="
+# echo "──────────────────────────────────────────────"
+# if [ -d "./build/lib.linux-x86_64-3.9" ]; then
+#     ls -la ./build/lib.linux-x86_64-3.9/ | head -20   # первые 20 строк, чтобы не заспамить лог
+#     echo "──────────────────────────────────────────────"
+#     echo "Всего файлов: $(ls ./build/lib.linux-x86_64-3.9/ | wc -l)"
     
-    # Если хочешь видеть только .so-файлы (самое важное для lib-dynload)
-    echo ""
-    echo "Список .so-файлов:"
-    ls -la ./build/lib.linux-x86_64-3.9/*.so 2>/dev/null || echo "  .so-файлы не найдены"
-else
-    echo "✗ Директория ./build/lib.linux-x86_64-3.9/ НЕ существует!"
-fi
-echo "=== Текущая директория: $(pwd) ==="
-# Копируем все .so-файлы из build/lib.linux-x86_64-3.9
-if [ -d "./build/lib.linux-x86_64-3.9" ]; then
-    echo "Копируем .so-файлы в $TARGET_PATH..."
-    cp -a ./build/lib.linux-x86_64-3.9/*.so "$TARGET_PATH"/ 2>/dev/null || {
-        echo "Копирование по одному..."
-        find ./build/lib.linux-x86_64-3.9 -type f -name "*.so" -exec cp -a {} "$TARGET_PATH"/ \;
-    }
+#     # Если хочешь видеть только .so-файлы (самое важное для lib-dynload)
+#     echo ""
+#     echo "Список .so-файлов:"
+#     ls -la ./build/lib.linux-x86_64-3.9/*.so 2>/dev/null || echo "  .so-файлы не найдены"
+# else
+#     echo "✗ Директория ./build/lib.linux-x86_64-3.9/ НЕ существует!"
+# fi
+# echo "=== Текущая директория: $(pwd) ==="
+# # Копируем все .so-файлы из build/lib.linux-x86_64-3.9
+# if [ -d "./build/lib.linux-x86_64-3.9" ]; then
+#     echo "Копируем .so-файлы в $TARGET_PATH..."
+#     cp -a ./build/lib.linux-x86_64-3.9/*.so "$TARGET_PATH"/ 2>/dev/null || {
+#         echo "Копирование по одному..."
+#         find ./build/lib.linux-x86_64-3.9 -type f -name "*.so" -exec cp -a {} "$TARGET_PATH"/ \;
+#     }
     
-    # Проверяем результат
-    if [ "$(ls -A "$TARGET_PATH"/*.so 2>/dev/null | wc -l)" -gt 0 ]; then
-        echo "✓ Успешно скопировано:"
-        ls -la "$TARGET_PATH" | head -8
-    else
-        echo "✗ Не удалось скопировать .so-файлы!"
-        mkdir -p "$TARGET_PATH"
-        touch "$TARGET_PATH/.placeholder"
-    fi
-else
-    echo "✗ Директория build/lib.linux-x86_64-3.9 не найдена!"
-    mkdir -p "$TARGET_PATH"
-    touch "$TARGET_PATH/.placeholder"
-fi
+#     # Проверяем результат
+#     if [ "$(ls -A "$TARGET_PATH"/*.so 2>/dev/null | wc -l)" -gt 0 ]; then
+#         echo "✓ Успешно скопировано:"
+#         ls -la "$TARGET_PATH" | head -8
+#     else
+#         echo "✗ Не удалось скопировать .so-файлы!"
+#         mkdir -p "$TARGET_PATH"
+#         touch "$TARGET_PATH/.placeholder"
+#     fi
+# else
+#     echo "✗ Директория build/lib.linux-x86_64-3.9 не найдена!"
+#     mkdir -p "$TARGET_PATH"
+#     touch "$TARGET_PATH/.placeholder"
+# fi
     
-    popd
-    echo "=== Вернулись в директорию: $(pwd) ==="
-fi
+#     popd
+#     echo "=== Вернулись в директорию: $(pwd) ==="
+# fi
 
 mkdir -p source/module
 mkdir -p include/module include/module/pygame_sdl2
@@ -171,11 +171,11 @@ rm -rf private
 mkdir -p ./raw/switchlibs
 
 # Проверяем, существует ли lib-dynload
-if [ -d "lib-dynload" ]; then
-    echo "Копируем lib-dynload в ./raw/switchlibs"
+# if [ -d "lib-dynload" ]; then
+#     echo "Копируем lib-dynload в ./raw/switchlibs"
     
-    # Копировать всю папку с содержимым
-    cp -r lib-dynload ./raw/switchlibs/
+#     # Копировать всю папку с содержимым
+#     cp -r lib-dynload ./raw/switchlibs/
     
     
     echo "Проверяем результат:"

@@ -382,6 +382,7 @@ int main(int argc, char* argv[])
     if (PyStatus_Exception(status)) goto exception;
     PyConfig_Clear(&config);
 
+   int python_result;
    python_result = PyRun_SimpleString("import sys; sys.path = ['romfs:/Contents/lib.zip']");
    if (python_result == -1)
     {

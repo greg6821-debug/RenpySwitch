@@ -176,9 +176,6 @@ PyMODINIT_FUNC PyInit_renpy_gl2_gl2texture(void);
 PyMODINIT_FUNC PyInit_renpy_uguu_gl(void);
 PyMODINIT_FUNC PyInit_renpy_uguu_uguu(void);
 
-/* renpy */
-extern PyObject* PyInit__renpy(void);
-extern PyObject* PyInit__renpybidi(void);
 
 /* -------------------------------------------------------
    Heap override

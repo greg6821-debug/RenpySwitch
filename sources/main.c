@@ -413,8 +413,8 @@ int main(int argc, char* argv[])
     }
 
     x("os");
-    x("pygame_sdl2");
-    x("encodings");
+    // x("pygame_sdl2");
+    // x("encodings");
 
     #undef x
 

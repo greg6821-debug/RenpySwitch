@@ -101,7 +101,7 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
     return PyModule_Create(&otrh_module);
 }
 
-static PyModuleDef pygame_sdl2_module = {
+static struct PyModuleDef pygame_sdl2_module = {
     PyModuleDef_HEAD_INIT,
     "pygame_sdl2",
     NULL,

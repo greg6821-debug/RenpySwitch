@@ -363,7 +363,8 @@ int main(int argc, char* argv[])
     status = PyConfig_SetArgv(&config, 1, pyargv);
     if (PyStatus_Exception(status)) goto exception;
 
-    Py_SetProgramName(pyargv);
+   
+    Py_SetProgramName(L"RenPy3.8.7");
    
     /* ---- Builtin modules ---- */
     static struct _inittab builtins[] = {

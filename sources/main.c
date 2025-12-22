@@ -101,52 +101,58 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
     return PyModule_Create(&otrh_module);
 }
 
-static struct PyModuleDef pygame_sdl2_module = {
-    PyModuleDef_HEAD_INIT,
-    "pygame_sdl2",
-    NULL,
-    -1,
-    NULL
-};
-
-#include <import.h>   // PyImport_GetModuleDict
-
-PyMODINIT_FUNC PyInit_pygame_sdl2(void)
-{
-    PyObject *m = PyModule_Create(&pygame_sdl2_module);
-    if (!m) return NULL;
-
-    /* 1. пакет */
-    PyObject *path = PyList_New(0);
-    PyModule_AddObject(m, "__path__", path);
-
-    /* 2. importlib._bootstrap.ModuleSpec */
-    PyObject *importlib = PyImport_ImportModule("importlib._bootstrap");
-    if (!importlib) return m;
-
-    PyObject *spec_cls = PyObject_GetAttrString(importlib, "ModuleSpec");
-    PyObject *builtin_loader = PyObject_GetAttrString(importlib, "BuiltinImporter");
-
-    PyObject *name = PyUnicode_FromString("pygame_sdl2");
-    PyObject *spec = PyObject_CallFunctionObjArgs(
-        spec_cls,
-        name,
-        builtin_loader,
+PyMODINIT_FUNC PyInit_pygame_sdl2(void) {
+    PyObject *module;
+    
+    // Создаем модуль pygame_sdl2
+    static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        "pygame_sdl2",
+        NULL,
+        -1,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
         NULL
-    );
-
-    Py_DECREF(name);
-    Py_DECREF(spec_cls);
-    Py_DECREF(importlib);
-
-    if (spec) {
-        PyObject_SetAttrString(m, "__spec__", spec);
-        PyObject_SetAttrString(m, "__loader__", builtin_loader);
-        Py_DECREF(spec);
+    };
+    
+    module = PyModule_Create(&moduledef);
+    if (module == NULL) return NULL;
+    
+    // ЗАГРУЖАЕМ И ВЫПОЛНЯЕМ __init__.py ВРУЧНУЮ
+    // Это ключевой момент!
+    PyObject *builtins = PyEval_GetBuiltins();
+    PyObject *import_func = PyDict_GetItemString(builtins, "__import__");
+    
+    if (import_func) {
+        // Импортируем pygame_sdl2.__init__ как модуль
+        PyObject *init_module = PyObject_CallFunction(
+            import_func, 
+            "s", 
+            "pygame_sdl2.__init__"
+        );
+        
+        if (init_module) {
+            // Копируем атрибуты из __init__ в основной модуль
+            PyObject *dict = PyModule_GetDict(init_module);
+            PyObject *main_dict = PyModule_GetDict(module);
+            
+            if (dict && main_dict) {
+                PyDict_Update(main_dict, dict);
+            }
+            Py_DECREF(init_module);
+        }
     }
-
-    Py_DECREF(builtin_loader);
-    return m;
+    
+    // Регистрируем подмодуль surface
+    PyObject *surface_module = PyInit_pygame_sdl2_surface();
+    if (surface_module == NULL) return NULL;
+    
+    Py_INCREF(surface_module);
+    PyModule_AddObject(module, "surface", surface_module);
+    
+    return module;
 }
 
 PyMODINIT_FUNC PyInit_pygame_sdl2_color(void);

@@ -101,29 +101,51 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
     return PyModule_Create(&otrh_module);
 }
 
+PyMODINIT_FUNC PyInit_renpy_pygame_error();
+PyMODINIT_FUNC PyInit_renpy_pygame_color();
+PyMODINIT_FUNC PyInit_renpy_pygame_controller();
+PyMODINIT_FUNC PyInit_renpy_pygame_rect();
+PyMODINIT_FUNC PyInit_renpy_pygame_rwobject();
+PyMODINIT_FUNC PyInit_renpy_pygame_surface();
+PyMODINIT_FUNC PyInit_renpy_pygame_display();
+PyMODINIT_FUNC PyInit_renpy_pygame_event();
+PyMODINIT_FUNC PyInit_renpy_pygame_locals();
+PyMODINIT_FUNC PyInit_renpy_pygame_key();
+PyMODINIT_FUNC PyInit_renpy_pygame_mouse();
+PyMODINIT_FUNC PyInit_renpy_pygame_joystick();
+PyMODINIT_FUNC PyInit_renpy_pygame_power();
+PyMODINIT_FUNC PyInit_renpy_pygame_pygame_time();
+PyMODINIT_FUNC PyInit_renpy_pygame_image();
+PyMODINIT_FUNC PyInit_renpy_pygame_transform();
+PyMODINIT_FUNC PyInit_renpy_pygame_gfxdraw();
+PyMODINIT_FUNC PyInit_renpy_pygame_draw();
+PyMODINIT_FUNC PyInit_renpy_pygame_scrap();
 
-PyMODINIT_FUNC PyInit_pygame_sdl2_color(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_controller(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_display(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_draw(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_error(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_event(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_gfxdraw(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_image(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_joystick(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_key(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_locals(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_mouse(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_power(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_pygame_time(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_rect(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_render(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_rwobject(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_scrap(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_surface(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_transform(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_mixer(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_mixer_music(void);
+
+// PyMODINIT_FUNC PyInit_pygame_sdl2_color(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_controller(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_display(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_draw(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_error(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_event(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_gfxdraw(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_image(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_joystick(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_key(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_locals(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_mouse(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_power(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_pygame_time(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_rect(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_rwobject(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_scrap(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_surface(void);
+// PyMODINIT_FUNC PyInit_pygame_sdl2_transform(void);
+
+
+//PyMODINIT_FUNC PyInit_pygame_sdl2_render(void);
+//PyMODINIT_FUNC PyInit_pygame_sdl2_mixer(void);
+//PyMODINIT_FUNC PyInit_pygame_sdl2_mixer_music(void);
 
 
 PyMODINIT_FUNC PyInit__renpy(void);
@@ -366,28 +388,49 @@ int main(int argc, char* argv[])
         {"_nx", PyInit__nx},
         {"_otrhlibnx", PyInit__otrhlibnx},
 
-        {"pygame_sdl2.color", PyInit_pygame_sdl2_color},
-        {"pygame_sdl2.controller", PyInit_pygame_sdl2_controller},
-        {"pygame_sdl2.display", PyInit_pygame_sdl2_display},
-        {"pygame_sdl2.draw", PyInit_pygame_sdl2_draw},
-        {"pygame_sdl2.error", PyInit_pygame_sdl2_error},
-        {"pygame_sdl2.event", PyInit_pygame_sdl2_event},
-        {"pygame_sdl2.gfxdraw", PyInit_pygame_sdl2_gfxdraw},
-        {"pygame_sdl2.image", PyInit_pygame_sdl2_image},
-        {"pygame_sdl2.joystick", PyInit_pygame_sdl2_joystick},
-        {"pygame_sdl2.key", PyInit_pygame_sdl2_key},
-        {"pygame_sdl2.locals", PyInit_pygame_sdl2_locals},
-        {"pygame_sdl2.mouse", PyInit_pygame_sdl2_mouse},
-        {"pygame_sdl2.power", PyInit_pygame_sdl2_power},
-        {"pygame_sdl2.pygame_time", PyInit_pygame_sdl2_pygame_time},
-        {"pygame_sdl2.rect", PyInit_pygame_sdl2_rect},
-        {"pygame_sdl2.render", PyInit_pygame_sdl2_render},
-        {"pygame_sdl2.rwobject", PyInit_pygame_sdl2_rwobject},
-        {"pygame_sdl2.scrap", PyInit_pygame_sdl2_scrap},
-        {"pygame_sdl2.surface", PyInit_pygame_sdl2_surface},
-        {"pygame_sdl2.transform", PyInit_pygame_sdl2_transform},
-        {"pygame_sdl2.mixer", PyInit_pygame_sdl2_mixer},
-        {"pygame_sdl2.mixer_music", PyInit_pygame_sdl2_mixer_music},
+        // {"pygame_sdl2.color", PyInit_pygame_sdl2_color},
+        // {"pygame_sdl2.controller", PyInit_pygame_sdl2_controller},
+        // {"pygame_sdl2.display", PyInit_pygame_sdl2_display},
+        // {"pygame_sdl2.draw", PyInit_pygame_sdl2_draw},
+        // {"pygame_sdl2.error", PyInit_pygame_sdl2_error},
+        // {"pygame_sdl2.event", PyInit_pygame_sdl2_event},
+        // {"pygame_sdl2.gfxdraw", PyInit_pygame_sdl2_gfxdraw},
+        // {"pygame_sdl2.image", PyInit_pygame_sdl2_image},
+        // {"pygame_sdl2.joystick", PyInit_pygame_sdl2_joystick},
+        // {"pygame_sdl2.key", PyInit_pygame_sdl2_key},
+        // {"pygame_sdl2.locals", PyInit_pygame_sdl2_locals},
+        // {"pygame_sdl2.mouse", PyInit_pygame_sdl2_mouse},
+        // {"pygame_sdl2.power", PyInit_pygame_sdl2_power},
+        // {"pygame_sdl2.pygame_time", PyInit_pygame_sdl2_pygame_time},
+        // {"pygame_sdl2.rect", PyInit_pygame_sdl2_rect}, 
+        // {"pygame_sdl2.rwobject", PyInit_pygame_sdl2_rwobject},
+        // {"pygame_sdl2.scrap", PyInit_pygame_sdl2_scrap},
+        // {"pygame_sdl2.surface", PyInit_pygame_sdl2_surface},
+        // {"pygame_sdl2.transform", PyInit_pygame_sdl2_transform},
+   
+        //{"pygame_sdl2.render", PyInit_pygame_sdl2_render},
+        //{"pygame_sdl2.mixer", PyInit_pygame_sdl2_mixer},
+        //{"pygame_sdl2.mixer_music", PyInit_pygame_sdl2_mixer_music},
+
+        {"renpy.pygame.error", PyInit_renpy_pygame_error},
+        {"renpy.pygame.color", PyInit_renpy_pygame_color},
+        {"renpy.pygame.controller", PyInit_renpy_pygame_controller},
+        {"renpy.pygame.rect", PyInit_renpy_pygame_rect},
+        {"renpy.pygame.rwobject", PyInit_renpy_pygame_rwobject},
+        {"renpy.pygame.surface", PyInit_renpy_pygame_surface},
+        {"renpy.pygame.display", PyInit_renpy_pygame_display},
+        {"renpy.pygame.event", PyInit_renpy_pygame_event},
+        {"renpy.pygame.locals", PyInit_renpy_pygame_locals},
+        {"renpy.pygame.key", PyInit_renpy_pygame_key},
+        {"renpy.pygame.mouse", PyInit_renpy_pygame_mouse},
+        {"renpy.pygame.joystick", PyInit_renpy_pygame_joystick},
+        {"renpy.pygame.power", PyInit_renpy_pygame_power},
+        {"renpy.pygame.pygame_time", PyInit_renpy_pygame_pygame_time},
+        {"renpy.pygame.image", PyInit_renpy_pygame_image},
+        {"renpy.pygame.transform", PyInit_renpy_pygame_transform},
+        {"renpy.pygame.gfxdraw", PyInit_renpy_pygame_gfxdraw},
+        {"renpy.pygame.draw", PyInit_renpy_pygame_draw},
+        {"renpy.pygame.scrap", PyInit_renpy_pygame_scrap},
 
         {"_renpy", PyInit__renpy},
         {"_renpybidi", PyInit__renpybidi},
@@ -491,7 +534,7 @@ int main(int argc, char* argv[])
 
     x("os");
     //x("pygame_sdl2");
-    x("pygame_sdl2.surface")
+    x("renpy.pygame")
     // x("encodings");
 
     #undef x

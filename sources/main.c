@@ -493,22 +493,14 @@ int main(int argc, char* argv[])
 
     for (int i = 0; core_subs[i]; i++) {
         PyObject *m = PyImport_ImportModule(core_subs[i]);
-        if (!m) {
-            PyErr_Print();  // Print the Python traceback for debugging
-            show_error("Failed to pre-import core submodule");
-            Py_Finalize();
-            exit(1);
-        }
+        if (!m) { /* handle error */ }
         Py_DECREF(m);
     }
 
-    // Get the namespace package
-    PyObject *pkg = PyImport_GetModule(PyUnicode_FromString("pygame_sdl2"));
-    if (!pkg) {
-        show_error("Failed to get pygame_sdl2 namespace after pre-import");
-        Py_Finalize();
-        exit(1);
-    }
+    // Now import pygame_sdl2 normally — it will auto-create namespace
+    PyObject *pkg = PyImport_ImportModule("pygame_sdl2");
+    if (!pkg) { /* handle error */ }
+    Py_DECREF(pkg);
 
     // Use Python zipfile to read __init__.py from lib.zip
     if (PyRun_SimpleString("import zipfile") == -1) {

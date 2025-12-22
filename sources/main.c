@@ -490,13 +490,12 @@ int main(int argc, char* argv[])
     }
 
     x("os");
-    x("pygame_sdl2");
+    //x("pygame_sdl2");
+    x("pygame_sdl2.surface")
     // x("encodings");
 
     #undef x
 
-   
-   
     /* ---- Run Ren'Py ---- */
     int rc = PyRun_SimpleFileEx(
         renpy_file,

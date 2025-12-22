@@ -304,48 +304,6 @@ static void on_applet_hook(AppletHookType hook, void *param)
    }
 }
 
-
-static PyObject* PyInit_pygame_sdl2(void)
-{
-    PyObject* module = PyModule_New("pygame_sdl2");
-    if (!module)
-        return NULL;
-
-    // 1. Объявляем пакет
-    PyObject* path = PyList_New(0);
-    PyModule_AddObject(module, "__path__", path);
-
-    // 2. КРИТИЧНО: сразу регистрируем модуль в sys.modules
-    PyObject* sys_modules = PyImport_GetModuleDict();
-    PyDict_SetItemString(sys_modules, "pygame_sdl2", module);
-
-    // 3. Теперь можно безопасно импортировать подмодуль
-    PyObject* surface_mod = PyImport_ImportModule("pygame_sdl2.surface");
-    if (!surface_mod) {
-        PyErr_Print();
-        PyErr_SetString(PyExc_ImportError,
-                        "pygame_sdl2.surface failed to import");
-        return NULL;
-    }
-
-    // 4. Забираем Surface
-    PyObject* surface_cls = PyObject_GetAttrString(surface_mod, "Surface");
-    if (!surface_cls) {
-        PyErr_Print();
-        PyErr_SetString(PyExc_ImportError,
-                        "pygame_sdl2.surface.Surface not found");
-        return NULL;
-    }
-
-    // 5. Прокидываем в корень пакета
-    PyModule_AddObject(module, "Surface", surface_cls);
-    PyModule_AddObject(module, "surface", surface_mod);
-
-    return module;
-}
-
-
-
 /* -------------------------------------------------------
    Main
 ------------------------------------------------------- */
@@ -407,8 +365,6 @@ int main(int argc, char* argv[])
 
         {"_nx", PyInit__nx},
         {"_otrhlibnx", PyInit__otrhlibnx},
-
-        {"pygame_sdl2", PyInit_pygame_sdl2}, // <-- ВАЖНО
 
         {"pygame_sdl2.color", PyInit_pygame_sdl2_color},
         {"pygame_sdl2.controller", PyInit_pygame_sdl2_controller},
@@ -510,12 +466,19 @@ int main(int argc, char* argv[])
     if (PyStatus_Exception(status)) goto exception;
     PyConfig_Clear(&config);
 
-   /*int python_result;
-   python_result = PyRun_SimpleString("import sys; sys.path = ['romfs:/Contents/lib.zip']");
-   if (python_result == -1)
+   char* pyargs[] = {
+        "romfs:/Contents/renpy.py",
+        NULL,
+    };
+
+    PySys_SetArgvEx(1, pyargs, 1);
+
+    int python_result;
+    python_result = PyRun_SimpleString("import sys; sys.path = ['romfs:/Contents/lib.zip']");
+    if (python_result == -1)
     {
         show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.");
-    }*/
+    }
    #define x(lib) \
     { \
         if (PyRun_SimpleString("import " lib) == -1) \
@@ -525,7 +488,7 @@ int main(int argc, char* argv[])
     }
 
     x("os");
-    // x("pygame_sdl2");
+    x("pygame_sdl2");
     // x("encodings");
 
     #undef x

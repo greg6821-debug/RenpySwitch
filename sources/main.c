@@ -114,10 +114,26 @@ PyMODINIT_FUNC PyInit_pygame_sdl2(void)
     PyObject *m = PyModule_Create(&pygame_sdl2_module);
     if (!m) return NULL;
 
-    // КЛЮЧЕВОЙ МОМЕНТ
+    /* 1. Делаем пакет */
     PyObject *path = PyList_New(0);
     PyModule_AddObject(m, "__path__", path);
 
+    /* 2. Выполняем pygame_sdl2/__init__.py */
+    PyObject *importlib = PyImport_ImportModule("importlib");
+    if (!importlib) return m;
+
+    PyObject *util = PyObject_GetAttrString(importlib, "import_module");
+    if (!util) return m;
+
+    PyObject *name = PyUnicode_FromString("pygame_sdl2.__init__");
+    PyObject *initmod = PyObject_CallFunctionObjArgs(util, name, NULL);
+
+    Py_DECREF(name);
+    Py_DECREF(util);
+    Py_DECREF(importlib);
+
+    /* initmod можно игнорировать — код уже выполнен */
+    Py_XDECREF(initmod);
     return m;
 }
 

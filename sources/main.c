@@ -101,6 +101,25 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
     return PyModule_Create(&otrh_module);
 }
 
+static PyModuleDef pygame_sdl2_module = {
+    PyModuleDef_HEAD_INIT,
+    "pygame_sdl2",
+    NULL,
+    -1,
+    NULL
+};
+
+PyMODINIT_FUNC PyInit_pygame_sdl2(void)
+{
+    PyObject *m = PyModule_Create(&pygame_sdl2_module);
+    if (!m) return NULL;
+
+    // КЛЮЧЕВОЙ МОМЕНТ
+    PyObject *path = PyList_New(0);
+    PyModule_AddObject(m, "__path__", path);
+
+    return m;
+}
 
 PyMODINIT_FUNC PyInit_pygame_sdl2_color(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_controller(void);
@@ -368,6 +387,8 @@ int main(int argc, char* argv[])
    
     /* ---- Builtin modules ---- */
     static struct _inittab builtins[] = {
+
+        {"pygame_sdl2", PyInit_pygame_sdl2},
 
         {"_nx", PyInit__nx},
         {"_otrhlibnx", PyInit__otrhlibnx},

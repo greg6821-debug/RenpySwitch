@@ -310,71 +310,33 @@ static PyObject* PyInit_pygame_sdl2(void)
     PyObject* module = PyModule_New("pygame_sdl2");
     if (!module) return NULL;
 
-    // ВАЖНО: объявляем как package
+    // Объявляем пакет
     PyObject* path = PyList_New(0);
     PyModule_AddObject(module, "__path__", path);
 
-    // Список подмодулей, которые нужно подтянуть
-    const char* submodules[] = {
-        "_renpy",
-        "_renpybidi",
-        "renpy.audio.filter",
-        "renpy.audio.renpysound",
-        "renpy.display.accelerator",
-        "renpy.display.matrix",
-        "renpy.display.quaternion",
-        "renpy.display.render",
-        "renpy.text.ftfont",
-        "renpy.text.textsupport",
-        "renpy.text.texwrap",
-        "renpy.pydict",
-        "renpy.lexersupport",
-        "renpy.style",
-        "renpy.styledata.style_activate_functions",
-        "renpy.styledata.style_functions",
-        "renpy.styledata.style_hover_functions",
-        "renpy.styledata.style_idle_functions",
-        "renpy.styledata.style_insensitive_functions",
-        "renpy.styledata.style_selected_activate_functions",
-        "renpy.styledata.style_selected_functions",
-        "renpy.styledata.style_selected_hover_functions",
-        "renpy.styledata.style_selected_idle_functions",
-        "renpy.styledata.style_selected_insensitive_functions",
-        "renpy.styledata.styleclass",
-        "renpy.styledata.stylesets",
-        "renpy.gl.gldraw",
-        "renpy.gl.glenviron_shader",
-        "renpy.gl.glrtt_copy",
-        "renpy.gl.glrtt_fbo",
-        "renpy.gl.gltexture",
-        "renpy.gl2.gl2draw",
-        "renpy.gl2.gl2mesh",
-        "renpy.gl2.gl2mesh2",
-        "renpy.gl2.gl2mesh3",
-        "renpy.gl2.gl2model",
-        "renpy.gl2.gl2polygon",
-        "renpy.gl2.gl2shader",
-        "renpy.gl2.gl2texture",
-        "renpy.uguu.gl",
-        "renpy.uguu.uguu",
-        NULL
-    };
-
-    // Импортируем каждый подмодуль и добавляем в пакет
-    for (const char** name = submodules; *name; ++name)
-    {
-        PyObject* submod = PyImport_ImportModule(*name);
-        if (!submod)
-        {
-            PyErr_Clear(); // игнорируем ошибки на этапе stub
-            continue;
-        }
-
-        // Берём последнюю часть имени как имя атрибута в пакете
-        const char* last = strrchr(*name, '.');
-        const char* attr_name = last ? last + 1 : *name;
-        PyModule_AddObject(module, attr_name, submod); // добавляем в pygame_sdl2
+    // Импортируем pygame_sdl2.surface
+    PyObject* surface_mod = PyImport_ImportModule("pygame_sdl2.surface");
+    if (!surface_mod) {
+        PyErr_Print();
+        PyErr_SetString(PyExc_ImportError,
+                        "pygame_sdl2.surface failed to import");
+        return NULL;
     }
+
+    // Достаём Surface
+    PyObject* surface_cls = PyObject_GetAttrString(surface_mod, "Surface");
+    if (!surface_cls) {
+        PyErr_Print();
+        PyErr_SetString(PyExc_ImportError,
+                        "pygame_sdl2.surface.Surface not found");
+        return NULL;
+    }
+
+    // pygame_sdl2.Surface = Surface
+    PyModule_AddObject(module, "Surface", surface_cls);
+
+    // Также полезно сохранить сам подмодуль
+    PyModule_AddObject(module, "surface", surface_mod);
 
     return module;
 }

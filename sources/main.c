@@ -101,6 +101,8 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
     return PyModule_Create(&otrh_module);
 }
 
+PyMODINIT_FUNC PyInit_pygame_sdl2_surface(void);
+
 PyMODINIT_FUNC PyInit_pygame_sdl2(void) {
     PyObject *module;
     
@@ -172,7 +174,6 @@ PyMODINIT_FUNC PyInit_pygame_sdl2_pygame_time(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_rect(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_rwobject(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_scrap(void);
-PyMODINIT_FUNC PyInit_pygame_sdl2_surface(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_transform(void);
 
 

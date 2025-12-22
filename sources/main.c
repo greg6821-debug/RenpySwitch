@@ -308,13 +308,18 @@ static void on_applet_hook(AppletHookType hook, void *param)
 static PyObject* PyInit_pygame_sdl2(void)
 {
     PyObject* module = PyModule_New("pygame_sdl2");
-    if (!module) return NULL;
+    if (!module)
+        return NULL;
 
-    // Объявляем пакет
+    // 1. Объявляем пакет
     PyObject* path = PyList_New(0);
     PyModule_AddObject(module, "__path__", path);
 
-    // Импортируем pygame_sdl2.surface
+    // 2. КРИТИЧНО: сразу регистрируем модуль в sys.modules
+    PyObject* sys_modules = PyImport_GetModuleDict();
+    PyDict_SetItemString(sys_modules, "pygame_sdl2", module);
+
+    // 3. Теперь можно безопасно импортировать подмодуль
     PyObject* surface_mod = PyImport_ImportModule("pygame_sdl2.surface");
     if (!surface_mod) {
         PyErr_Print();
@@ -323,7 +328,7 @@ static PyObject* PyInit_pygame_sdl2(void)
         return NULL;
     }
 
-    // Достаём Surface
+    // 4. Забираем Surface
     PyObject* surface_cls = PyObject_GetAttrString(surface_mod, "Surface");
     if (!surface_cls) {
         PyErr_Print();
@@ -332,14 +337,13 @@ static PyObject* PyInit_pygame_sdl2(void)
         return NULL;
     }
 
-    // pygame_sdl2.Surface = Surface
+    // 5. Прокидываем в корень пакета
     PyModule_AddObject(module, "Surface", surface_cls);
-
-    // Также полезно сохранить сам подмодуль
     PyModule_AddObject(module, "surface", surface_mod);
 
     return module;
 }
+
 
 
 /* -------------------------------------------------------

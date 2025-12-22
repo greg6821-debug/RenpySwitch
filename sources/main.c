@@ -466,15 +466,17 @@ int main(int argc, char* argv[])
     if (PyStatus_Exception(status)) goto exception;
     PyConfig_Clear(&config);
 
-   char* pyargs[] = {
-        "romfs:/Contents/renpy.py",
-        NULL,
+    wchar_t* pyargs[] = {
+    Py_DecodeLocale("romfs:/Contents/renpy.py", NULL),
+    NULL
     };
-
     PySys_SetArgvEx(1, pyargs, 1);
 
     int python_result;
-    python_result = PyRun_SimpleString("import sys; sys.path = ['romfs:/Contents/lib.zip']");
+    python_result = PyRun_SimpleString(
+    "import sys\n"
+    "sys.path[:] = ['romfs:/Contents/lib.zip']\n"
+    );
     if (python_result == -1)
     {
         show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.");

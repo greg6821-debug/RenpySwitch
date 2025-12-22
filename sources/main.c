@@ -4,7 +4,7 @@
 #include <string.h>
 #include <wchar.h>
 #include <locale.h>
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 /* -------------------------------------------------------
    Globals

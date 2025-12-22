@@ -466,106 +466,6 @@ int main(int argc, char* argv[])
     if (PyStatus_Exception(status)) goto exception;
     PyConfig_Clear(&config);
 
-    // Pre-import core pygame_sdl2 submodules to create namespace and load built-ins
-    const char *core_subs[] = {
-        "pygame_sdl2.color",
-        "pygame_sdl2.controller",
-        "pygame_sdl2.display",
-        "pygame_sdl2.draw",
-        "pygame_sdl2.error",
-        "pygame_sdl2.event",
-        "pygame_sdl2.gfxdraw",
-        "pygame_sdl2.image",
-        "pygame_sdl2.joystick",
-        "pygame_sdl2.key",
-        "pygame_sdl2.locals",
-        "pygame_sdl2.mouse",
-        "pygame_sdl2.power",
-        "pygame_sdl2.pygame_time",
-        "pygame_sdl2.rect",
-        "pygame_sdl2.render",
-        "pygame_sdl2.rwobject",
-        "pygame_sdl2.scrap",
-        "pygame_sdl2.surface",
-        "pygame_sdl2.transform",
-        NULL
-    };
-
-    for (int i = 0; core_subs[i]; i++) {
-        PyObject *m = PyImport_ImportModule(core_subs[i]);
-        if (!m) { /* handle error */ }
-        Py_DECREF(m);
-    }
-
-    // Now import pygame_sdl2 normally — it will auto-create namespace
-    PyObject *pkg = PyImport_ImportModule("pygame_sdl2");
-    if (!pkg) { /* handle error */ }
-    Py_DECREF(pkg);
-
-    // Use Python zipfile to read __init__.py from lib.zip
-    if (PyRun_SimpleString("import zipfile") == -1) {
-        show_error("Failed to import zipfile");
-        Py_Finalize();
-        exit(1);
-    }
-
-    PyObject *zipmod = PyImport_GetModule(PyUnicode_FromString("zipfile"));
-    if (!zipmod) {
-        show_error("Failed to get zipfile module");
-        Py_Finalize();
-        exit(1);
-    }
-
-    PyObject *zf = PyObject_CallMethod(zipmod, "ZipFile", "s", "romfs:/Contents/lib.zip");
-    if (!zf) {
-        PyErr_Print();
-        show_error("Failed to open lib.zip with zipfile");
-        Py_Finalize();
-        exit(1);
-    }
-
-    PyObject *code_bytes = PyObject_CallMethod(zf, "read", "s", "lib/python3.9/pygame_sdl2/__init__.py");
-    if (!code_bytes) {
-        PyErr_Print();
-        show_error("Failed to read pygame_sdl2/__init__.py from zip");
-        Py_Finalize();
-        exit(1);
-    }
-
-    PyObject *code_str = PyUnicode_FromEncodedObject(code_bytes, "utf-8", "strict");
-    Py_DECREF(code_bytes);
-    if (!code_str) {
-        PyErr_Print();
-        show_error("Failed to decode __init__.py to string");
-        Py_Finalize();
-        exit(1);
-    }
-
-    PyObject *code = Py_CompileStringExFlags(PyUnicode_AsUTF8(code_str), "pygame_sdl2/__init__.py", Py_file_input, NULL, 0);
-    Py_DECREF(code_str);
-    if (!code) {
-        PyErr_Print();
-        show_error("Failed to compile pygame_sdl2/__init__.py");
-        Py_Finalize();
-        exit(1);
-    }
-
-    PyObject *module_dict = PyModule_GetDict(pkg);
-    PyObject *res = PyEval_EvalCode(code, module_dict, module_dict);
-    Py_DECREF(code);
-    if (!res) {
-        PyErr_Print();
-        show_error("Failed to execute pygame_sdl2/__init__.py");
-        Py_Finalize();
-        exit(1);
-    }
-    Py_DECREF(res);
-
-    Py_DECREF(pkg);  // Clean up reference
-   
-    
-   
-
     int python_result;
     python_result = PyRun_SimpleString(
     "import sys\n"
@@ -584,7 +484,7 @@ int main(int argc, char* argv[])
     }
 
     x("os");
-    x("pygame_sdl2");
+    //x("pygame_sdl2");
     // x("encodings");
 
     #undef x

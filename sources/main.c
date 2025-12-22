@@ -363,6 +363,8 @@ int main(int argc, char* argv[])
     status = PyConfig_SetArgv(&config, 1, pyargv);
     if (PyStatus_Exception(status)) goto exception;
 
+    Py_SetProgramName(pyargv);
+   
     /* ---- Builtin modules ---- */
     static struct _inittab builtins[] = {
 
@@ -455,6 +457,8 @@ int main(int argc, char* argv[])
     if (!renpy_file) {
         show_error("Could not find renpy.py");
     }   
+
+    
   
     /* ---- Initialize Python ---- */
     status = Py_InitializeFromConfig(&config);
@@ -463,22 +467,33 @@ int main(int argc, char* argv[])
 
     // Pre-import core pygame_sdl2 submodules to create namespace and load built-ins
     const char *core_subs[] = {
-        "pygame_sdl2.error",
-        "pygame_sdl2.surface",
-        "pygame_sdl2.rect",
         "pygame_sdl2.color",
+        "pygame_sdl2.controller",
         "pygame_sdl2.display",
+        "pygame_sdl2.draw",
+        "pygame_sdl2.error",
         "pygame_sdl2.event",
+        "pygame_sdl2.gfxdraw",
+        "pygame_sdl2.image",
+        "pygame_sdl2.joystick",
         "pygame_sdl2.key",
         "pygame_sdl2.locals",
-        "pygame_sdl2.time",
-        "pygame_sdl2.version",
+        "pygame_sdl2.mouse",
+        "pygame_sdl2.power",
+        "pygame_sdl2.pygame_time",
+        "pygame_sdl2.rect",
+        "pygame_sdl2.render",
+        "pygame_sdl2.rwobject",
+        "pygame_sdl2.scrap",
+        "pygame_sdl2.surface",
+        "pygame_sdl2.transform",
         NULL
     };
 
     for (int i = 0; core_subs[i]; i++) {
         PyObject *m = PyImport_ImportModule(core_subs[i]);
         if (!m) {
+            PyErr_Print();  // Print the Python traceback for debugging
             show_error("Failed to pre-import core submodule");
             Py_Finalize();
             exit(1);

@@ -14,7 +14,7 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     endif()
 endif()
 
-project(renpy-switch-modules C CXX)
+project(renpy-switch C CXX)
 
 # ------------------------------------------------------------------------------
 # Build type
@@ -24,7 +24,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # ------------------------------------------------------------------------------
-# Compile definitions
+# Compile definitions (Python / Switch)
 # ------------------------------------------------------------------------------
 add_compile_definitions(
     __SWITCH__
@@ -168,18 +168,6 @@ pkg_check_modules(SDL2_TTF REQUIRED IMPORTED_TARGET SDL2_ttf)
 pkg_check_modules(ZLIB REQUIRED IMPORTED_TARGET zlib)
 
 # ------------------------------------------------------------------------------
-# Workaround: pkg-config returns $(DEVKITPRO) which CMake does not expand
-# ------------------------------------------------------------------------------
-if(TARGET PkgConfig::LIBDRM_NOUVEAU)
-    set_property(TARGET PkgConfig::LIBDRM_NOUVEAU PROPERTY
-        INTERFACE_INCLUDE_DIRECTORIES
-            "${DEVKITPRO}/portlibs/switch/include"
-    )
-endif()
-
-# ------------------------------------------------------------------------------
-# Static library
-# ------------------------------------------------------------------------------
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -194,6 +182,9 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:RELWITHDEBINFO>:${OPT_FLAGS}>
 )
 
+target_link_options(${PROJECT_NAME} PRIVATE
+    "-specs=${DEVKITPRO}/libnx/switch.specs"
+)
 target_link_libraries(${PROJECT_NAME}
     ${DEVKITPRO}/portlibs/switch/lib/libpython3.9.a
     ${DEVKITPRO}/portlibs/switch/lib/libfribidi.a

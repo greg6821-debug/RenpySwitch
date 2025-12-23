@@ -101,9 +101,7 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
     return PyModule_Create(&otrh_module);
 }
 
-PyMODINIT_FUNC PyInit_surface(void);
 
-//PyMODINIT_FUNC PyInit_pygame_sdl2_surface(void);
 
 // PyMODINIT_FUNC PyInit_pygame_sdl2(void) {
 //     PyObject *module;
@@ -177,7 +175,7 @@ PyMODINIT_FUNC PyInit_pygame_sdl2_rect(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_rwobject(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_scrap(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_transform(void);
-
+PyMODINIT_FUNC PyInit_pygame_sdl2_surface(void);
 
 PyMODINIT_FUNC PyInit_pygame_sdl2_render(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_mixer(void);
@@ -449,7 +447,7 @@ int main(int argc, char* argv[])
         {"pygame_sdl2.rect", PyInit_pygame_sdl2_rect}, 
         {"pygame_sdl2.rwobject", PyInit_pygame_sdl2_rwobject},
         {"pygame_sdl2.scrap", PyInit_pygame_sdl2_scrap},
-        //{"pygame_sdl2.surface", PyInit_pygame_sdl2_surface},
+        {"pygame_sdl2.surface", PyInit_pygame_sdl2_surface},
         {"pygame_sdl2.transform", PyInit_pygame_sdl2_transform},
    
         {"pygame_sdl2.render", PyInit_pygame_sdl2_render},

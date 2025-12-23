@@ -130,13 +130,13 @@ mkdir build
 pushd build
 cmake ..
 make #|| true
-#echo "===== PyInit symbols ====="
-#nm CMakeFiles/renpy-switch.dir/source/module/*.o | grep PyInit || true
-#echo "===== PyInit symbols ====="
+echo "===== PyInit symbols ====="
+nm CMakeFiles/renpy-switch-modules.dir/source/module/*.o | grep PyInit || true
+echo "===== PyInit symbols ====="
 popd
 
 mkdir -p ./raw/switch/exefs
-mv ./build/renpy-switch.nso ./raw/switch/exefs/main
+mv ./build/renpy-switch-modules.nso ./raw/switch/exefs/main
 rm -rf build include source pygame_sdl2-source
 
 rm -rf renpy_clear

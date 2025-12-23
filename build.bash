@@ -136,7 +136,7 @@ echo "===== PyInit symbols ====="
 popd
 
 mkdir -p ./raw/switch/exefs
-mv ./build/renpy-switch-modules.nso ./raw/switch/exefs/main
+mv ./build/renpy-switch.nso ./raw/switch/exefs/main
 rm -rf build include source pygame_sdl2-source
 
 rm -rf renpy_clear

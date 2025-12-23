@@ -185,9 +185,9 @@ if(_drm_includes)
 endif()
 
 # ------------------------------------------------------------------------------
-add_library(${PROJECT_NAME} STATIC ${SOURCES})
+add_executable(renpy-switch ${SOURCES})
 
-set_target_properties(${PROJECT_NAME} PROPERTIES
+set_target_properties(renpy-switch PROPERTIES
     LINKER_LANGUAGE CXX
 )
 
@@ -229,10 +229,15 @@ target_link_libraries(${PROJECT_NAME}
 # ------------------------------------------------------------------------------
 # NSO generation
 # ------------------------------------------------------------------------------
-add_custom_target(${PROJECT_NAME}.nso ALL
+add_custom_command(
+    OUTPUT renpy-switch.nso
     COMMAND ${DEVKITPRO}/tools/bin/elf2nso
-        ${PROJECT_NAME}.elf
-        ${PROJECT_NAME}.nso
-    DEPENDS ${PROJECT_NAME}
-    VERBATIM
+            renpy-switch.elf
+            renpy-switch.nso
+    DEPENDS renpy-switch
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+add_custom_target(renpy-switch_nso ALL
+    DEPENDS renpy-switch.nso
 )

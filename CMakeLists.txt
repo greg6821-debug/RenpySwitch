@@ -167,6 +167,23 @@ pkg_check_modules(SDL2_MIXER REQUIRED IMPORTED_TARGET SDL2_mixer)
 pkg_check_modules(SDL2_TTF REQUIRED IMPORTED_TARGET SDL2_ttf)
 pkg_check_modules(ZLIB REQUIRED IMPORTED_TARGET zlib)
 
+# ---- FIX: pkg-config uses $(DEVKITPRO) which CMake cannot expand ----
+get_target_property(_drm_includes PkgConfig::LIBDRM_NOUVEAU INTERFACE_INCLUDE_DIRECTORIES)
+
+if(_drm_includes)
+    set(_fixed_includes "")
+    foreach(dir IN LISTS _drm_includes)
+        if(dir MATCHES "\\$\\(DEVKITPRO\\)")
+            string(REPLACE "\$(DEVKITPRO)" "${DEVKITPRO}" dir "${dir}")
+        endif()
+        list(APPEND _fixed_includes "${dir}")
+    endforeach()
+
+    set_target_properties(PkgConfig::LIBDRM_NOUVEAU PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${_fixed_includes}"
+    )
+endif()
+
 # ------------------------------------------------------------------------------
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 

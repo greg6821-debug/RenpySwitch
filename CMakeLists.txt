@@ -168,6 +168,16 @@ pkg_check_modules(SDL2_TTF REQUIRED IMPORTED_TARGET SDL2_ttf)
 pkg_check_modules(ZLIB REQUIRED IMPORTED_TARGET zlib)
 
 # ------------------------------------------------------------------------------
+# Workaround: pkg-config returns $(DEVKITPRO) which CMake does not expand
+# ------------------------------------------------------------------------------
+if(TARGET PkgConfig::LIBDRM_NOUVEAU)
+    set_property(TARGET PkgConfig::LIBDRM_NOUVEAU PROPERTY
+        INTERFACE_INCLUDE_DIRECTORIES
+            "${DEVKITPRO}/portlibs/switch/include"
+    )
+endif()
+
+# ------------------------------------------------------------------------------
 # Static library
 # ------------------------------------------------------------------------------
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

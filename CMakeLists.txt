@@ -225,3 +225,14 @@ target_link_libraries(${PROJECT_NAME}
     PkgConfig::SDL2_TTF
     PkgConfig::ZLIB
 )
+
+# ------------------------------------------------------------------------------
+# NSO generation
+# ------------------------------------------------------------------------------
+add_custom_target(${PROJECT_NAME}.nso ALL
+    COMMAND ${DEVKITPRO}/tools/bin/elf2nso
+        ${PROJECT_NAME}.elf
+        ${PROJECT_NAME}.nso
+    DEPENDS ${PROJECT_NAME}
+    VERBATIM
+)

@@ -16,6 +16,10 @@ endif()
 
 project(renpy-switch C CXX)
 
+set(SWITCH_APP_NAME "Ren'Py")
+set(SWITCH_AUTHOR   "renpytom")
+set(SWITCH_VERSION  "8.3.7")
+
 # ------------------------------------------------------------------------------
 # Build type
 # ------------------------------------------------------------------------------
@@ -40,10 +44,23 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(C_FLAGS
     -DFRIBIDI_ENTRY=
     -DHAVE_CONFIG_H=1
+							  
+					
 )
 
 set(OPT_FLAGS
     -Ofast
+																	
+																
+
+													 
+																	  
+
+								   
+
+					
+																			   
+	
     -fsingle-precision-constant
     -fno-common
 )
@@ -129,6 +146,7 @@ set(SOURCES
     source/module/write_png.c
     source/module/renpybidicore.c
 
+							
     source/module/renpy.gl2.gl2draw.c
     source/module/renpy.gl2.gl2mesh.c
     source/module/renpy.gl2.gl2mesh2.c
@@ -148,6 +166,62 @@ set(SOURCES
 # pkg-config
 # ------------------------------------------------------------------------------
 find_package(PkgConfig REQUIRED)
+set(pkgcfg_lib_FREETYPE2_nx /opt/devkitpro/libnx/lib/libnx.a)
+set(pkgcfg_lib_LIBAVFILTER_nx /opt/devkitpro/libnx/lib/libnx.a)
+set(pkgcfg_lib_LIBAVFORMAT_nx /opt/devkitpro/libnx/lib/libnx.a)
+set(pkgcfg_lib_EGL_m /opt/devkitpro/devkitA64/aarch64-none-elf/lib/pic/libm.a)
+set(pkgcfg_lib_FREETYPE2_m /opt/devkitpro/devkitA64/aarch64-none-elf/lib/pic/libm.a)
+set(pkgcfg_lib_GLAPI_m /opt/devkitpro/devkitA64/aarch64-none-elf/lib/pic/libm.a)
+set(pkgcfg_lib_GLESV2_m /opt/devkitpro/devkitA64/aarch64-none-elf/lib/pic/libm.a)
+set(pkgcfg_lib_LIBAVCODEC_m /opt/devkitpro/devkitA64/aarch64-none-elf/lib/libm.a)
+set(pkgcfg_lib_LIBAVFILTER_m /opt/devkitpro/devkitA64/aarch64-none-elf/lib/libm.a)
+set(pkgcfg_lib_LIBAVFORMAT_m /opt/devkitpro/devkitA64/aarch64-none-elf/lib/libm.a)
+set(pkgcfg_lib_LIBAVUTIL_m /opt/devkitpro/devkitA64/aarch64-none-elf/lib/libm.a)
+set(pkgcfg_lib_LIBSWRESAMPLE_m /opt/devkitpro/devkitA64/aarch64-none-elf/lib/libm.a)
+set(pkgcfg_lib_LIBSWSCALE_m /opt/devkitpro/devkitA64/aarch64-none-elf/lib/libm.a)
+set(pkgcfg_lib_SDL2_IMAGE_m /opt/devkitpro/devkitA64/aarch64-none-elf/lib/libm.a)
+set(pkgcfg_lib_SDL2_MIXER_m /opt/devkitpro/devkitA64/aarch64-none-elf/lib/libm.a)
+set(pkgcfg_lib_SDL2_TTF_m /opt/devkitpro/devkitA64/aarch64-none-elf/lib/libm.a)
+set(pkgcfg_lib_SDL2_EGL /opt/devkitpro/portlibs/switch/lib/libEGL.a)
+set(pkgcfg_lib_SDL2_GFX_EGL /opt/devkitpro/portlibs/switch/lib/libEGL.a)
+set(pkgcfg_lib_SDL2_IMAGE_EGL /opt/devkitpro/portlibs/switch/lib/libEGL.a)
+set(pkgcfg_lib_SDL2_MIXER_EGL /opt/devkitpro/portlibs/switch/lib/libEGL.a)
+set(pkgcfg_lib_SDL2_TTF_EGL /opt/devkitpro/portlibs/switch/lib/libEGL.a)
+set(pkgcfg_lib_LIBDRM_NOUVEAU_drm_nouveau /opt/devkitpro/portlibs/switch/lib/libdrm_nouveau.a)
+set(pkgcfg_lib_SDL2_GFX_drm_nouveau /opt/devkitpro/portlibs/switch/lib/libdrm_nouveau.a)
+set(pkgcfg_lib_SDL2_IMAGE_drm_nouveau /opt/devkitpro/portlibs/switch/lib/libdrm_nouveau.a)
+set(pkgcfg_lib_SDL2_MIXER_drm_nouveau /opt/devkitpro/portlibs/switch/lib/libdrm_nouveau.a)
+set(pkgcfg_lib_SDL2_TTF_drm_nouveau /opt/devkitpro/portlibs/switch/lib/libdrm_nouveau.a)
+set(pkgcfg_lib_SDL2_drm_nouveau /opt/devkitpro/portlibs/switch/lib/libdrm_nouveau.a)
+set(pkgcfg_lib_SDL2_GFX_SDL2 /opt/devkitpro/portlibs/switch/lib/libSDL2.a)
+set(pkgcfg_lib_SDL2_IMAGE_SDL2 /opt/devkitpro/portlibs/switch/lib/libSDL2.a)
+set(pkgcfg_lib_SDL2_MIXER_SDL2 /opt/devkitpro/portlibs/switch/lib/libSDL2.a)
+set(pkgcfg_lib_SDL2_SDL2 /opt/devkitpro/portlibs/switch/lib/libSDL2.a)
+set(pkgcfg_lib_SDL2_TTF_SDL2 /opt/devkitpro/portlibs/switch/lib/libSDL2.a)
+set(pkgcfg_lib_SDL2_IMAGE_z /opt/devkitpro/portlibs/switch/lib/libz.a)
+set(pkgcfg_lib_SDL2_TTF_z /opt/devkitpro/portlibs/switch/lib/libz.a)
+set(pkgcfg_lib_SDL2_GFX_glapi /opt/devkitpro/portlibs/switch/lib/libglapi.a)
+set(pkgcfg_lib_SDL2_IMAGE_glapi /opt/devkitpro/portlibs/switch/lib/libglapi.a)
+set(pkgcfg_lib_SDL2_MIXER_glapi /opt/devkitpro/portlibs/switch/lib/libglapi.a)
+set(pkgcfg_lib_SDL2_TTF_glapi /opt/devkitpro/portlibs/switch/lib/libglapi.a)
+set(pkgcfg_lib_SDL2_glapi /opt/devkitpro/portlibs/switch/lib/libglapi.a)
+set(pkgcfg_lib_SDL2_IMAGE_SDL2_image /opt/devkitpro/portlibs/switch/lib/libSDL2_image.a)
+set(pkgcfg_lib_SDL2_GFX_SDL2_gfx /opt/devkitpro/portlibs/switch/lib/libSDL2_gfx.a)
+set(pkgcfg_lib_SDL2_IMAGE_jpeg /opt/devkitpro/portlibs/switch/lib/libjpeg.a)
+set(pkgcfg_lib_SDL2_IMAGE_png16 /opt/devkitpro/portlibs/switch/lib/libpng16.a)
+set(pkgcfg_lib_SDL2_IMAGE_webp /opt/devkitpro/portlibs/switch/lib/libwebp.a)
+set(pkgcfg_lib_SDL2_MIXER_SDL2_mixer /opt/devkitpro/portlibs/switch/lib/libSDL2_mixer.a)
+set(pkgcfg_lib_SDL2_MIXER_modplug /opt/devkitpro/portlibs/switch/lib/libmodplug.a)
+set(pkgcfg_lib_SDL2_MIXER_mpg123 /opt/devkitpro/portlibs/switch/lib/libmpg123.a)
+set(pkgcfg_lib_SDL2_MIXER_ogg /opt/devkitpro/portlibs/switch/lib/libogg.a)
+set(pkgcfg_lib_SDL2_MIXER_opus /opt/devkitpro/portlibs/switch/lib/libopus.a)
+set(pkgcfg_lib_SDL2_MIXER_opusfile /opt/devkitpro/portlibs/switch/lib/libopusfile.a)
+set(pkgcfg_lib_SDL2_MIXER_stdc++ /opt/devkitpro/devkitA64/aarch64-none-elf/lib/pic/libstdc++.a)
+set(pkgcfg_lib_SDL2_MIXER_vorbisidec /opt/devkitpro/portlibs/switch/lib/libvorbisidec.a)
+set(pkgcfg_lib_SDL2_TTF_SDL2_ttf /opt/devkitpro/portlibs/switch/lib/libSDL2_ttf.a)
+set(pkgcfg_lib_SDL2_TTF_bz2 /opt/devkitpro/portlibs/switch/lib/libbz2.a)
+set(pkgcfg_lib_SDL2_TTF_freetype /opt/devkitpro/portlibs/switch/lib/libfreetype.a)
+set(pkgcfg_lib_SDL2_TTF_png16 /opt/devkitpro/portlibs/switch/lib/libpng16.a)
 
 pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
 pkg_check_modules(FREETYPE2 REQUIRED IMPORTED_TARGET freetype2)
@@ -185,23 +259,13 @@ if(_drm_includes)
 endif()
 
 # ------------------------------------------------------------------------------
-add_executable(renpy-switch ${SOURCES})
+add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
-set_target_properties(renpy-switch PROPERTIES
-    LINKER_LANGUAGE CXX
-)
-
-target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDES})
-
-target_compile_options(${PROJECT_NAME} PRIVATE
-    $<$<COMPILE_LANGUAGE:C>:${C_FLAGS}>
-    $<$<CONFIG:RELEASE>:${OPT_FLAGS}>
-    $<$<CONFIG:RELWITHDEBINFO>:${OPT_FLAGS}>
-)
-
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries("${PROJECT_NAME}"
     ${DEVKITPRO}/portlibs/switch/lib/libpython3.9.a
     ${DEVKITPRO}/portlibs/switch/lib/libfribidi.a
+	   
+	 
     m
     z
     PkgConfig::EGL
@@ -226,15 +290,10 @@ target_link_libraries(${PROJECT_NAME}
 # ------------------------------------------------------------------------------
 # NSO generation
 # ------------------------------------------------------------------------------
-add_custom_command(
-    OUTPUT renpy-switch.nso
-    COMMAND ${DEVKITPRO}/tools/bin/elf2nso
-            renpy-switch.elf
-            renpy-switch.nso
-    DEPENDS renpy-switch
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-)
-
-add_custom_target(renpy-switch_nso ALL
-    DEPENDS renpy-switch.nso
-)
+target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDES})
+										  
+target_compile_options(${PROJECT_NAME} PUBLIC $<$<COMPILE_LANGUAGE:C>:${C_FLAGS}>)
+target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:RELEASE>:${OPTIMIZATION_FLAGS}>)
+target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:RELWITHDEBINFO>:${OPTIMIZATION_FLAGS}>)
+			
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)

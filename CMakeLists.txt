@@ -199,9 +199,6 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:RELWITHDEBINFO>:${OPT_FLAGS}>
 )
 
-target_link_options(${PROJECT_NAME} PRIVATE
-    "-specs=${DEVKITPRO}/libnx/switch.specs"
-)
 target_link_libraries(${PROJECT_NAME}
     ${DEVKITPRO}/portlibs/switch/lib/libpython3.9.a
     ${DEVKITPRO}/portlibs/switch/lib/libfribidi.a

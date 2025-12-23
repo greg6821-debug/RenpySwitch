@@ -130,9 +130,9 @@ mkdir build
 pushd build
 cmake ..
 make #|| true
-echo "===== PyInit symbols ====="
-nm CMakeFiles/renpy-switch.dir/source/module/*.o | grep PyInit || true
-echo "===== PyInit symbols ====="
+#echo "===== PyInit symbols ====="
+#nm CMakeFiles/renpy-switch.dir/source/module/*.o | grep PyInit || true
+#echo "===== PyInit symbols ====="
 popd
 
 mkdir -p ./raw/switch/exefs

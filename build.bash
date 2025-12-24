@@ -17,10 +17,10 @@ pushd pygame_sdl2-source
 rm -rf gen gen-static
 
 # обычная сборка
-$PYTHON setup.py || true
+python3 setup.py || true
 
 # статическая сборка
-PYGAME_SDL2_STATIC=1 $PYTHON setup.py || true
+PYGAME_SDL2_STATIC=1 python3 setup.py || true
 popd
 
 
@@ -34,10 +34,10 @@ rm -rf gen gen-static
 export RENPY_DEPS_INSTALL=$DEVKITPRO/portlibs/switch
 
 # обычная сборка
-$PYTHON setup.py || true
+python3 setup.py || true
 
 # статическая сборка
-RENPY_STATIC=1 $PYTHON setup.py || true
+RENPY_STATIC=1 python3 setup.py || true
 popd
 
 
@@ -46,9 +46,9 @@ popd
 ####################################
 
 pushd pygame_sdl2-source
-$PYTHON setup.py build
-$PYTHON setup.py install_headers
-$PYTHON setup.py install
+python3 setup.py build
+python3 setup.py install_headers
+python3 setup.py install
 popd
 
 
@@ -58,8 +58,8 @@ popd
 
 pushd renpy-source/module
 export RENPY_DEPS_INSTALL=$DEVKITPRO/portlibs/switch
-$PYTHON setup.py build
-$PYTHON setup.py install
+python3 setup.py build
+python3 setup.py install
 popd
 
 bash link_sources.bash

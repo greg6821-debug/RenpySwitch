@@ -249,30 +249,27 @@ if(_drm_includes)
 endif()
 
 # ------------------------------------------------------------------------------
-# Executable (ELF)
+# Executable
 # ------------------------------------------------------------------------------
-add_executable(renpy-switch.elf
+add_executable(renpy-switch
     source/main.c
     ${SOURCES}
 )
 
-set_target_properties(renpy-switch.elf PROPERTIES
+set_target_properties(renpy-switch PROPERTIES
     LINKER_LANGUAGE CXX
 )
 
-target_include_directories(renpy-switch.elf PRIVATE ${INCLUDES})
+target_include_directories(renpy-switch PRIVATE ${INCLUDES})
 
-target_compile_options(renpy-switch.elf PRIVATE
+target_compile_options(renpy-switch PRIVATE
     $<$<COMPILE_LANGUAGE:C>:${C_FLAGS}>
     $<$<CONFIG:RELEASE>:${OPT_FLAGS}>
     $<$<CONFIG:RELWITHDEBINFO>:${OPT_FLAGS}>
 )
 
-target_link_options(renpy-switch.elf PRIVATE
-    "-specs=${DEVKITPRO}/libnx/switch.specs"
-)
 
-target_link_libraries(renpy-switch.elf
+target_link_libraries(renpy-switch
     ${DEVKITPRO}/portlibs/switch/lib/libpython3.9.a
     ${DEVKITPRO}/portlibs/switch/lib/libfribidi.a
     m
@@ -300,10 +297,10 @@ target_link_libraries(renpy-switch.elf
 # ELF -> NSO
 # ------------------------------------------------------------------------------
 add_custom_command(
-    TARGET renpy-switch.elf
+    TARGET renpy-switch
     POST_BUILD
     COMMAND ${DEVKITPRO}/tools/bin/elf2nso
-            $<TARGET_FILE:renpy-switch.elf>
+            $<TARGET_FILE:renpy-switch>
             renpy-switch.nso
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )

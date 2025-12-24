@@ -163,6 +163,7 @@ PyMODINIT_FUNC PyInit_pygame_sdl2_display(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_draw(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_error(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_event(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_font(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_gfxdraw(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_image(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_joystick(void);
@@ -185,7 +186,7 @@ PyMODINIT_FUNC PyInit_pygame_sdl2_mixer_music(void);
 PyMODINIT_FUNC PyInit__renpy(void);
 PyMODINIT_FUNC PyInit__renpybidi(void);
 
-PyMODINIT_FUNC PyInit_renpy_audio_filter(void);
+//PyMODINIT_FUNC PyInit_renpy_audio_filter(void);
 PyMODINIT_FUNC PyInit_renpy_audio_renpysound(void);
 
 PyMODINIT_FUNC PyInit_renpy_display_accelerator(void);
@@ -455,7 +456,7 @@ int main(int argc, char* argv[])
         {"_renpy", PyInit__renpy},
         {"_renpybidi", PyInit__renpybidi},
 
-        {"renpy.audio.filter", PyInit_renpy_audio_filter},
+        //{"renpy.audio.filter", PyInit_renpy_audio_filter},
         {"renpy.audio.renpysound", PyInit_renpy_audio_renpysound},
         {"renpy.display.accelerator", PyInit_renpy_display_accelerator},
         {"renpy.display.matrix", PyInit_renpy_display_matrix},

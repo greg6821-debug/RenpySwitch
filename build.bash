@@ -80,6 +80,9 @@ mkdir build
 pushd build
 cmake ..
 make
+echo "===== PyInit symbols ====="
+nm CMakeFiles/renpy-switch.dir/source/module/*.o | grep PyInit || true
+echo "===== PyInit symbols ====="
 popd
 popd
 

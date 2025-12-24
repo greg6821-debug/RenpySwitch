@@ -71,7 +71,7 @@ set(INCLUDES
 # Sources
 # ------------------------------------------------------------------------------
 set(SOURCES
-    source/main.c
+    Sources/main.c
     source/module/IMG_savepng.c
     source/module/SDL2_rotozoom.c
     source/module/SDL_gfxPrimitives.c
@@ -249,13 +249,32 @@ if(_drm_includes)
 endif()
 
 # ------------------------------------------------------------------------------
-add_library(${PROJECT_NAME} STATIC ${SOURCES})
+# Executable (ELF)
+# ------------------------------------------------------------------------------
+add_executable(renpy-switch.elf
+    source/main.c
+    ${SOURCES}
+)
 
-target_link_libraries("${PROJECT_NAME}"
+set_target_properties(renpy-switch.elf PROPERTIES
+    LINKER_LANGUAGE CXX
+)
+
+target_include_directories(renpy-switch.elf PRIVATE ${INCLUDES})
+
+target_compile_options(renpy-switch.elf PRIVATE
+    $<$<COMPILE_LANGUAGE:C>:${C_FLAGS}>
+    $<$<CONFIG:RELEASE>:${OPT_FLAGS}>
+    $<$<CONFIG:RELWITHDEBINFO>:${OPT_FLAGS}>
+)
+
+target_link_options(renpy-switch.elf PRIVATE
+    "-specs=${DEVKITPRO}/libnx/switch.specs"
+)
+
+target_link_libraries(renpy-switch.elf
     ${DEVKITPRO}/portlibs/switch/lib/libpython3.9.a
     ${DEVKITPRO}/portlibs/switch/lib/libfribidi.a
-	   
-	 
     m
     z
     PkgConfig::EGL
@@ -278,12 +297,13 @@ target_link_libraries("${PROJECT_NAME}"
 )
 
 # ------------------------------------------------------------------------------
-# NSO generation
+# ELF -> NSO
 # ------------------------------------------------------------------------------
-target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDES})
-										  
-target_compile_options(${PROJECT_NAME} PUBLIC $<$<COMPILE_LANGUAGE:C>:${C_FLAGS}>)
-target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:RELEASE>:${OPTIMIZATION_FLAGS}>)
-target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:RELWITHDEBINFO>:${OPTIMIZATION_FLAGS}>)
-			
-set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
+add_custom_command(
+    TARGET renpy-switch.elf
+    POST_BUILD
+    COMMAND ${DEVKITPRO}/tools/bin/elf2nso
+            $<TARGET_FILE:renpy-switch.elf>
+            renpy-switch.nso
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)

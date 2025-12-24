@@ -1,16 +1,56 @@
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <switch.h>
+#include <Python.h>
 #include <stdio.h>
 
 u64 cur_progid = 0;
 AccountUid userID = {0};
 
-/* ===================== PYTHON EXTENSION ===================== */
-
 static PyObject* commitsave(PyObject* self, PyObject* args)
 {
+    u64 total_size = 0;
+    u64 free_size = 0;
+    FsFileSystem* FsSave = fsdevGetDeviceFileSystem("save");
+
+    FsSaveDataInfoReader reader;
+    FsSaveDataInfo info;
+    s64 total_entries = 0;
+    Result rc = 0;
+
     fsdevCommitDevice("save");
+    fsFsGetTotalSpace(FsSave, "/", &total_size);
+    fsFsGetFreeSpace(FsSave, "/", &free_size);
+
+    if (free_size < 0x800000)
+    {
+        u64 new_size = total_size + 0x800000;
+
+        fsdevUnmountDevice("save");
+        fsOpenSaveDataInfoReader(&reader, FsSaveDataSpaceId_User);
+
+        while (1)
+        {
+            rc = fsSaveDataInfoReaderRead(&reader, &info, 1, &total_entries);
+            if (R_FAILED(rc) || total_entries == 0)
+                break;
+
+            if (info.save_data_type == FsSaveDataType_Account &&
+                userID.uid[0] == info.uid.uid[0] &&
+                userID.uid[1] == info.uid.uid[1] &&
+                info.application_id == cur_progid)
+            {
+                fsExtendSaveDataFileSystem(
+                    info.save_data_space_id,
+                    info.save_data_id,
+                    new_size,
+                    0x400000);
+                break;
+            }
+        }
+
+        fsSaveDataInfoReaderClose(&reader);
+        fsdevMountSaveData("save", cur_progid, userID);
+    }
+
     Py_RETURN_NONE;
 }
 
@@ -32,7 +72,7 @@ static PyObject* restartprogram(PyObject* self, PyObject* args)
     Py_RETURN_NONE;
 }
 
-static PyMethodDef myMethods[] = {
+static PyMethodDef otrh_methods[] = {
     {"commitsave", commitsave, METH_NOARGS, NULL},
     {"startboost", startboost, METH_NOARGS, NULL},
     {"disableboost", disableboost, METH_NOARGS, NULL},
@@ -40,61 +80,175 @@ static PyMethodDef myMethods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-static struct PyModuleDef otrhlibnx_module = {
+static struct PyModuleDef otrh_module = {
     PyModuleDef_HEAD_INIT,
     "_otrhlibnx",
     NULL,
     -1,
-    myMethods
+    otrh_methods
 };
 
 PyMODINIT_FUNC PyInit__otrhlibnx(void)
 {
-    return PyModule_Create(&otrhlibnx_module);
+    return PyModule_Create(&otrh_module);
 }
 
-/* ===================== APP INIT ===================== */
+/* ---- external init symbols ---- */
+#define DECL(name) PyMODINIT_FUNC PyInit_##name(void)
 
-void userAppInit(void)
+DECL(pygame_sdl2_color);
+DECL(pygame_sdl2_controller);
+DECL(pygame_sdl2_display);
+DECL(pygame_sdl2_draw);
+DECL(pygame_sdl2_error);
+DECL(pygame_sdl2_event);
+DECL(pygame_sdl2_gfxdraw);
+DECL(pygame_sdl2_image);
+DECL(pygame_sdl2_joystick);
+DECL(pygame_sdl2_key);
+DECL(pygame_sdl2_locals);
+DECL(pygame_sdl2_mouse);
+DECL(pygame_sdl2_power);
+DECL(pygame_sdl2_pygame_time);
+DECL(pygame_sdl2_rect);
+DECL(pygame_sdl2_render);
+DECL(pygame_sdl2_rwobject);
+DECL(pygame_sdl2_scrap);
+DECL(pygame_sdl2_surface);
+DECL(pygame_sdl2_transform);
+
+DECL(_renpy);
+DECL(_renpybidi);
+DECL(renpy_audio_renpysound);
+DECL(renpy_display_accelerator);
+DECL(renpy_display_render);
+DECL(renpy_display_matrix);
+DECL(renpy_gl_gldraw);
+DECL(renpy_gl_glenviron_shader);
+DECL(renpy_gl_glrtt_copy);
+DECL(renpy_gl_glrtt_fbo);
+DECL(renpy_gl_gltexture);
+DECL(renpy_pydict);
+DECL(renpy_style);
+DECL(renpy_styledata_style_activate_functions);
+DECL(renpy_styledata_style_functions);
+DECL(renpy_styledata_style_hover_functions);
+DECL(renpy_styledata_style_idle_functions);
+DECL(renpy_styledata_style_insensitive_functions);
+DECL(renpy_styledata_style_selected_activate_functions);
+DECL(renpy_styledata_style_selected_functions);
+DECL(renpy_styledata_style_selected_hover_functions);
+DECL(renpy_styledata_style_selected_idle_functions);
+DECL(renpy_styledata_style_selected_insensitive_functions);
+DECL(renpy_styledata_styleclass);
+DECL(renpy_styledata_stylesets);
+DECL(renpy_text_ftfont);
+DECL(renpy_text_textsupport);
+DECL(renpy_text_texwrap);
+DECL(renpy_compat_dictviews);
+DECL(renpy_gl2_gl2draw);
+DECL(renpy_gl2_gl2mesh);
+DECL(renpy_gl2_gl2mesh2);
+DECL(renpy_gl2_gl2mesh3);
+DECL(renpy_gl2_gl2model);
+DECL(renpy_gl2_gl2polygon);
+DECL(renpy_gl2_gl2shader);
+DECL(renpy_gl2_gl2texture);
+DECL(renpy_uguu_gl);
+DECL(renpy_uguu_uguu);
+DECL(renpy_lexersupport);
+DECL(renpy_display_quaternion);
+
+#undef DECL
+
+void __libnx_initheap(void)
 {
-    svcGetInfo(&cur_progid, InfoType_ProgramId, CUR_PROCESS_HANDLE, 0);
+    void* addr = NULL;
+    u64 size = 0;
+    u64 mem_available = 0, mem_used = 0;
 
-    accountInitialize(AccountServiceType_Application);
-    accountGetPreselectedUser(&userID);
+    svcGetInfo(&mem_available, InfoType_TotalMemorySize, CUR_PROCESS_HANDLE, 0);
+    svcGetInfo(&mem_used, InfoType_UsedMemorySize, CUR_PROCESS_HANDLE, 0);
 
-    fsdevMountSaveData("save", cur_progid, userID);
-    romfsInit();
-    socketInitializeDefault();
+    if (mem_available > mem_used + 0x200000)
+        size = (mem_available - mem_used - 0x200000) & ~0x1FFFFF;
+    if (size == 0)
+        size = 0x2000000 * 16;
+
+    Result rc = svcSetHeapSize(&addr, size);
+    if (R_FAILED(rc) || !addr)
+        diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_HeapAllocFailed));
+
+    extern char* fake_heap_start;
+    extern char* fake_heap_end;
+
+    fake_heap_start = (char*)addr;
+    fake_heap_end = (char*)addr + size;
 }
 
-void userAppExit(void)
+static AppletHookCookie applet_hook_cookie;
+
+static void on_applet_hook(AppletHookType hook, void* param)
 {
-    fsdevCommitDevice("save");
-    fsdevUnmountDevice("save");
-    socketExit();
-    romfsExit();
+    if (hook == AppletHookType_OnExitRequest)
+    {
+        fsdevCommitDevice("save");
+        svcSleepThread(1500000000ULL);
+        appletUnlockExit();
+    }
 }
-
-/* ===================== MAIN ===================== */
 
 int main(int argc, char* argv[])
 {
+    setenv("MESA_NO_ERROR", "1", 1);
+
     appletLockExit();
+    appletHook(&applet_hook_cookie, on_applet_hook, NULL);
+
+    Py_NoSiteFlag = 1;
+    Py_IgnoreEnvironmentFlag = 1;
+    Py_DontWriteBytecodeFlag = 1;
+    Py_OptimizeFlag = 2;
 
     PyImport_AppendInittab("_otrhlibnx", PyInit__otrhlibnx);
-
-    Py_PreInitialize(NULL);
-
-    wchar_t *home = Py_DecodeLocale("romfs:/Contents/lib.zip", NULL);
-    Py_SetPythonHome(home);
+    PyImport_AppendInittab("pygame_sdl2.color", PyInit_pygame_sdl2_color);
+    PyImport_AppendInittab("pygame_sdl2.controller", PyInit_pygame_sdl2_controller);
+    PyImport_AppendInittab("pygame_sdl2.display", PyInit_pygame_sdl2_display);
+    PyImport_AppendInittab("pygame_sdl2.draw", PyInit_pygame_sdl2_draw);
+    PyImport_AppendInittab("pygame_sdl2.error", PyInit_pygame_sdl2_error);
+    PyImport_AppendInittab("pygame_sdl2.event", PyInit_pygame_sdl2_event);
+    PyImport_AppendInittab("pygame_sdl2.gfxdraw", PyInit_pygame_sdl2_gfxdraw);
+    PyImport_AppendInittab("pygame_sdl2.image", PyInit_pygame_sdl2_image);
+    PyImport_AppendInittab("pygame_sdl2.joystick", PyInit_pygame_sdl2_joystick);
+    PyImport_AppendInittab("pygame_sdl2.key", PyInit_pygame_sdl2_key);
+    PyImport_AppendInittab("pygame_sdl2.locals", PyInit_pygame_sdl2_locals);
+    PyImport_AppendInittab("pygame_sdl2.mouse", PyInit_pygame_sdl2_mouse);
+    PyImport_AppendInittab("pygame_sdl2.power", PyInit_pygame_sdl2_power);
+    PyImport_AppendInittab("pygame_sdl2.pygame_time", PyInit_pygame_sdl2_pygame_time);
+    PyImport_AppendInittab("pygame_sdl2.rect", PyInit_pygame_sdl2_rect);
+    PyImport_AppendInittab("pygame_sdl2.render", PyInit_pygame_sdl2_render);
+    PyImport_AppendInittab("pygame_sdl2.rwobject", PyInit_pygame_sdl2_rwobject);
+    PyImport_AppendInittab("pygame_sdl2.scrap", PyInit_pygame_sdl2_scrap);
+    PyImport_AppendInittab("pygame_sdl2.surface", PyInit_pygame_sdl2_surface);
+    PyImport_AppendInittab("pygame_sdl2.transform", PyInit_pygame_sdl2_transform);
 
     Py_Initialize();
 
-    wchar_t *py_argv[2];
-    py_argv[0] = Py_DecodeLocale("romfs:/Contents/renpy.py", NULL);
-    py_argv[1] = NULL;
-    PySys_SetArgvEx(1, py_argv, 1);
+    wchar_t* pyargv[] = {L"romfs:/Contents/renpy.py"};
+    PySys_SetArgv(1, pyargv);
 
     PyRun_SimpleString(
         "import sys\n"
-        "sys.path = ['romfs:/Content]()
+        "sys.path = ['romfs:/Contents/lib.zip']\n"
+        "import encodings, os, pygame_sdl2\n");
+
+    FILE* f = fopen("romfs:/Contents/renpy.py", "rb");
+    if (!f)
+        Py_Exit(1);
+
+    PyRun_SimpleFile(f, "renpy.py");
+    fclose(f);
+
+    Py_Exit(0);
+    return 0;
+}

@@ -1,5 +1,5 @@
 set -e
-Echo "---------------------------------------------0---------------------------------------"
+echo "---------------------------------------------0---------------------------------------"
 export DEVKITPRO=/opt/devkitpro
 pushd pygame_sdl2-source
 rm -rf gen gen-static
@@ -8,40 +8,40 @@ rm -rf gen gen-static
 python3 setup.py build #|| true
 PYGAME_SDL2_STATIC=1 python3 setup.py build #|| true
 popd
-Echo "---------------------------------------------1---------------------------------------"
+echo "---------------------------------------------1---------------------------------------"
 pushd renpy-source/module
 rm -rf gen gen-static
 # RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py || true
 # RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python2 setup.py || true
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py build
-Echo "---------------------------------------------1.1---------------------------------------"
+echo "---------------------------------------------1.1---------------------------------------"
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3 setup.py build
 popd
 
-Echo "---------------------------------------------2---------------------------------------"
+echo "---------------------------------------------2---------------------------------------"
 pushd pygame_sdl2-source
 # python2 setup.py build
 # python2 setup.py install_headers
 # python2 setup.py install
 python3 setup.py build
-Echo "---------------------------------------------2.1---------------------------------------"
+echo "---------------------------------------------2.1---------------------------------------"
 python3 setup.py install_headers
-Echo "---------------------------------------------2.2---------------------------------------"
+echo "---------------------------------------------2.2---------------------------------------"
 python3 setup.py install
 popd
-Echo "---------------------------------------------3---------------------------------------"
+echo "---------------------------------------------3---------------------------------------"
 pushd renpy-source/module
 # RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build
 # RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py install
-Echo "---------------------------------------------3.1---------------------------------------"
+echo "---------------------------------------------3.1---------------------------------------"
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py build
-Echo "---------------------------------------------3.2---------------------------------------"
+echo "---------------------------------------------3.2---------------------------------------"
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py install
-Echo "---------------------------------------------3.3---------------------------------------"
+echo "---------------------------------------------3.3---------------------------------------"
 python3 setup.py build_static
 
 popd
-Echo "---------------------------------------------4---------------------------------------"
+echo "---------------------------------------------4---------------------------------------"
 
 bash link_sources.bash
 

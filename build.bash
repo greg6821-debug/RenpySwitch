@@ -13,7 +13,7 @@ echo "=== Содержимое pygame_sdl2-source ==="
 find pygame_sdl2-source -type d -print -exec ls -l {} \;
 echo "---------------------------------------------0.2---------------------------------------"
 echo "=== Содержимое renpy-source ==="
-find renpy-sourc -type d -print -exec ls -l {} \;
+find renpy-source -type d -print -exec ls -l {} \;
 echo "---------------------------------------------1---------------------------------------"
 pushd renpy-source/module
 rm -rf gen gen-static

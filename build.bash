@@ -1,7 +1,4 @@
 set -e
-echo "---------------------------------------------.---------------------------------------"
-echo "=== Содержимое pygame_sdl2-source ==="
-find pygame_sdl2-source -type d -print -exec ls -l {} \;
 echo "---------------------------------------------0---------------------------------------"
 export DEVKITPRO=/opt/devkitpro
 pushd pygame_sdl2-source
@@ -14,17 +11,15 @@ popd
 echo "---------------------------------------------0.1---------------------------------------"
 echo "=== Содержимое pygame_sdl2-source ==="
 find pygame_sdl2-source -type d -print -exec ls -l {} \;
-echo "---------------------------------------------0.2---------------------------------------"
-bash link_sources.bash
 
 echo "---------------------------------------------1---------------------------------------"
 pushd renpy-source/module
 rm -rf gen gen-static
 # RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py || true
 # RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python2 setup.py || true
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py build
+python3 setup.py build
 echo "---------------------------------------------1.1---------------------------------------"
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3 setup.py build
+RENPY_STATIC=1 python3 setup.py build
 popd
 
 echo "---------------------------------------------2---------------------------------------"
@@ -43,9 +38,9 @@ pushd renpy-source/module
 # RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build
 # RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py install
 echo "---------------------------------------------3.1---------------------------------------"
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py build
+python3 setup.py build
 echo "---------------------------------------------3.2---------------------------------------"
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py install
+python3 setup.py install
 echo "---------------------------------------------3.3---------------------------------------"
 python3 setup.py build_static
 

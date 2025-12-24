@@ -1,57 +1,66 @@
 set -e
-echo "---------------------------------------------0---------------------------------------"
+
 export DEVKITPRO=/opt/devkitpro
+export PYTHON=python3
+export PYTHON_VERSION=3.9
+
+# Python для Switch
+export PYTHONHOME=$DEVKITPRO/portlibs/switch/python39
+export PYTHONPATH=$PYTHONHOME/lib/python3.9
+export PATH=$PYTHONHOME/bin:$PATH
+
+####################################
+# pygame_sdl2 – генерация
+####################################
+
 pushd pygame_sdl2-source
 rm -rf gen gen-static
-#python2 setup.py || true
-#PYGAME_SDL2_STATIC=1 python2 setup.py || true
-python3 setup.py build #|| true
-PYGAME_SDL2_STATIC=1 python3 setup.py build #|| true
+
+# обычная сборка
+$PYTHON setup.py || true
+
+# статическая сборка
+PYGAME_SDL2_STATIC=1 $PYTHON setup.py || true
 popd
-echo "---------------------------------------------0.1---------------------------------------"
-echo "=== Содержимое pygame_sdl2-source ==="
-find pygame_sdl2-source -type d -print -exec ls -l {} \;
-echo "---------------------------------------------0.2---------------------------------------"
-echo "=== Проверка SDL2 ==="
-pkg-config --cflags --libs sdl2 || echo "SDL2 dev not found!"
-ls -l $DEVKITPRO/portlibs/switch/include/SDL2
-ls -l $DEVKITPRO/portlibs/switch/lib
-echo "---------------------------------------------1---------------------------------------"
+
+
+####################################
+# renpy – генерация
+####################################
+
 pushd renpy-source/module
-export CFLAGS="$(pkg-config --cflags sdl2 SDL2_image SDL2_mixer SDL2_ttf)"
-export LDFLAGS="$(pkg-config --libs sdl2 SDL2_image SDL2_mixer SDL2_ttf)"
 rm -rf gen gen-static
-# RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py || true
-# RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python2 setup.py || true
-python3 setup.py build
-echo "---------------------------------------------1.1---------------------------------------"
-RENPY_STATIC=1 python3 setup.py build
+
+export RENPY_DEPS_INSTALL=$DEVKITPRO/portlibs/switch
+
+# обычная сборка
+$PYTHON setup.py || true
+
+# статическая сборка
+RENPY_STATIC=1 $PYTHON setup.py || true
 popd
 
-echo "---------------------------------------------2---------------------------------------"
+
+####################################
+# pygame_sdl2 – build + install
+####################################
+
 pushd pygame_sdl2-source
-# python2 setup.py build
-# python2 setup.py install_headers
-# python2 setup.py install
-python3 setup.py build
-echo "---------------------------------------------2.1---------------------------------------"
-python3 setup.py install_headers
-echo "---------------------------------------------2.2---------------------------------------"
-python3 setup.py install
+$PYTHON setup.py build
+$PYTHON setup.py install_headers
+$PYTHON setup.py install
 popd
-echo "---------------------------------------------3---------------------------------------"
-pushd renpy-source/module
-# RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build
-# RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py install
-echo "---------------------------------------------3.1---------------------------------------"
-python3 setup.py build
-echo "---------------------------------------------3.2---------------------------------------"
-python3 setup.py install
-echo "---------------------------------------------3.3---------------------------------------"
-python3 setup.py build_static
 
+
+####################################
+# renpy – build + install
+####################################
+
+pushd renpy-source/module
+export RENPY_DEPS_INSTALL=$DEVKITPRO/portlibs/switch
+$PYTHON setup.py build
+$PYTHON setup.py install
 popd
-echo "---------------------------------------------4---------------------------------------"
 
 bash link_sources.bash
 

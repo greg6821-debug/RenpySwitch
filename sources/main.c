@@ -420,8 +420,6 @@ int main(int argc, char* argv[])
    
     Py_SetProgramName(L"RenPy3.8.7");
    
-    PyImport_AppendInittab("pygame_sdl2.surface", PyInit_surface);
-   
     /* ---- Builtin modules ---- */
     static struct _inittab builtins[] = {
 

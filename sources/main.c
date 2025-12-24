@@ -363,8 +363,30 @@ static void on_applet_hook(AppletHookType hook, void *param)
 /* -------------------------------------------------------
    Main
 ------------------------------------------------------- */
+static struct PyModuleDef pygame_sdl2_module = {
+    PyModuleDef_HEAD_INIT,
+    "pygame_sdl2",
+    NULL,
+    -1,
+    NULL
+};
+
+PyMODINIT_FUNC PyInit_pygame_sdl2(void)
+{
+    PyObject *m = PyModule_Create(&pygame_sdl2_module);
+    if (!m) return NULL;
+
+    /* ВАЖНО: помечаем как пакет */
+    PyObject *path = PyList_New(0);
+    PyModule_AddObject(m, "__path__", path);
+
+    return m;
+}
  static void register_builtin_modules(void)
     {
+       /* ROOT PACKAGE */
+    PyImport_AppendInittab("pygame_sdl2", PyInit_pygame_sdl2);
+       
     PyImport_AppendInittab("pygame_sdl2.error", PyInit_pygame_sdl2_error);
     PyImport_AppendInittab("pygame_sdl2.surface", PyInit_pygame_sdl2_surface);
     }

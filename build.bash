@@ -1,4 +1,7 @@
 set -e
+echo "---------------------------------------------.---------------------------------------"
+echo "=== Содержимое pygame_sdl2-source ==="
+find pygame_sdl2-source -type d -print -exec ls -l {} \;
 echo "---------------------------------------------0---------------------------------------"
 export DEVKITPRO=/opt/devkitpro
 pushd pygame_sdl2-source
@@ -9,6 +12,9 @@ python3 setup.py build #|| true
 PYGAME_SDL2_STATIC=1 python3 setup.py build #|| true
 popd
 echo "---------------------------------------------0.1---------------------------------------"
+echo "=== Содержимое pygame_sdl2-source ==="
+find pygame_sdl2-source -type d -print -exec ls -l {} \;
+echo "---------------------------------------------0.2---------------------------------------"
 bash link_sources.bash
 
 echo "---------------------------------------------1---------------------------------------"

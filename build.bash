@@ -18,6 +18,8 @@ ls -l $DEVKITPRO/portlibs/switch/include/SDL2
 ls -l $DEVKITPRO/portlibs/switch/lib
 echo "---------------------------------------------1---------------------------------------"
 pushd renpy-source/module
+export CFLAGS="$(pkg-config --cflags sdl2 SDL2_image SDL2_mixer SDL2_ttf)"
+export LDFLAGS="$(pkg-config --libs sdl2 SDL2_image SDL2_mixer SDL2_ttf)"
 rm -rf gen gen-static
 # RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py || true
 # RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python2 setup.py || true

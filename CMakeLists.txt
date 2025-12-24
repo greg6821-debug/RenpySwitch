@@ -50,17 +50,6 @@ set(C_FLAGS
 
 set(OPT_FLAGS
     -Ofast
-																	
-																
-
-													 
-																	  
-
-								   
-
-					
-																			   
-	
     -fsingle-precision-constant
     -fno-common
 )
@@ -83,7 +72,6 @@ set(INCLUDES
 # ------------------------------------------------------------------------------
 set(SOURCES
     source/main.c
-	main.c
     source/module/IMG_savepng.c
     source/module/SDL2_rotozoom.c
     source/module/SDL_gfxPrimitives.c

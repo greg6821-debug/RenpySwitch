@@ -27,17 +27,6 @@ python3 setup.py install_headers
 python3 setup.py install
 popd
 
-# Указать путь к заголовкам pygame_sdl2
-export CFLAGS="-I$(pwd)/pygame_sdl2-source/include"
-# Построить pygame_sdl2
-pushd pygame_sdl2-source
-PYGAME_SDL2_STATIC=1 python3 setup.py build_ext --inplace
-popd
-# Построить Ren'Py с CFLAGS
-pushd renpy-source/module
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3 setup.py build_ext --inplace
-popd
-
 pushd renpy-source/module
 # RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py build
 # RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python2 setup.py install

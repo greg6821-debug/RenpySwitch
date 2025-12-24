@@ -420,7 +420,13 @@ int main(int argc, char* argv[])
 
    
     Py_SetProgramName(L"RenPy3.8.7");
-   
+
+
+    static void register_builtin_modules(void)
+    {
+    PyImport_AppendInittab("pygame_sdl2.error", PyInit_pygame_sdl2_error);
+    PyImport_AppendInittab("pygame_sdl2.surface", PyInit_pygame_sdl2_surface);
+    }
     /* ---- Builtin modules ---- */
     static struct _inittab builtins[] = {
 
@@ -433,7 +439,7 @@ int main(int argc, char* argv[])
         {"pygame_sdl2.controller", PyInit_pygame_sdl2_controller},
         {"pygame_sdl2.display", PyInit_pygame_sdl2_display},
         {"pygame_sdl2.draw", PyInit_pygame_sdl2_draw},
-        {"pygame_sdl2.error", PyInit_pygame_sdl2_error},
+        //{"pygame_sdl2.error", PyInit_pygame_sdl2_error},
         {"pygame_sdl2.event", PyInit_pygame_sdl2_event},
         {"pygame_sdl2.gfxdraw", PyInit_pygame_sdl2_gfxdraw},
         {"pygame_sdl2.image", PyInit_pygame_sdl2_image},
@@ -446,7 +452,7 @@ int main(int argc, char* argv[])
         {"pygame_sdl2.rect", PyInit_pygame_sdl2_rect}, 
         {"pygame_sdl2.rwobject", PyInit_pygame_sdl2_rwobject},
         {"pygame_sdl2.scrap", PyInit_pygame_sdl2_scrap},
-        {"pygame_sdl2.surface", PyInit_pygame_sdl2_surface},
+        //{"pygame_sdl2.surface", PyInit_pygame_sdl2_surface},
         {"pygame_sdl2.transform", PyInit_pygame_sdl2_transform},
    
         {"pygame_sdl2.render", PyInit_pygame_sdl2_render},
@@ -517,11 +523,16 @@ int main(int argc, char* argv[])
     }   
 
     
-  
+    register_builtin_modules();
+   
     /* ---- Initialize Python ---- */
     status = Py_InitializeFromConfig(&config);
     if (PyStatus_Exception(status)) goto exception;
     PyConfig_Clear(&config);
+
+
+    PyRun_SimpleString("import pygame_sdl2");
+   
 
     int python_result;
     python_result = PyRun_SimpleString(

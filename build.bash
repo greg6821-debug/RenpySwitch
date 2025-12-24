@@ -13,9 +13,10 @@ export SWITCH_PYTHON=$DEVKITPRO/portlibs/switch/python39
 pushd pygame_sdl2-source
 rm -rf gen gen-static build
 
-python3 setup.py
-PYGAME_SDL2_STATIC=1 python3 setup.py
+python3 setup.py egg_info || true
+PYGAME_SDL2_STATIC=1 python3 setup.py egg_info || true
 
+# сборка
 python3 setup.py build
 python3 setup.py install_headers
 python3 setup.py install

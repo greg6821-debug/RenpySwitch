@@ -12,8 +12,10 @@ echo "---------------------------------------------0.1--------------------------
 echo "=== Содержимое pygame_sdl2-source ==="
 find pygame_sdl2-source -type d -print -exec ls -l {} \;
 echo "---------------------------------------------0.2---------------------------------------"
-echo "=== Содержимое renpy-source ==="
-find renpy-source -type d -print -exec ls -l {} \;
+echo "=== Проверка SDL2 ==="
+pkg-config --cflags --libs sdl2 || echo "SDL2 dev not found!"
+ls -l $DEVKITPRO/portlibs/switch/include/SDL2
+ls -l $DEVKITPRO/portlibs/switch/lib
 echo "---------------------------------------------1---------------------------------------"
 pushd renpy-source/module
 rm -rf gen gen-static

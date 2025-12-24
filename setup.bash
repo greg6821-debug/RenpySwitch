@@ -89,9 +89,9 @@ rm rawproject.zip
 pushd renpy-source
 patch -p1 < ../renpy.patch
 pushd module
-rm -rf gen gen-static
+#rm -rf gen gen-static
 popd
 popd
 pushd pygame_sdl2-source
-rm -rf gen gen-static
+#rm -rf gen gen-static
 popd

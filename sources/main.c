@@ -363,7 +363,11 @@ static void on_applet_hook(AppletHookType hook, void *param)
 /* -------------------------------------------------------
    Main
 ------------------------------------------------------- */
-
+ static void register_builtin_modules(void)
+    {
+    PyImport_AppendInittab("pygame_sdl2.error", PyInit_pygame_sdl2_error);
+    PyImport_AppendInittab("pygame_sdl2.surface", PyInit_pygame_sdl2_surface);
+    }
 int main(int argc, char* argv[])
 {
     chdir("romfs:/Contents");
@@ -422,11 +426,7 @@ int main(int argc, char* argv[])
     Py_SetProgramName(L"RenPy3.8.7");
 
 
-    static void register_builtin_modules(void)
-    {
-    PyImport_AppendInittab("pygame_sdl2.error", PyInit_pygame_sdl2_error);
-    PyImport_AppendInittab("pygame_sdl2.surface", PyInit_pygame_sdl2_surface);
-    }
+
     /* ---- Builtin modules ---- */
     static struct _inittab builtins[] = {
 

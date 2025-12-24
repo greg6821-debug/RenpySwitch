@@ -82,6 +82,7 @@ set(INCLUDES
 # Sources
 # ------------------------------------------------------------------------------
 set(SOURCES
+    sources/main.c
     source/module/IMG_savepng.c
     source/module/SDL2_rotozoom.c
     source/module/SDL_gfxPrimitives.c

@@ -8,6 +8,9 @@ rm -rf gen gen-static
 python3 setup.py build #|| true
 PYGAME_SDL2_STATIC=1 python3 setup.py build #|| true
 popd
+echo "---------------------------------------------0.1---------------------------------------"
+bash link_sources.bash
+
 echo "---------------------------------------------1---------------------------------------"
 pushd renpy-source/module
 rm -rf gen gen-static

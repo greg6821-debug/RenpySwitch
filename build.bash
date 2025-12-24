@@ -2,12 +2,9 @@ set -e
 
 export DEVKITPRO=/opt/devkitpro
 export PYTHON=python3
-export PYTHON_VERSION=3.9
 
-# Python для Switch
-export PYTHONHOME=$DEVKITPRO/portlibs/switch/python39
-export PYTHONPATH=$PYTHONHOME/lib/python3.9
-export PATH=$PYTHONHOME/bin:$PATH
+# пути для линковки и include
+export SWITCH_PYTHON=$DEVKITPRO/portlibs/switch/python39
 
 ####################################
 # pygame_sdl2 – генерация
@@ -16,11 +13,8 @@ export PATH=$PYTHONHOME/bin:$PATH
 pushd pygame_sdl2-source
 rm -rf gen gen-static
 
-# обычная сборка
-python3 setup.py || true
-
-# статическая сборка
-PYGAME_SDL2_STATIC=1 python3 setup.py || true
+$PYTHON setup.py || true
+PYGAME_SDL2_STATIC=1 $PYTHON setup.py || true
 popd
 
 
@@ -32,12 +26,8 @@ pushd renpy-source/module
 rm -rf gen gen-static
 
 export RENPY_DEPS_INSTALL=$DEVKITPRO/portlibs/switch
-
-# обычная сборка
-python3 setup.py || true
-
-# статическая сборка
-RENPY_STATIC=1 python3 setup.py || true
+$PYTHON setup.py || true
+RENPY_STATIC=1 $PYTHON setup.py || true
 popd
 
 
@@ -46,9 +36,9 @@ popd
 ####################################
 
 pushd pygame_sdl2-source
-python3 setup.py build
-python3 setup.py install_headers
-python3 setup.py install
+$PYTHON setup.py build
+$PYTHON setup.py install_headers
+$PYTHON setup.py install
 popd
 
 
@@ -58,8 +48,8 @@ popd
 
 pushd renpy-source/module
 export RENPY_DEPS_INSTALL=$DEVKITPRO/portlibs/switch
-python3 setup.py build
-python3 setup.py install
+$PYTHON setup.py build
+$PYTHON setup.py install
 popd
 
 bash link_sources.bash

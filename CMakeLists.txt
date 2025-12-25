@@ -99,7 +99,7 @@ set(SOURCES
     source/module/write_png.c
     source/module/renpybidicore.c
 
-    source/module/renpy.compat.dictviews.c
+    #source/module/renpy.compat.dictviews.c
     source/module/renpy.gl2.gl2draw.c
     source/module/renpy.gl2.gl2mesh.c
     source/module/renpy.gl2.gl2mesh2.c

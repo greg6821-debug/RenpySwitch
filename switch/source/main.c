@@ -266,9 +266,6 @@ void userAppExit(void)
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
-    // 🔴 ОБЯЗАТЕЛЬНО ДО Py_Initialize
-    setenv("PYTHONHOME", "romfs:/Contents/lib.zip", 1);
-    setenv("PYTHONHOME", "romfs:/Contents/python", 1);
 
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
@@ -277,6 +274,12 @@ int main(int argc, char* argv[])
     Py_IgnoreEnvironmentFlag = 1;
     Py_DontWriteBytecodeFlag = 1;
     Py_OptimizeFlag = 2;
+
+    static wchar_t python_home[] = L"romfs:/Contents/python";
+    static wchar_t program_name[] = L"renpy";
+
+    Py_SetProgramName(program_name);
+    Py_SetPythonHome(python_home);
 
     PyImport_AppendInittab("_otrhlibnx", PyInit__otrhlibnx);
     PyImport_AppendInittab("pygame_sdl2.color", PyInit_pygame_sdl2_color);

@@ -15,8 +15,8 @@ RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 pyth
 rm -rf gen
 popd
 echo "----------------------------------------3----------------------------------"
-rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
-rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module
+rsync -av pygame_sdl2-source/gen3-static/ source/module/
+rsync -av renpy-source/module/gen3-static/ source/module/
 find source/module -mindepth 2 -type f -exec mv -t source/module {} +
 find source/module -type d -empty -delete
 echo "----------------------------------------4----------------------------------"

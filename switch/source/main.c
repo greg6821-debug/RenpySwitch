@@ -198,6 +198,51 @@ static void on_applet_hook(AppletHookType hook, void* param)
     }
 }
 
+
+/* -------------------------------------------------------
+   App init / exit
+------------------------------------------------------- */
+
+void userAppInit(void)
+{
+    fsdevMountSdmc();
+
+    freopen("sdmc:/renpy_switch.log", "w", stdout);
+    freopen("sdmc:/renpy_switch.log", "w", stderr);
+
+    setvbuf(stdout, NULL, _IOLBF, 0);
+    setvbuf(stderr, NULL, _IOLBF, 0);
+
+    printf("=== Ren'Py 8 Switch launcher ===\n");
+
+    svcGetInfo(&cur_progid, InfoType_ProgramId, CUR_PROCESS_HANDLE, 0);
+
+    accountInitialize(AccountServiceType_Application);
+    accountGetPreselectedUser(&userID);
+
+    if (accountUidIsValid(&userID)) {
+        Result rc = fsdevMountSaveData("save", cur_progid, userID);
+        if (R_FAILED(rc)) {
+            createSaveData();
+            fsdevMountSaveData("save", cur_progid, userID);
+        }
+    }
+
+    romfsInit();
+    socketInitializeDefault();
+}
+
+void userAppExit(void)
+{
+    if (fsdevGetDeviceFileSystem("save"))
+        fsdevCommitDevice("save");
+
+    fsdevUnmountDevice("save");
+    socketExit();
+    romfsExit();
+}
+
+
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);

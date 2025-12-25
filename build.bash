@@ -1,37 +1,73 @@
 set -e
-
 export DEVKITPRO=/opt/devkitpro
+
+# Создание директорий
 mkdir -p source/module
 mkdir -p include/module include/module/pygame_sdl2
 
+# Сборка pygame_sdl2 (статическая)
 pushd pygame_sdl2-source
-PYGAME_SDL2_STATIC=1 python3 setup.py || true
+PYGAME_SDL2_STATIC=1 python3 setup.py build || true
 rm -rf gen
 popd
 
+# Сборка renpy module (статическая)
 pushd renpy-source/module
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3 setup.py || true
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3 setup.py build || true
 rm -rf gen
 popd
 
+# Копирование .c файлов с проверкой на дублирование
 rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
 rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module
-find source/module -mindepth 2 -type f -exec mv -t source/module {} +
+
+# Перемещение файлов с проверкой на существование
+find source/module -mindepth 2 -type f -name "*.c" | while read file; do
+    dest="source/module/$(basename "$file")"
+    if [ ! -f "$dest" ]; then
+        mv "$file" "source/module/"
+    else
+        # Если файл уже существует, проверяем, не из gen3-static ли он
+        if echo "$file" | grep -q "gen3-static"; then
+            # Файл из gen3-static - заменяем существующий
+            mv -f "$file" "source/module/"
+        fi
+    fi
+done
+
+# Удаление пустых директорий
 find source/module -type d -empty -delete
 
+# Копирование .h файлов
 rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
-find include/module/pygame_sdl2 -mindepth 2 -type f -exec mv -t include/module/pygame_sdl2 {} +
-mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src
+
+# Перемещение .h файлов с проверкой
+find include/module/pygame_sdl2 -mindepth 2 -type f -name "*.h" | while read file; do
+    dest="include/module/pygame_sdl2/$(basename "$file")"
+    if [ ! -f "$dest" ]; then
+        mv "$file" "include/module/pygame_sdl2/"
+    fi
+done
+
+# Исправление для surface.h
+if [ -f "include/module/pygame_sdl2/surface.h" ]; then
+    mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src/
+fi
+
+# Копирование заголовочных файлов renpy
 rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ include/module
-#mv source/module/hydrogen.c include/module/libhydrogen
+
+# Удаление пустых директорий в include
 find include/module -type d -empty -delete
 
+# Установка pygame_sdl2
 pushd pygame_sdl2-source
 python3 setup.py build
 python3 setup.py install_headers
 python3 setup.py install
 popd
 
+# Установка renpy module
 pushd renpy-source/module
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py build
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py install

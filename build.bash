@@ -17,48 +17,39 @@ RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 pyth
 rm -rf gen
 popd
 
-# Копирование .c файлов с проверкой на дублирование
-rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
-rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module
+# Копирование ВСЕХ .c файлов из renpy-source/module (включая поддиректории)
+find renpy-source/module -name "*.c" -exec cp {} source/module/ \;
 
-# Перемещение файлов с проверкой на существование
-find source/module -mindepth 2 -type f -name "*.c" | while read file; do
-    dest="source/module/$(basename "$file")"
-    if [ ! -f "$dest" ]; then
-        mv "$file" "source/module/"
+# Копирование .c файлов из pygame_sdl2 с проверкой на дубликаты
+find pygame_sdl2-source -name "*.c" | while read file; do
+    basename=$(basename "$file")
+    if [ ! -f "source/module/$basename" ]; then
+        cp "$file" source/module/
     else
-        # Если файл уже существует, проверяем, не из gen3-static ли он
+        # Если файл уже есть, проверяем не из gen3-static ли он
         if echo "$file" | grep -q "gen3-static"; then
-            # Файл из gen3-static - заменяем существующий
-            mv -f "$file" "source/module/"
+            cp -f "$file" source/module/
         fi
     fi
 done
 
-# Удаление пустых директорий
-find source/module -type d -empty -delete
+# Копирование ВСЕХ .h файлов из renpy-source/module
+find renpy-source/module -name "*.h" -exec cp {} include/module/ 2>/dev/null \;
 
-# Копирование .h файлов
+# Копирование .h файлов из pygame_sdl2
 rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
 
-# Перемещение .h файлов с проверкой
-find include/module/pygame_sdl2 -mindepth 2 -type f -name "*.h" | while read file; do
-    dest="include/module/pygame_sdl2/$(basename "$file")"
-    if [ ! -f "$dest" ]; then
-        mv "$file" "include/module/pygame_sdl2/"
-    fi
-done
+# Перемещение .h файлов из поддиректорий pygame_sdl2
+find include/module/pygame_sdl2 -mindepth 2 -type f -name "*.h" -exec mv -t include/module/pygame_sdl2 {} + 2>/dev/null || true
 
 # Исправление для surface.h
 if [ -f "include/module/pygame_sdl2/surface.h" ]; then
-    mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src/
+    mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src/ 2>/dev/null || true
 fi
 
-# Копирование заголовочных файлов renpy
-rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ include/module
-
-# Удаление пустых директорий в include
-find include/module -type d -empty -delete
+# Удаление пустых директорий
+find source/module -type d -empty -delete 2>/dev/null || true
+find include/module -type d -empty -delete 2>/dev/null || true
 
 # Установка pygame_sdl2
 pushd pygame_sdl2-source
@@ -73,10 +64,10 @@ RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py bu
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py install
 popd
 
-
-
-echo "----------------------------------------7----------------------------------"
-bash link_sources.bash
+# Запуск link_sources.bash если он существует
+if [ -f "link_sources.bash" ]; then
+    bash link_sources.bash
+fi
 
 export PREFIXARCHIVE=$(realpath renpy-switch.tar.gz)
 

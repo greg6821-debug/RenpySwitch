@@ -4,40 +4,40 @@ export DEVKITPRO=/opt/devkitpro
 
 mkdir -p source/module
 mkdir -p include/module include/module/pygame_sdl2
-
+echo "----------------------------------------1----------------------------------"
 pushd pygame_sdl2-source
 PYGAME_SDL2_STATIC=1 python3 setup.py || true
 rm -rf gen
 popd
-
+echo "----------------------------------------2----------------------------------"
 pushd renpy-source/module
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3 setup.py || true
 rm -rf gen
 popd
-
+echo "----------------------------------------3----------------------------------"
 rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
 rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module
 find source/module -mindepth 2 -type f -exec mv -t source/module {} +
 find source/module -type d -empty -delete
-
+echo "----------------------------------------4----------------------------------"
 rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
 find include/module/pygame_sdl2 -mindepth 2 -type f -exec mv -t include/module/pygame_sdl2 {} +
 mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src
 rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ include/module
 #mv source/module/hydrogen.c include/module/libhydrogen
 find include/module -type d -empty -delete
-
+echo "----------------------------------------5----------------------------------"
 pushd pygame_sdl2-source
 python3 setup.py build
 python3 setup.py install_headers
 python3 setup.py install
 popd
-
+echo "----------------------------------------6----------------------------------"
 pushd renpy-source/module
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py build
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py install
 popd
-
+echo "----------------------------------------7----------------------------------"
 bash link_sources.bash
 
 export PREFIXARCHIVE=$(realpath renpy-switch.tar.gz)

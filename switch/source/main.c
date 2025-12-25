@@ -1,55 +1,63 @@
 #include <switch.h>
 #include <Python.h>
 #include <stdio.h>
+#include <string.h>
+#include <wchar.h>
+#include <locale.h>
+#include <SDL2/SDL.h>
+
+/* -------------------------------------------------------
+   Globals
+------------------------------------------------------- */
 
 u64 cur_progid = 0;
 AccountUid userID = {0};
 
+/* -------------------------------------------------------
+   _nx module (sleep)
+------------------------------------------------------- */
+
+static PyObject* py_nx_sleep(PyObject* self, PyObject* args)
+{
+    double seconds;
+    if (!PyArg_ParseTuple(args, "d", &seconds))
+        return NULL;
+
+    uint64_t ns = (uint64_t)(seconds * 1000000000ULL);
+
+    Py_BEGIN_ALLOW_THREADS
+    svcSleepThread(ns);
+    Py_END_ALLOW_THREADS
+
+    Py_RETURN_NONE;
+}
+
+static PyMethodDef NxMethods[] = {
+    {"sleep", py_nx_sleep, METH_VARARGS, "Sleep using svcSleepThread"},
+    {NULL, NULL, 0, NULL}
+};
+
+static struct PyModuleDef nx_module = {
+    PyModuleDef_HEAD_INIT,
+    "_nx",
+    NULL,
+    -1,
+    NxMethods
+};
+
+PyMODINIT_FUNC PyInit__nx(void)
+{
+    return PyModule_Create(&nx_module);
+}
+
+/* -------------------------------------------------------
+   _otrhlibnx module
+------------------------------------------------------- */
+
 static PyObject* commitsave(PyObject* self, PyObject* args)
 {
-    u64 total_size = 0;
-    u64 free_size = 0;
-    FsFileSystem* FsSave = fsdevGetDeviceFileSystem("save");
-
-    FsSaveDataInfoReader reader;
-    FsSaveDataInfo info;
-    s64 total_entries = 0;
-    Result rc = 0;
-
-    fsdevCommitDevice("save");
-    fsFsGetTotalSpace(FsSave, "/", &total_size);
-    fsFsGetFreeSpace(FsSave, "/", &free_size);
-
-    if (free_size < 0x800000)
-    {
-        u64 new_size = total_size + 0x800000;
-
-        fsdevUnmountDevice("save");
-        fsOpenSaveDataInfoReader(&reader, FsSaveDataSpaceId_User);
-
-        while (1)
-        {
-            rc = fsSaveDataInfoReaderRead(&reader, &info, 1, &total_entries);
-            if (R_FAILED(rc) || total_entries == 0)
-                break;
-
-            if (info.save_data_type == FsSaveDataType_Account &&
-                userID.uid[0] == info.uid.uid[0] &&
-                userID.uid[1] == info.uid.uid[1] &&
-                info.application_id == cur_progid)
-            {
-                fsExtendSaveDataFileSystem(
-                    info.save_data_space_id,
-                    info.save_data_id,
-                    new_size,
-                    0x400000);
-                break;
-            }
-        }
-
-        fsSaveDataInfoReaderClose(&reader);
-        fsdevMountSaveData("save", cur_progid, userID);
-    }
+    if (fsdevGetDeviceFileSystem("save"))
+        fsdevCommitDevice("save");
 
     Py_RETURN_NONE;
 }
@@ -72,7 +80,7 @@ static PyObject* restartprogram(PyObject* self, PyObject* args)
     Py_RETURN_NONE;
 }
 
-static PyMethodDef otrh_methods[] = {
+static PyMethodDef OtrhMethods[] = {
     {"commitsave", commitsave, METH_NOARGS, NULL},
     {"startboost", startboost, METH_NOARGS, NULL},
     {"disableboost", disableboost, METH_NOARGS, NULL},
@@ -85,7 +93,7 @@ static struct PyModuleDef otrh_module = {
     "_otrhlibnx",
     NULL,
     -1,
-    otrh_methods
+    OtrhMethods
 };
 
 PyMODINIT_FUNC PyInit__otrhlibnx(void)
@@ -93,73 +101,142 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
     return PyModule_Create(&otrh_module);
 }
 
-/* ---- external init symbols ---- */
-#define DECL(name) PyMODINIT_FUNC PyInit_##name(void)
 
-DECL(pygame_sdl2_color);
-DECL(pygame_sdl2_controller);
-DECL(pygame_sdl2_display);
-DECL(pygame_sdl2_draw);
-DECL(pygame_sdl2_error);
-DECL(pygame_sdl2_event);
-DECL(pygame_sdl2_gfxdraw);
-DECL(pygame_sdl2_image);
-DECL(pygame_sdl2_joystick);
-DECL(pygame_sdl2_key);
-DECL(pygame_sdl2_locals);
-DECL(pygame_sdl2_mouse);
-DECL(pygame_sdl2_power);
-DECL(pygame_sdl2_pygame_time);
-DECL(pygame_sdl2_rect);
-DECL(pygame_sdl2_render);
-DECL(pygame_sdl2_rwobject);
-DECL(pygame_sdl2_scrap);
-DECL(pygame_sdl2_surface);
-DECL(pygame_sdl2_transform);
 
-DECL(_renpy);
-DECL(_renpybidi);
-DECL(renpy_audio_renpysound);
-DECL(renpy_display_accelerator);
-DECL(renpy_display_render);
-DECL(renpy_display_matrix);
-DECL(renpy_gl_gldraw);
-DECL(renpy_gl_glenviron_shader);
-DECL(renpy_gl_glrtt_copy);
-DECL(renpy_gl_glrtt_fbo);
-DECL(renpy_gl_gltexture);
-DECL(renpy_pydict);
-DECL(renpy_style);
-DECL(renpy_styledata_style_activate_functions);
-DECL(renpy_styledata_style_functions);
-DECL(renpy_styledata_style_hover_functions);
-DECL(renpy_styledata_style_idle_functions);
-DECL(renpy_styledata_style_insensitive_functions);
-DECL(renpy_styledata_style_selected_activate_functions);
-DECL(renpy_styledata_style_selected_functions);
-DECL(renpy_styledata_style_selected_hover_functions);
-DECL(renpy_styledata_style_selected_idle_functions);
-DECL(renpy_styledata_style_selected_insensitive_functions);
-DECL(renpy_styledata_styleclass);
-DECL(renpy_styledata_stylesets);
-DECL(renpy_text_ftfont);
-DECL(renpy_text_textsupport);
-DECL(renpy_text_texwrap);
-DECL(renpy_compat_dictviews);
-DECL(renpy_gl2_gl2draw);
-DECL(renpy_gl2_gl2mesh);
-DECL(renpy_gl2_gl2mesh2);
-DECL(renpy_gl2_gl2mesh3);
-DECL(renpy_gl2_gl2model);
-DECL(renpy_gl2_gl2polygon);
-DECL(renpy_gl2_gl2shader);
-DECL(renpy_gl2_gl2texture);
-DECL(renpy_uguu_gl);
-DECL(renpy_uguu_uguu);
-DECL(renpy_lexersupport);
-DECL(renpy_display_quaternion);
+// PyMODINIT_FUNC PyInit_pygame_sdl2(void) {
+//     PyObject *module;
+    
+//     // Создаем модуль pygame_sdl2
+//     static struct PyModuleDef moduledef = {
+//         PyModuleDef_HEAD_INIT,
+//         "pygame_sdl2",
+//         NULL,
+//         -1,
+//         NULL,
+//         NULL,
+//         NULL,
+//         NULL,
+//         NULL
+//     };
+    
+//     module = PyModule_Create(&moduledef);
+//     if (module == NULL) return NULL;
+    
+//     // ЗАГРУЖАЕМ И ВЫПОЛНЯЕМ __init__.py ВРУЧНУЮ
+//     // Это ключевой момент!
+//     PyObject *builtins = PyEval_GetBuiltins();
+//     PyObject *import_func = PyDict_GetItemString(builtins, "__import__");
+    
+//     if (import_func) {
+//         // Импортируем pygame_sdl2.__init__ как модуль
+//         PyObject *init_module = PyObject_CallFunction(
+//             import_func, 
+//             "s", 
+//             "pygame_sdl2.__init__"
+//         );
+        
+//         if (init_module) {
+//             // Копируем атрибуты из __init__ в основной модуль
+//             PyObject *dict = PyModule_GetDict(init_module);
+//             PyObject *main_dict = PyModule_GetDict(module);
+            
+//             if (dict && main_dict) {
+//                 PyDict_Update(main_dict, dict);
+//             }
+//             Py_DECREF(init_module);
+//         }
+//     }
+    
+//     // Регистрируем подмодуль surface
+//     PyObject *surface_module = PyInit_pygame_sdl2_surface();
+//     if (surface_module == NULL) return NULL;
+    
+//     Py_INCREF(surface_module);
+//     PyModule_AddObject(module, "surface", surface_module);
+    
+//     return module;
+// }
 
-#undef DECL
+PyMODINIT_FUNC PyInit_pygame_sdl2_color(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_controller(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_display(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_draw(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_error(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_event(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_font(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_gfxdraw(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_image(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_joystick(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_key(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_locals(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_mouse(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_power(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_pygame_time(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_rect(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_rwobject(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_scrap(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_transform(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_surface(void);
+
+PyMODINIT_FUNC PyInit_pygame_sdl2_render(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_mixer(void);
+PyMODINIT_FUNC PyInit_pygame_sdl2_mixer_music(void);
+
+
+PyMODINIT_FUNC PyInit__renpy(void);
+PyMODINIT_FUNC PyInit__renpybidi(void);
+
+//PyMODINIT_FUNC PyInit_renpy_audio_filter(void);
+PyMODINIT_FUNC PyInit_renpy_audio_renpysound(void);
+
+PyMODINIT_FUNC PyInit_renpy_display_accelerator(void);
+PyMODINIT_FUNC PyInit_renpy_display_matrix(void);
+PyMODINIT_FUNC PyInit_renpy_display_quaternion(void);
+PyMODINIT_FUNC PyInit_renpy_display_render(void);
+
+PyMODINIT_FUNC PyInit_renpy_text_ftfont(void);
+PyMODINIT_FUNC PyInit_renpy_text_textsupport(void);
+PyMODINIT_FUNC PyInit_renpy_text_texwrap(void);
+
+PyMODINIT_FUNC PyInit_renpy_lexersupport(void);
+PyMODINIT_FUNC PyInit_renpy_pydict(void);
+PyMODINIT_FUNC PyInit_renpy_style(void);
+
+PyMODINIT_FUNC PyInit_renpy_styledata_style_activate_functions(void);
+PyMODINIT_FUNC PyInit_renpy_styledata_style_functions(void);
+PyMODINIT_FUNC PyInit_renpy_styledata_style_hover_functions(void);
+PyMODINIT_FUNC PyInit_renpy_styledata_style_idle_functions(void);
+PyMODINIT_FUNC PyInit_renpy_styledata_style_insensitive_functions(void);
+PyMODINIT_FUNC PyInit_renpy_styledata_style_selected_activate_functions(void);
+PyMODINIT_FUNC PyInit_renpy_styledata_style_selected_functions(void);
+PyMODINIT_FUNC PyInit_renpy_styledata_style_selected_hover_functions(void);
+PyMODINIT_FUNC PyInit_renpy_styledata_style_selected_idle_functions(void);
+PyMODINIT_FUNC PyInit_renpy_styledata_style_selected_insensitive_functions(void);
+PyMODINIT_FUNC PyInit_renpy_styledata_styleclass(void);
+PyMODINIT_FUNC PyInit_renpy_styledata_stylesets(void);
+
+PyMODINIT_FUNC PyInit_renpy_gl_gldraw(void);
+PyMODINIT_FUNC PyInit_renpy_gl_glenviron_shader(void);
+PyMODINIT_FUNC PyInit_renpy_gl_glrtt_copy(void);
+PyMODINIT_FUNC PyInit_renpy_gl_glrtt_fbo(void);
+PyMODINIT_FUNC PyInit_renpy_gl_gltexture(void);
+
+PyMODINIT_FUNC PyInit_renpy_gl2_gl2draw(void);
+PyMODINIT_FUNC PyInit_renpy_gl2_gl2mesh(void);
+PyMODINIT_FUNC PyInit_renpy_gl2_gl2mesh2(void);
+PyMODINIT_FUNC PyInit_renpy_gl2_gl2mesh3(void);
+PyMODINIT_FUNC PyInit_renpy_gl2_gl2model(void);
+PyMODINIT_FUNC PyInit_renpy_gl2_gl2polygon(void);
+PyMODINIT_FUNC PyInit_renpy_gl2_gl2shader(void);
+PyMODINIT_FUNC PyInit_renpy_gl2_gl2texture(void);
+
+PyMODINIT_FUNC PyInit_renpy_uguu_gl(void);
+PyMODINIT_FUNC PyInit_renpy_uguu_uguu(void);
+
+
+/* -------------------------------------------------------
+   Heap override
+------------------------------------------------------- */
 
 void __libnx_initheap(void)
 {
@@ -172,30 +249,19 @@ void __libnx_initheap(void)
 
     if (mem_available > mem_used + 0x200000)
         size = (mem_available - mem_used - 0x200000) & ~0x1FFFFF;
+
     if (size == 0)
-        size = 0x2000000 * 16;
+        size = 0x2000000 * 8; // 256 MB fallback
 
     Result rc = svcSetHeapSize(&addr, size);
-    if (R_FAILED(rc) || !addr)
+    if (R_FAILED(rc) || addr == NULL)
         diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_HeapAllocFailed));
 
     extern char* fake_heap_start;
     extern char* fake_heap_end;
 
     fake_heap_start = (char*)addr;
-    fake_heap_end = (char*)addr + size;
-}
-
-static AppletHookCookie applet_hook_cookie;
-
-static void on_applet_hook(AppletHookType hook, void* param)
-{
-    if (hook == AppletHookType_OnExitRequest)
-    {
-        fsdevCommitDevice("save");
-        svcSleepThread(1500000000ULL);
-        appletUnlockExit();
-    }
+    fake_heap_end   = (char*)addr + size;
 }
 
 /* -------------------------------------------------------
@@ -219,6 +285,7 @@ Result createSaveData(void)
 
     return fsCreateSaveDataFileSystem(&attr, &crt, &meta);
 }
+
 /* -------------------------------------------------------
    App init / exit
 ------------------------------------------------------- */
@@ -262,6 +329,10 @@ void userAppExit(void)
     romfsExit();
 }
 
+/* -------------------------------------------------------
+   Error helper
+------------------------------------------------------- */
+
 void show_error(const char* message)
 {
     PyErr_Print();
@@ -273,84 +344,243 @@ void show_error(const char* message)
     Py_Exit(1);
 }
 
+static AppletHookCookie applet_hook_cookie;
+static void on_applet_hook(AppletHookType hook, void *param)
+{
+   switch (hook)
+   {
+      case AppletHookType_OnExitRequest:
+        fsdevCommitDevice("save");
+        svcSleepThread(1500000000ULL);
+        appletUnlockExit();
+        break;
 
+      default:
+         break;
+   }
+}
+
+/* -------------------------------------------------------
+   Main
+------------------------------------------------------- */
+
+ static void register_builtin_modules(void)
+    {
+       /* ROOT PACKAGE */
+    PyImport_AppendInittab("pygame_sdl2.error", PyInit_pygame_sdl2_error);
+    PyImport_AppendInittab("pygame_sdl2.surface", PyInit_pygame_sdl2_surface);
+    }
 int main(int argc, char* argv[])
 {
+    chdir("romfs:/Contents");
+    setlocale(LC_ALL, "C");
     setenv("MESA_NO_ERROR", "1", 1);
 
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
 
+    Py_NoSiteFlag = 1;
+    Py_OptimizeFlag = 2;
+   
     PyStatus status;
     PyConfig config;
+
     PyConfig_InitPythonConfig(&config);
 
-    config.isolated = 1;
+    /* ---- Critical for Python 3.9 embedded ---- */
+    config.isolated = 0;
     config.use_environment = 0;
     config.site_import = 0;
+    config.user_site_directory = 0;
     config.write_bytecode = 0;
     config.optimization_level = 2;
+    config.verbose = 0;
 
-    /* filesystem encoding */
-    PyConfig_SetString(&config, &config.filesystem_encoding, L"utf-8");
-    PyConfig_SetString(&config, &config.filesystem_errors, L"surrogateescape");
+    /* Filesystem encoding */
+    status = PyConfig_SetString(&config,
+                                &config.filesystem_encoding,
+                                L"utf-8");
+    if (PyStatus_Exception(status)) goto exception;
 
-    /* 🔴 PYTHONHOME = PREFIX */
-    PyConfig_SetString(&config, &config.home, L"romfs:/Contents/python");
+    status = PyConfig_SetString(&config,
+                                &config.filesystem_errors,
+                                L"surrogateescape");
+    if (PyStatus_Exception(status)) goto exception;
 
-    /* program name */
-    PyConfig_SetString(&config, &config.program_name, L"renpy");
+    /* ---- stdlib: ONLY lib.zip ---- */
+    config.module_search_paths_set = 1;
 
-    /* argv */
-    wchar_t* argvw[] = { L"romfs:/Contents/renpy.py" };
-    PyConfig_SetArgv(&config, 1, argvw);
+    status = PyWideStringList_Append(
+        &config.module_search_paths,
+        L"romfs:/Contents/lib.zip"
+    );
+    if (PyStatus_Exception(status)) goto exception;
 
-    /* builtin modules */
-    PyImport_AppendInittab("_otrhlibnx", PyInit__otrhlibnx);
-    PyImport_AppendInittab("pygame_sdl2.color", PyInit_pygame_sdl2_color);
-    PyImport_AppendInittab("pygame_sdl2.controller", PyInit_pygame_sdl2_controller);
-    PyImport_AppendInittab("pygame_sdl2.display", PyInit_pygame_sdl2_display);
-    PyImport_AppendInittab("pygame_sdl2.draw", PyInit_pygame_sdl2_draw);
-    PyImport_AppendInittab("pygame_sdl2.error", PyInit_pygame_sdl2_error);
-    PyImport_AppendInittab("pygame_sdl2.event", PyInit_pygame_sdl2_event);
-    PyImport_AppendInittab("pygame_sdl2.gfxdraw", PyInit_pygame_sdl2_gfxdraw);
-    PyImport_AppendInittab("pygame_sdl2.image", PyInit_pygame_sdl2_image);
-    PyImport_AppendInittab("pygame_sdl2.joystick", PyInit_pygame_sdl2_joystick);
-    PyImport_AppendInittab("pygame_sdl2.key", PyInit_pygame_sdl2_key);
-    PyImport_AppendInittab("pygame_sdl2.locals", PyInit_pygame_sdl2_locals);
-    PyImport_AppendInittab("pygame_sdl2.mouse", PyInit_pygame_sdl2_mouse);
-    PyImport_AppendInittab("pygame_sdl2.power", PyInit_pygame_sdl2_power);
-    PyImport_AppendInittab("pygame_sdl2.pygame_time", PyInit_pygame_sdl2_pygame_time);
-    PyImport_AppendInittab("pygame_sdl2.rect", PyInit_pygame_sdl2_rect);
-    PyImport_AppendInittab("pygame_sdl2.render", PyInit_pygame_sdl2_render);
-    PyImport_AppendInittab("pygame_sdl2.rwobject", PyInit_pygame_sdl2_rwobject);
-    PyImport_AppendInittab("pygame_sdl2.scrap", PyInit_pygame_sdl2_scrap);
-    PyImport_AppendInittab("pygame_sdl2.surface", PyInit_pygame_sdl2_surface);
-    PyImport_AppendInittab("pygame_sdl2.transform", PyInit_pygame_sdl2_transform);
+    /* ---- argv ---- */
+    wchar_t* pyargv[] = {
+        L"romfs:/Contents/renpy.py",
+        NULL
+    };
+    status = PyConfig_SetArgv(&config, 1, pyargv);
+    if (PyStatus_Exception(status)) goto exception;
 
-    /* START PYTHON */
-    status = Py_InitializeFromConfig(&config);
-    if (PyStatus_Exception(status)) {
-        Py_ExitStatusException(status);
+   
+    Py_SetProgramName(L"RenPy3.8.7");
+
+
+
+    /* ---- Builtin modules ---- */
+    static struct _inittab builtins[] = {
+
+       //{"pygame_sdl2", PyInit_pygame_sdl2},
+
+        {"_nx", PyInit__nx},
+        {"_otrhlibnx", PyInit__otrhlibnx},
+
+        {"pygame_sdl2.color", PyInit_pygame_sdl2_color},
+        {"pygame_sdl2.controller", PyInit_pygame_sdl2_controller},
+        {"pygame_sdl2.display", PyInit_pygame_sdl2_display},
+        {"pygame_sdl2.draw", PyInit_pygame_sdl2_draw},
+        //{"pygame_sdl2.error", PyInit_pygame_sdl2_error},
+        {"pygame_sdl2.event", PyInit_pygame_sdl2_event},
+        {"pygame_sdl2.gfxdraw", PyInit_pygame_sdl2_gfxdraw},
+        {"pygame_sdl2.image", PyInit_pygame_sdl2_image},
+        {"pygame_sdl2.joystick", PyInit_pygame_sdl2_joystick},
+        {"pygame_sdl2.key", PyInit_pygame_sdl2_key},
+        {"pygame_sdl2.locals", PyInit_pygame_sdl2_locals},
+        {"pygame_sdl2.mouse", PyInit_pygame_sdl2_mouse},
+        {"pygame_sdl2.power", PyInit_pygame_sdl2_power},
+        {"pygame_sdl2.pygame_time", PyInit_pygame_sdl2_pygame_time},
+        {"pygame_sdl2.rect", PyInit_pygame_sdl2_rect}, 
+        {"pygame_sdl2.rwobject", PyInit_pygame_sdl2_rwobject},
+        {"pygame_sdl2.scrap", PyInit_pygame_sdl2_scrap},
+        //{"pygame_sdl2.surface", PyInit_pygame_sdl2_surface},
+        {"pygame_sdl2.transform", PyInit_pygame_sdl2_transform},
+   
+        {"pygame_sdl2.render", PyInit_pygame_sdl2_render},
+        {"pygame_sdl2.mixer", PyInit_pygame_sdl2_mixer},
+        {"pygame_sdl2.mixer_music", PyInit_pygame_sdl2_mixer_music},
+
+        {"_renpy", PyInit__renpy},
+        {"_renpybidi", PyInit__renpybidi},
+
+        //{"renpy.audio.filter", PyInit_renpy_audio_filter},
+        {"renpy.audio.renpysound", PyInit_renpy_audio_renpysound},
+        {"renpy.display.accelerator", PyInit_renpy_display_accelerator},
+        {"renpy.display.matrix", PyInit_renpy_display_matrix},
+        {"renpy.display.quaternion", PyInit_renpy_display_quaternion},
+        {"renpy.display.render", PyInit_renpy_display_render},
+        {"renpy.text.ftfont", PyInit_renpy_text_ftfont},
+        {"renpy.text.textsupport", PyInit_renpy_text_textsupport},
+        {"renpy.text.texwrap", PyInit_renpy_text_texwrap},
+        {"renpy.pydict", PyInit_renpy_pydict},
+        {"renpy.lexersupport", PyInit_renpy_lexersupport},
+        {"renpy.style", PyInit_renpy_style},
+        {"renpy.styledata.style_activate_functions", PyInit_renpy_styledata_style_activate_functions},
+        {"renpy.styledata.style_functions", PyInit_renpy_styledata_style_functions},
+        {"renpy.styledata.style_hover_functions", PyInit_renpy_styledata_style_hover_functions},
+        {"renpy.styledata.style_idle_functions", PyInit_renpy_styledata_style_idle_functions},
+        {"renpy.styledata.style_insensitive_functions", PyInit_renpy_styledata_style_insensitive_functions},
+        {"renpy.styledata.style_selected_activate_functions", PyInit_renpy_styledata_style_selected_activate_functions},
+        {"renpy.styledata.style_selected_functions", PyInit_renpy_styledata_style_selected_functions},
+        {"renpy.styledata.style_selected_hover_functions", PyInit_renpy_styledata_style_selected_hover_functions},
+        {"renpy.styledata.style_selected_idle_functions", PyInit_renpy_styledata_style_selected_idle_functions},
+        {"renpy.styledata.style_selected_insensitive_functions", PyInit_renpy_styledata_style_selected_insensitive_functions},
+        {"renpy.styledata.styleclass", PyInit_renpy_styledata_styleclass},
+        {"renpy.styledata.stylesets", PyInit_renpy_styledata_stylesets},
+
+        {"renpy.gl.gldraw", PyInit_renpy_gl_gldraw},
+        {"renpy.gl.glenviron_shader", PyInit_renpy_gl_glenviron_shader},
+        {"renpy.gl.glrtt_copy", PyInit_renpy_gl_glrtt_copy},
+        {"renpy.gl.glrtt_fbo", PyInit_renpy_gl_glrtt_fbo},
+        {"renpy.gl.gltexture", PyInit_renpy_gl_gltexture},
+
+        {"renpy.gl2.gl2draw", PyInit_renpy_gl2_gl2draw},
+        {"renpy.gl2.gl2mesh", PyInit_renpy_gl2_gl2mesh},
+        {"renpy.gl2.gl2mesh2", PyInit_renpy_gl2_gl2mesh2},
+        {"renpy.gl2.gl2mesh3", PyInit_renpy_gl2_gl2mesh3},
+        {"renpy.gl2.gl2model", PyInit_renpy_gl2_gl2model},
+        {"renpy.gl2.gl2polygon", PyInit_renpy_gl2_gl2polygon},
+        {"renpy.gl2.gl2shader", PyInit_renpy_gl2_gl2shader},
+        {"renpy.gl2.gl2texture", PyInit_renpy_gl2_gl2texture},
+
+        {"renpy.uguu.gl", PyInit_renpy_uguu_gl},
+        {"renpy.uguu.uguu", PyInit_renpy_uguu_uguu},
+
+        {NULL, NULL}
+    };
+
+    PyImport_ExtendInittab(builtins);
+
+    /* ---- Sanity check ---- */
+    FILE* libzip = fopen("romfs:/Contents/lib.zip", "rb");
+    if (!libzip) {
+        show_error("Could not find lib.zip");
     }
+    fclose(libzip);
 
+    FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
+    if (!renpy_file) {
+        show_error("Could not find renpy.py");
+    }   
+
+    
+    register_builtin_modules();
+   
+    /* ---- Initialize Python ---- */
+    status = Py_InitializeFromConfig(&config);
+    if (PyStatus_Exception(status)) goto exception;
     PyConfig_Clear(&config);
 
-    /* smoke test */
-    PyRun_SimpleString(
-        "import sys\n"
-        "print(sys.prefix)\n"
-        "print(sys.path)\n"
-        "import encodings\n"
-        "print('encodings OK')\n"
+
+    PyRun_SimpleString("import pygame_sdl2");
+   
+
+    int python_result;
+    python_result = PyRun_SimpleString(
+    "import sys\n"
+    "sys.path[:] = ['romfs:/Contents/lib.zip']\n"
+    );
+    if (python_result == -1)
+    {
+        show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.");
+    }
+   #define x(lib) \
+    { \
+        if (PyRun_SimpleString("import " lib) == -1) \
+        { \
+            show_error("Could not import python library " lib ".\n\nPlease ensure that you have extracted the files correctly so that the \"lib\" folder is in the same directory as the nsp file, and that the \"lib\" folder contains the folder \"python3.9\". \nInside that folder, the file \"" lib ".py\" or folder \"" lib "\" needs to exist."); \
+        } \
+    }
+
+    x("os");
+    x("pygame_sdl2");
+    // x("encodings");
+
+    #undef x
+
+    /* ---- Run Ren'Py ---- */
+    int rc = PyRun_SimpleFileEx(
+        renpy_file,
+        "romfs:/Contents/renpy.py",
+        1
     );
 
-    FILE* f = fopen("romfs:/Contents/renpy.py", "rb");
-    if (!f)
-        Py_Exit(1);
+    if (rc != 0) {
+        show_error("Ren'Py execution failed");
+    }
 
-    PyRun_SimpleFile(f, "renpy.py");
-    fclose(f);
+    Py_Finalize();
+    return 0;
 
-    Py_Exit(0);
+exception:
+    PyConfig_Clear(&config);
+    if (PyStatus_IsExit(status)) {
+        return status.exitcode;
+    }
+    show_error(status.err_msg);
+    Py_ExitStatusException(status);
 }
+
+
+

@@ -270,16 +270,24 @@ int main(int argc, char* argv[])
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
 
-    Py_NoSiteFlag = 1;
-    Py_IgnoreEnvironmentFlag = 1;
-    Py_DontWriteBytecodeFlag = 1;
-    Py_OptimizeFlag = 2;
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
 
-    static wchar_t python_home[] = L"romfs:/Contents/python";
-    static wchar_t program_name[] = L"renpy";
+    // ❗ ОЧЕНЬ ВАЖНО
+    config.isolated = 1;
+    config.use_environment = 0;
+    config.site_import = 0;
+    config.write_bytecode = 0;
+    config.optimization_level = 2;
 
-    Py_SetProgramName(program_name);
-    Py_SetPythonHome(python_home);
+    // 🔴 ВОТ ГДЕ ТЕПЕРЬ ЗАДАЁТСЯ PYTHONHOME
+    PyConfig_SetString(&config, &config.home, L"romfs:/Contents/python");
+
+    // argv
+    PyConfig_SetString(&config, &config.program_name, L"renpy");
+
+    wchar_t* argvw[] = { L"renpy" };
+    PyConfig_SetArgv(&config, 1, argvw);
 
     PyImport_AppendInittab("_otrhlibnx", PyInit__otrhlibnx);
     PyImport_AppendInittab("pygame_sdl2.color", PyInit_pygame_sdl2_color);
@@ -303,15 +311,21 @@ int main(int argc, char* argv[])
     PyImport_AppendInittab("pygame_sdl2.surface", PyInit_pygame_sdl2_surface);
     PyImport_AppendInittab("pygame_sdl2.transform", PyInit_pygame_sdl2_transform);
 
-    Py_Initialize();
+    // 🔥 СТАРТ PYTHON
+    PyStatus status = Py_InitializeFromConfig(&config);
+    if (PyStatus_Exception(status)) {
+        Py_ExitStatusException(status);
+    }
 
-    wchar_t* pyargv[] = {L"romfs:/Contents/renpy.py"};
-    PySys_SetArgv(1, pyargv);
+    PyConfig_Clear(&config);
 
     PyRun_SimpleString(
         "import sys\n"
-        "sys.path = ['romfs:/Contents/lib.zip']\n"
-        "import encodings, os, pygame_sdl2\n");
+        "print(sys.prefix)\n"
+        "print(sys.path)\n"
+        "import encodings\n"
+        "print('encodings OK')\n"
+    );
 
     FILE* f = fopen("romfs:/Contents/renpy.py", "rb");
     if (!f)

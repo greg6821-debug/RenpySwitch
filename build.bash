@@ -19,8 +19,13 @@ PYGAME_SDL2_STATIC=1 python3 setup.py egg_info || true
 python3 setup.py build
 
 # FIX headers
-mkdir -p /opt/devkitpro/portlibs/switch/include/pygame_sdl2
-cp -r src/pygame_sdl2/*.h /opt/devkitpro/portlibs/switch/include/pygame_sdl2/
+rm -rf /opt/devkitpro/portlibs/switch/include/pygame_sdl2
+
+mkdir -p /opt/devkitpro/portlibs/switch/include
+
+cp -r \
+  pygame_sdl2-source/src/pygame_sdl2 \
+  /opt/devkitpro/portlibs/switch/include/
 
 python3 setup.py install
 popd

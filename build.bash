@@ -15,16 +15,12 @@ RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 pyth
 rm -rf gen
 popd
 echo "----------------------------------------3----------------------------------"
-# -----------------------------
-# 5️⃣ Копируем C-код (только static) в source/module
-# -----------------------------
+# C-файлы
 rsync -av pygame_sdl2-source/gen3-static/ source/module/
 rsync -av renpy-source/module/gen3-static/ source/module/
 
-# -----------------------------
-# 6️⃣ Копируем headers (только static) в include/module/pygame_sdl2
-# -----------------------------
-cp -a pygame_sdl2-source/gen3-static/pygame_sdl2/. include/module/pygame_sdl2/
+# headers
+cp -a pygame_sdl2-source/gen3-static/*.h include/module/pygame_sdl2/
 echo "----------------------------------------4----------------------------------"
 rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
 find include/module/pygame_sdl2 -mindepth 2 -type f -exec mv -t include/module/pygame_sdl2 {} +

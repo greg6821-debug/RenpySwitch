@@ -1,74 +1,46 @@
 set -e
 
 export DEVKITPRO=/opt/devkitpro
-export PYTHON=python3
 
-# пути для линковки и include
-export SWITCH_PYTHON=$DEVKITPRO/portlibs/switch/python39
-
-####################################
-# pygame_sdl2 – генерация
-####################################
+mkdir -p source/module
+mkdir -p include/module include/module/pygame_sdl2
 
 pushd pygame_sdl2-source
-rm -rf gen gen-static build
-
-python3 setup.py egg_info || true
-PYGAME_SDL2_STATIC=1 python3 setup.py egg_info || true
-
-python3 setup.py build
-
-# FIX headers
-rm -rf /opt/devkitpro/portlibs/switch/include/pygame_sdl2
-mkdir -p /opt/devkitpro/portlibs/switch/include
-
-cp -r src/pygame_sdl2 /opt/devkitpro/portlibs/switch/include/
-
-python3 setup.py install
+PYGAME_SDL2_STATIC=1 python3 setup.py || true
+rm -rf gen
 popd
-####################################
-# renpy – генерация
-####################################
 
 pushd renpy-source/module
-rm -rf gen gen-static build
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3 setup.py || true
+rm -rf gen
+popd
 
-export RENPY_DEPS_INSTALL=/opt/devkitpro/portlibs/switch
-export CFLAGS="-I/opt/devkitpro/portlibs/switch/include"
-export CPPFLAGS="$CFLAGS"
+rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
+rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module
+find source/module -mindepth 2 -type f -exec mv -t source/module {} +
+find source/module -type d -empty -delete
 
-python3 setup.py egg_info || true
-RENPY_STATIC=1 python3 setup.py egg_info || true
+rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
+find include/module/pygame_sdl2 -mindepth 2 -type f -exec mv -t include/module/pygame_sdl2 {} +
+mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src
+rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ include/module
+#mv source/module/hydrogen.c include/module/libhydrogen
+find include/module -type d -empty -delete
 
+pushd pygame_sdl2-source
 python3 setup.py build
+python3 setup.py install_headers
 python3 setup.py install
 popd
 
-echo ---------------------------------------end--------------------------------
-####################################
-# pygame_sdl2 – build + install
-####################################
-
-pushd pygame_sdl2-source
-$PYTHON setup.py build
-$PYTHON setup.py install_headers
-$PYTHON setup.py install
-popd
-
-
-####################################
-# renpy – build + install
-####################################
-
 pushd renpy-source/module
-export RENPY_DEPS_INSTALL=$DEVKITPRO/portlibs/switch
-$PYTHON setup.py build
-$PYTHON setup.py install
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py build
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py install
 popd
 
 bash link_sources.bash
 
-export PREFIXARCHIVE=$(realpath renpy-switch-modules.tar.gz)
+export PREFIXARCHIVE=$(realpath renpy-switch.tar.gz)
 
 rm -rf build-switch
 mkdir build-switch
@@ -78,12 +50,12 @@ export LOCAL_PREFIX=$(realpath local_prefix)
 cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build .
 mkdir -p $LOCAL_PREFIX/lib
-cp librenpy-switch-modules.a $LOCAL_PREFIX/lib/librenpy-switch-modules.a
+cp librenpy-switch.a $LOCAL_PREFIX/lib/librenpy-switch.a
 popd
 
 tar -czvf $PREFIXARCHIVE -C $LOCAL_PREFIX .
-tar -xf renpy-switch-modules.tar.gz -C $DEVKITPRO/portlibs/switch
-rm renpy-switch-modules.tar.gz
+tar -xf renpy-switch.tar.gz -C $DEVKITPRO/portlibs/switch
+rm renpy-switch.tar.gz
 rm -rf build-switch
 
 source /opt/devkitpro/switchvars.sh

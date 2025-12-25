@@ -262,6 +262,16 @@ void userAppExit(void)
     romfsExit();
 }
 
+void show_error(const char* message)
+{
+    PyErr_Print();
+
+    ErrorSystemConfig c;
+    errorSystemCreate(&c, message, message);
+    errorSystemShow(&c);
+
+    Py_Exit(1);
+}
 
 int main(int argc, char* argv[])
 {
@@ -270,6 +280,7 @@ int main(int argc, char* argv[])
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
 
+    PyStatus status;
     PyConfig config;
     PyConfig_InitPythonConfig(&config);
 
@@ -361,4 +372,11 @@ int main(int argc, char* argv[])
 
     Py_Exit(0);
     return 0;
+    exception:
+    PyConfig_Clear(&config);
+    if (PyStatus_IsExit(status)) {
+        return status.exitcode;
+    }
+    show_error(status.err_msg);
+    Py_ExitStatusException(status);
 }

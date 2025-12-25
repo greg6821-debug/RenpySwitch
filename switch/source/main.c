@@ -266,6 +266,9 @@ void userAppExit(void)
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
+    // 🔴 ОБЯЗАТЕЛЬНО ДО Py_Initialize
+    setenv("PYTHONHOME", "romfs:/Contents/python", 1);
+    setenv("PYTHONPATH", "romfs:/Contents/python/lib/python39.zip", 1);
 
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);

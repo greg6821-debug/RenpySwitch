@@ -29,7 +29,7 @@ set(OPTIMIZATION_FLAGS
 )
 
 set(INCLUDES
-    ${DEVKITPRO}/portlibs/switch/include/python2.7
+    ${DEVKITPRO}/portlibs/switch/include/python3.9
 )
 
 set(SOURCES

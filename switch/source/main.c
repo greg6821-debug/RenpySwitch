@@ -280,14 +280,39 @@ int main(int argc, char* argv[])
     config.write_bytecode = 0;
     config.optimization_level = 2;
 
+    status = PyConfig_SetString(&config,
+                                &config.filesystem_encoding,
+                                L"utf-8");
+    if (PyStatus_Exception(status)) goto exception;
+
+    status = PyConfig_SetString(&config,
+                                &config.filesystem_errors,
+                                L"surrogateescape");
+    if (PyStatus_Exception(status)) goto exception;
+    
     // 🔴 ВОТ ГДЕ ТЕПЕРЬ ЗАДАЁТСЯ PYTHONHOME
-    PyConfig_SetString(&config, &config.home, L"romfs:/Contents/python");
+    PyConfig_SetString(&config, &config.home, L"romfs:/Contents/lib.zip");
 
     // argv
     PyConfig_SetString(&config, &config.program_name, L"renpy");
 
-    wchar_t* argvw[] = { L"renpy" };
-    PyConfig_SetArgv(&config, 1, argvw);
+    config.module_search_paths_set = 1;
+
+    status = PyWideStringList_Append(
+        &config.module_search_paths,
+        L"romfs:/Contents/lib.zip"
+    );
+    if (PyStatus_Exception(status)) goto exception;
+    
+    /* ---- argv ---- */
+    wchar_t* pyargv[] = {
+        L"romfs:/Contents/renpy.py",
+        NULL
+    };
+    status = PyConfig_SetArgv(&config, 1, pyargv);
+    if (PyStatus_Exception(status)) goto exception;
+
+    Py_SetProgramName(L"RenPy3.8.7");
 
     PyImport_AppendInittab("_otrhlibnx", PyInit__otrhlibnx);
     PyImport_AppendInittab("pygame_sdl2.color", PyInit_pygame_sdl2_color);

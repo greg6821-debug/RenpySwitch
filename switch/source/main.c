@@ -198,7 +198,27 @@ static void on_applet_hook(AppletHookType hook, void* param)
     }
 }
 
+/* -------------------------------------------------------
+   Save creation
+------------------------------------------------------- */
 
+Result createSaveData(void)
+{
+    FsSaveDataAttribute attr = {0};
+    FsSaveDataCreationInfo crt = {0};
+    FsSaveDataMetaInfo meta = {0};
+
+    attr.application_id = cur_progid;
+    attr.uid = userID;
+    attr.save_data_type = FsSaveDataType_Account;
+
+    crt.save_data_size = 0x800000;   // 8 MB
+    crt.journal_size   = 0x400000;   // 4 MB
+    crt.available_size = 0x8000;
+    crt.save_data_space_id = FsSaveDataSpaceId_User;
+
+    return fsCreateSaveDataFileSystem(&attr, &crt, &meta);
+}
 /* -------------------------------------------------------
    App init / exit
 ------------------------------------------------------- */

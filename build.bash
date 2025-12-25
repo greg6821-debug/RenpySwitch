@@ -83,8 +83,8 @@ cp librenpy-switch-modules.a $LOCAL_PREFIX/lib/librenpy-switch-modules.a
 popd
 
 tar -czvf $PREFIXARCHIVE -C $LOCAL_PREFIX .
-tar -xf renpy-switch.tar.gz -C $DEVKITPRO/portlibs/switch
-rm renpy-switch.tar.gz
+tar -xf renpy-switch-modules.tar.gz -C $DEVKITPRO/portlibs/switch
+rm renpy-switch-modules.tar.gz
 rm -rf build-switch
 
 source /opt/devkitpro/switchvars.sh

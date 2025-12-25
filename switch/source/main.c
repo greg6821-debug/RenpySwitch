@@ -273,6 +273,7 @@ void show_error(const char* message)
     Py_Exit(1);
 }
 
+
 int main(int argc, char* argv[])
 {
     setenv("MESA_NO_ERROR", "1", 1);
@@ -284,47 +285,27 @@ int main(int argc, char* argv[])
     PyConfig config;
     PyConfig_InitPythonConfig(&config);
 
-    // ❗ ОЧЕНЬ ВАЖНО
     config.isolated = 1;
     config.use_environment = 0;
     config.site_import = 0;
     config.write_bytecode = 0;
     config.optimization_level = 2;
 
-    status = PyConfig_SetString(&config,
-                                &config.filesystem_encoding,
-                                L"utf-8");
-    if (PyStatus_Exception(status)) goto exception;
+    /* filesystem encoding */
+    PyConfig_SetString(&config, &config.filesystem_encoding, L"utf-8");
+    PyConfig_SetString(&config, &config.filesystem_errors, L"surrogateescape");
 
-    status = PyConfig_SetString(&config,
-                                &config.filesystem_errors,
-                                L"surrogateescape");
-    if (PyStatus_Exception(status)) goto exception;
-    
-    // 🔴 ВОТ ГДЕ ТЕПЕРЬ ЗАДАЁТСЯ PYTHONHOME
-    PyConfig_SetString(&config, &config.home, L"romfs:/Contents/lib.zip");
+    /* 🔴 PYTHONHOME = PREFIX */
+    PyConfig_SetString(&config, &config.home, L"romfs:/Contents/python");
 
-    // argv
+    /* program name */
     PyConfig_SetString(&config, &config.program_name, L"renpy");
 
-    config.module_search_paths_set = 1;
+    /* argv */
+    wchar_t* argvw[] = { L"romfs:/Contents/renpy.py" };
+    PyConfig_SetArgv(&config, 1, argvw);
 
-    status = PyWideStringList_Append(
-        &config.module_search_paths,
-        L"romfs:/Contents/lib.zip"
-    );
-    if (PyStatus_Exception(status)) goto exception;
-    
-    /* ---- argv ---- */
-    wchar_t* pyargv[] = {
-        L"romfs:/Contents/renpy.py",
-        NULL
-    };
-    status = PyConfig_SetArgv(&config, 1, pyargv);
-    if (PyStatus_Exception(status)) goto exception;
-
-    Py_SetProgramName(L"RenPy3.8.7");
-
+    /* builtin modules */
     PyImport_AppendInittab("_otrhlibnx", PyInit__otrhlibnx);
     PyImport_AppendInittab("pygame_sdl2.color", PyInit_pygame_sdl2_color);
     PyImport_AppendInittab("pygame_sdl2.controller", PyInit_pygame_sdl2_controller);
@@ -347,7 +328,7 @@ int main(int argc, char* argv[])
     PyImport_AppendInittab("pygame_sdl2.surface", PyInit_pygame_sdl2_surface);
     PyImport_AppendInittab("pygame_sdl2.transform", PyInit_pygame_sdl2_transform);
 
-    // 🔥 СТАРТ PYTHON
+    /* START PYTHON */
     status = Py_InitializeFromConfig(&config);
     if (PyStatus_Exception(status)) {
         Py_ExitStatusException(status);
@@ -355,6 +336,7 @@ int main(int argc, char* argv[])
 
     PyConfig_Clear(&config);
 
+    /* smoke test */
     PyRun_SimpleString(
         "import sys\n"
         "print(sys.prefix)\n"
@@ -371,12 +353,4 @@ int main(int argc, char* argv[])
     fclose(f);
 
     Py_Exit(0);
-    return 0;
-    exception:
-    PyConfig_Clear(&config);
-    if (PyStatus_IsExit(status)) {
-        return status.exitcode;
-    }
-    show_error(status.err_msg);
-    Py_ExitStatusException(status);
 }

@@ -69,7 +69,7 @@ if [ -f "link_sources.bash" ]; then
     bash link_sources.bash
 fi
 
-export PREFIXARCHIVE=$(realpath renpy-switch.tar.gz)
+export PREFIXARCHIVE=$(realpath renpy-switch-modules.tar.gz)
 
 rm -rf build-switch
 mkdir build-switch

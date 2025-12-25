@@ -348,7 +348,7 @@ int main(int argc, char* argv[])
     PyImport_AppendInittab("pygame_sdl2.transform", PyInit_pygame_sdl2_transform);
 
     // 🔥 СТАРТ PYTHON
-    PyStatus status = Py_InitializeFromConfig(&config);
+    status = Py_InitializeFromConfig(&config);
     if (PyStatus_Exception(status)) {
         Py_ExitStatusException(status);
     }

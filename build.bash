@@ -98,6 +98,9 @@ make
 echo "===== PyInit symbols ====="
 nm CMakeFiles/renpy-switch.dir/source/module/*.o | grep PyInit || true
 echo "===== PyInit symbols ====="
+echo "===== PyInit symbols 2 ====="
+nm CMakeFiles/renpy-switch.dir/source/*.o | grep PyInit || true
+echo "===== PyInit symbols 2 ====="
 popd
 popd
 

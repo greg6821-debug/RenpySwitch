@@ -16,13 +16,14 @@ rm -rf gen gen-static build
 python3 setup.py egg_info || true
 PYGAME_SDL2_STATIC=1 python3 setup.py egg_info || true
 
-# сборка
 python3 setup.py build
-python3 setup.py install_headers
+
+# FIX headers
+mkdir -p /opt/devkitpro/portlibs/switch/include/pygame_sdl2
+cp -r src/pygame_sdl2/*.h /opt/devkitpro/portlibs/switch/include/pygame_sdl2/
+
 python3 setup.py install
 popd
-echo ---------------------------------------test--------------------------------
-ls /opt/devkitpro/portlibs/switch/include/pygame_sdl2/pygame_sdl2.h
 ####################################
 # renpy – генерация
 ####################################
@@ -30,12 +31,12 @@ ls /opt/devkitpro/portlibs/switch/include/pygame_sdl2/pygame_sdl2.h
 pushd renpy-source/module
 rm -rf gen gen-static build
 
-export RENPY_DEPS_INSTALL=$DEVKITPRO/portlibs/switch
-export CFLAGS="-I$DEVKITPRO/portlibs/switch/include"
+export RENPY_DEPS_INSTALL=/opt/devkitpro/portlibs/switch
+export CFLAGS="-I/opt/devkitpro/portlibs/switch/include"
 export CPPFLAGS="$CFLAGS"
 
-python3 setup.py
-RENPY_STATIC=1 python3 setup.py
+python3 setup.py egg_info || true
+RENPY_STATIC=1 python3 setup.py egg_info || true
 
 python3 setup.py build
 python3 setup.py install

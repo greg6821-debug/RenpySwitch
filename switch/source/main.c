@@ -441,7 +441,7 @@ int main(int argc, char* argv[])
         {"pygame_sdl2.controller", PyInit_pygame_sdl2_controller},
         {"pygame_sdl2.display", PyInit_pygame_sdl2_display},
         {"pygame_sdl2.draw", PyInit_pygame_sdl2_draw},
-        //{"pygame_sdl2.error", PyInit_pygame_sdl2_error},
+        {"pygame_sdl2.error", PyInit_pygame_sdl2_error},
         {"pygame_sdl2.event", PyInit_pygame_sdl2_event},
         {"pygame_sdl2.gfxdraw", PyInit_pygame_sdl2_gfxdraw},
         {"pygame_sdl2.image", PyInit_pygame_sdl2_image},
@@ -555,7 +555,7 @@ int main(int argc, char* argv[])
 
     x("os");
     x("pygame_sdl2");
-    // x("encodings");
+    x("encodings");
 
     #undef x
 

@@ -126,7 +126,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_link_libraries(${PROJECT_NAME}
     ${DEVKITPRO}/portlibs/switch/lib/libpython3.9.a
-    ${DEVKITPRO}/portlibs/switch/lib/librenpy-switch-modules.a
+    ${DEVKITPRO}/portlibs/switch/lib/librenpy-switch.a
     m
     PkgConfig::EGL
     PkgConfig::FREETYPE2

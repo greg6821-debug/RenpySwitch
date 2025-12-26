@@ -101,61 +101,9 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
     return PyModule_Create(&otrh_module);
 }
 
-
-
-// PyMODINIT_FUNC PyInit_pygame_sdl2(void) {
-//     PyObject *module;
-    
-//     // Создаем модуль pygame_sdl2
-//     static struct PyModuleDef moduledef = {
-//         PyModuleDef_HEAD_INIT,
-//         "pygame_sdl2",
-//         NULL,
-//         -1,
-//         NULL,
-//         NULL,
-//         NULL,
-//         NULL,
-//         NULL
-//     };
-    
-//     module = PyModule_Create(&moduledef);
-//     if (module == NULL) return NULL;
-    
-//     // ЗАГРУЖАЕМ И ВЫПОЛНЯЕМ __init__.py ВРУЧНУЮ
-//     // Это ключевой момент!
-//     PyObject *builtins = PyEval_GetBuiltins();
-//     PyObject *import_func = PyDict_GetItemString(builtins, "__import__");
-    
-//     if (import_func) {
-//         // Импортируем pygame_sdl2.__init__ как модуль
-//         PyObject *init_module = PyObject_CallFunction(
-//             import_func, 
-//             "s", 
-//             "pygame_sdl2.__init__"
-//         );
-        
-//         if (init_module) {
-//             // Копируем атрибуты из __init__ в основной модуль
-//             PyObject *dict = PyModule_GetDict(init_module);
-//             PyObject *main_dict = PyModule_GetDict(module);
-            
-//             if (dict && main_dict) {
-//                 PyDict_Update(main_dict, dict);
-//             }
-//             Py_DECREF(init_module);
-//         }
-//     }
-    
-//     // Регистрируем подмодуль surface
-//     PyObject *surface_module = PyInit_pygame_sdl2_surface();
-//     if (surface_module == NULL) return NULL;
-    
-//     Py_INCREF(surface_module);
-//     PyModule_AddObject(module, "surface", surface_module);
-    
-//     return module;
-// }
+/* -------------------------------------------------------
+   Pygame_sdl2 и другие модули
+------------------------------------------------------- */
 
 PyMODINIT_FUNC PyInit_pygame_sdl2_color(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_controller(void);
@@ -177,31 +125,23 @@ PyMODINIT_FUNC PyInit_pygame_sdl2_rwobject(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_scrap(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_transform(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_surface(void);
-
 PyMODINIT_FUNC PyInit_pygame_sdl2_render(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_mixer(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_mixer_music(void);
 
-
 PyMODINIT_FUNC PyInit__renpy(void);
 PyMODINIT_FUNC PyInit__renpybidi(void);
-
-//PyMODINIT_FUNC PyInit_renpy_audio_filter(void);
 PyMODINIT_FUNC PyInit_renpy_audio_renpysound(void);
-
 PyMODINIT_FUNC PyInit_renpy_display_accelerator(void);
 PyMODINIT_FUNC PyInit_renpy_display_matrix(void);
 PyMODINIT_FUNC PyInit_renpy_display_quaternion(void);
 PyMODINIT_FUNC PyInit_renpy_display_render(void);
-
 PyMODINIT_FUNC PyInit_renpy_text_ftfont(void);
 PyMODINIT_FUNC PyInit_renpy_text_textsupport(void);
 PyMODINIT_FUNC PyInit_renpy_text_texwrap(void);
-
 PyMODINIT_FUNC PyInit_renpy_lexersupport(void);
 PyMODINIT_FUNC PyInit_renpy_pydict(void);
 PyMODINIT_FUNC PyInit_renpy_style(void);
-
 PyMODINIT_FUNC PyInit_renpy_styledata_style_activate_functions(void);
 PyMODINIT_FUNC PyInit_renpy_styledata_style_functions(void);
 PyMODINIT_FUNC PyInit_renpy_styledata_style_hover_functions(void);
@@ -214,13 +154,11 @@ PyMODINIT_FUNC PyInit_renpy_styledata_style_selected_idle_functions(void);
 PyMODINIT_FUNC PyInit_renpy_styledata_style_selected_insensitive_functions(void);
 PyMODINIT_FUNC PyInit_renpy_styledata_styleclass(void);
 PyMODINIT_FUNC PyInit_renpy_styledata_stylesets(void);
-
 PyMODINIT_FUNC PyInit_renpy_gl_gldraw(void);
 PyMODINIT_FUNC PyInit_renpy_gl_glenviron_shader(void);
 PyMODINIT_FUNC PyInit_renpy_gl_glrtt_copy(void);
 PyMODINIT_FUNC PyInit_renpy_gl_glrtt_fbo(void);
 PyMODINIT_FUNC PyInit_renpy_gl_gltexture(void);
-
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2draw(void);
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2mesh(void);
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2mesh2(void);
@@ -229,10 +167,8 @@ PyMODINIT_FUNC PyInit_renpy_gl2_gl2model(void);
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2polygon(void);
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2shader(void);
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2texture(void);
-
 PyMODINIT_FUNC PyInit_renpy_uguu_gl(void);
 PyMODINIT_FUNC PyInit_renpy_uguu_uguu(void);
-
 
 /* -------------------------------------------------------
    Heap override
@@ -361,79 +297,12 @@ static void on_applet_hook(AppletHookType hook, void *param)
 }
 
 /* -------------------------------------------------------
-   Main
+   Регистрация встроенных модулей
 ------------------------------------------------------- */
 
- static void register_builtin_modules(void)
-    {
-       /* ROOT PACKAGE */
-    PyImport_AppendInittab("pygame_sdl2.error", PyInit_pygame_sdl2_error);
-    PyImport_AppendInittab("pygame_sdl2.surface", PyInit_pygame_sdl2_surface);
-    }
-int main(int argc, char* argv[])
+static void register_builtin_modules(void)
 {
-    chdir("romfs:/Contents");
-    setlocale(LC_ALL, "C");
-    setenv("MESA_NO_ERROR", "1", 1);
-
-    appletLockExit();
-    appletHook(&applet_hook_cookie, on_applet_hook, NULL);
-
-    Py_NoSiteFlag = 1;
-    Py_OptimizeFlag = 2;
-   
-    PyStatus status;
-    PyConfig config;
-
-    PyConfig_InitPythonConfig(&config);
-
-    /* ---- Critical for Python 3.9 embedded ---- */
-    config.isolated = 0;
-    config.use_environment = 0;
-    config.site_import = 0;
-    config.user_site_directory = 0;
-    config.write_bytecode = 0;
-    config.optimization_level = 2;
-    config.verbose = 0;
-
-    /* Filesystem encoding */
-    status = PyConfig_SetString(&config,
-                                &config.filesystem_encoding,
-                                L"utf-8");
-    if (PyStatus_Exception(status)) goto exception;
-
-    status = PyConfig_SetString(&config,
-                                &config.filesystem_errors,
-                                L"surrogateescape");
-    if (PyStatus_Exception(status)) goto exception;
-
-    /* ---- stdlib: ONLY lib.zip ---- */
-    config.module_search_paths_set = 1;
-
-    status = PyWideStringList_Append(
-        &config.module_search_paths,
-        L"romfs:/Contents/lib.zip"
-    );
-    if (PyStatus_Exception(status)) goto exception;
-
-    /* ---- argv ---- */
-    wchar_t* pyargv[] = {
-        L"romfs:/Contents/renpy.py",
-        NULL
-    };
-    status = PyConfig_SetArgv(&config, 1, pyargv);
-    if (PyStatus_Exception(status)) goto exception;
-
-   
-    Py_SetProgramName(L"RenPy3.8.7");
-
-
-
-    /* ---- Builtin modules ---- */
     static struct _inittab builtins[] = {
-
-       //{"pygame_sdl2", PyInit_pygame_sdl2},
-
         {"_nx", PyInit__nx},
         {"_otrhlibnx", PyInit__otrhlibnx},
 
@@ -454,17 +323,14 @@ int main(int argc, char* argv[])
         {"pygame_sdl2.rect", PyInit_pygame_sdl2_rect}, 
         {"pygame_sdl2.rwobject", PyInit_pygame_sdl2_rwobject},
         {"pygame_sdl2.scrap", PyInit_pygame_sdl2_scrap},
-        //{"pygame_sdl2.surface", PyInit_pygame_sdl2_surface},
+        {"pygame_sdl2.surface", PyInit_pygame_sdl2_surface},
         {"pygame_sdl2.transform", PyInit_pygame_sdl2_transform},
-   
         {"pygame_sdl2.render", PyInit_pygame_sdl2_render},
         {"pygame_sdl2.mixer", PyInit_pygame_sdl2_mixer},
         {"pygame_sdl2.mixer_music", PyInit_pygame_sdl2_mixer_music},
 
         {"_renpy", PyInit__renpy},
         {"_renpybidi", PyInit__renpybidi},
-
-        //{"renpy.audio.filter", PyInit_renpy_audio_filter},
         {"renpy.audio.renpysound", PyInit_renpy_audio_renpysound},
         {"renpy.display.accelerator", PyInit_renpy_display_accelerator},
         {"renpy.display.matrix", PyInit_renpy_display_matrix},
@@ -511,8 +377,112 @@ int main(int argc, char* argv[])
     };
 
     PyImport_ExtendInittab(builtins);
+}
 
-    /* ---- Sanity check ---- */
+/* -------------------------------------------------------
+   Вспомогательные функции для инициализации Python
+------------------------------------------------------- */
+
+static void init_python_paths(PyConfig *config)
+{
+    // Добавляем необходимые пути для Python 3.9
+    PyStatus status;
+    
+    // Устанавливаем домашний каталог Python
+    status = PyConfig_SetString(config, &config->home, L"romfs:/Contents");
+    if (PyStatus_Exception(status)) goto exception;
+    
+    // Устанавливаем пути поиска модулей
+    config->module_search_paths_set = 1;
+    
+    // Добавляем lib.zip как основной путь
+    status = PyWideStringList_Append(&config->module_search_paths, L"romfs:/Contents/lib.zip");
+    if (PyStatus_Exception(status)) goto exception;
+    
+    // Добавляем текущий каталог
+    status = PyWideStringList_Append(&config->module_search_paths, L".");
+    if (PyStatus_Exception(status)) goto exception;
+    
+    // Устанавливаем кодировку файловой системы
+    status = PyConfig_SetString(config, &config->filesystem_encoding, L"utf-8");
+    if (PyStatus_Exception(status)) goto exception;
+    
+    status = PyConfig_SetString(config, &config->filesystem_errors, L"surrogateescape");
+    if (PyStatus_Exception(status)) goto exception;
+    
+    return;
+    
+exception:
+    printf("Error setting Python paths: %s\n", status.err_msg);
+    Py_ExitStatusException(status);
+}
+
+/* -------------------------------------------------------
+   Основная функция
+------------------------------------------------------- */
+
+int main(int argc, char* argv[])
+{
+    chdir("romfs:/Contents");
+    setlocale(LC_ALL, "C");
+    setenv("MESA_NO_ERROR", "1", 1);
+    setenv("PYTHONPATH", "romfs:/Contents/lib.zip", 1);
+    setenv("PYTHONHOME", "romfs:/Contents", 1);
+
+    appletLockExit();
+    appletHook(&applet_hook_cookie, on_applet_hook, NULL);
+
+    // Регистрируем встроенные модули
+    register_builtin_modules();
+
+    // Инициализируем конфигурацию Python
+    PyStatus status;
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
+
+    // Настраиваем параметры Python
+    config.optimization_level = 2;
+    config.write_bytecode = 0;
+    config.verbose = 0;
+    config.isolated = 0;
+    config.use_environment = 0;
+    config.site_import = 0;
+    config.user_site_directory = 0;
+    config.parse_argv = 0;
+
+    // Настраиваем пути Python
+    init_python_paths(&config);
+
+    // Устанавливаем программу
+    Py_SetProgramName(L"RenPy8.3.7");
+    
+    // Устанавливаем путь к стандартной библиотеке
+    wchar_t python_path[512];
+    swprintf(python_path, sizeof(python_path)/sizeof(wchar_t), 
+             L"romfs:/Contents/lib.zip");
+    Py_SetPath(python_path);
+
+    // Устанавливаем argv
+    wchar_t* pyargv[] = {
+        L"romfs:/Contents/renpy.py",
+        NULL
+    };
+    status = PyConfig_SetArgv(&config, 1, pyargv);
+    if (PyStatus_Exception(status)) {
+        PyConfig_Clear(&config);
+        show_error("Failed to set Python argv");
+    }
+
+    // Инициализируем Python
+    status = Py_InitializeFromConfig(&config);
+    if (PyStatus_Exception(status)) {
+        PyConfig_Clear(&config);
+        show_error("Failed to initialize Python");
+    }
+    
+    PyConfig_Clear(&config);
+
+    // Проверяем наличие необходимых файлов
     FILE* libzip = fopen("romfs:/Contents/lib.zip", "rb");
     if (!libzip) {
         show_error("Could not find lib.zip");
@@ -522,65 +492,64 @@ int main(int argc, char* argv[])
     FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
     if (!renpy_file) {
         show_error("Could not find renpy.py");
-    }   
+    }
 
-    
-    register_builtin_modules();
-   
-    /* ---- Initialize Python ---- */
-    status = Py_InitializeFromConfig(&config);
-    if (PyStatus_Exception(status)) goto exception;
-    PyConfig_Clear(&config);
-
-
-    PyRun_SimpleString("import pygame_sdl2");
-   
-
+    // Устанавливаем sys.path
     int python_result;
     python_result = PyRun_SimpleString(
-    "import sys\n"
-    "sys.path[:] = ['romfs:/Contents/lib.zip']\n"
+        "import sys\n"
+        "import os\n"
+        "sys.path = ['romfs:/Contents/lib.zip', '.']\n"
+        "sys.prefix = 'romfs:/Contents'\n"
+        "sys.exec_prefix = 'romfs:/Contents'\n"
+        "sys._base_executable = ''\n"
+        "sys._home = 'romfs:/Contents'\n"
+        "print('Python initialized successfully')\n"
     );
-    if (python_result == -1)
-    {
-        show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.");
-    }
-   #define x(lib) \
-    { \
-        if (PyRun_SimpleString("import " lib) == -1) \
-        { \
-            show_error("Could not import python library " lib ".\n\nPlease ensure that you have extracted the files correctly so that the \"lib\" folder is in the same directory as the nsp file, and that the \"lib\" folder contains the folder \"python3.9\". \nInside that folder, the file \"" lib ".py\" or folder \"" lib "\" needs to exist."); \
-        } \
+    
+    if (python_result == -1) {
+        show_error("Could not set Python path");
     }
 
-    x("os");
-    x("pygame_sdl2");
-    x("encodings");
-
-    #undef x
-
-    /* ---- Run Ren'Py ---- */
+    // Импортируем необходимые модули
+    #define IMPORT_MODULE(module) \
+        if (PyRun_SimpleString("import " module) == -1) { \
+            printf("Failed to import " module "\n"); \
+            PyErr_Print(); \
+        }
+    
+    IMPORT_MODULE("encodings.utf_8");
+    IMPORT_MODULE("encodings.ascii");
+    IMPORT_MODULE("encodings.latin_1");
+    IMPORT_MODULE("encodings.hex_codec");
+    IMPORT_MODULE("encodings.base64_codec");
+    IMPORT_MODULE("codecs");
+    IMPORT_MODULE("_codecs");
+    IMPORT_MODULE("io");
+    IMPORT_MODULE("os");
+    
+    // Импортируем pygame_sdl2
+    if (PyRun_SimpleString("import pygame_sdl2") == -1) {
+        printf("Warning: Failed to import pygame_sdl2\n");
+        PyErr_Print();
+    }
+    
+    // Запускаем Ren'Py
+    printf("Starting Ren'Py...\n");
     int rc = PyRun_SimpleFileEx(
         renpy_file,
         "romfs:/Contents/renpy.py",
-        1
+        1  // Закрыть файл после выполнения
     );
 
     if (rc != 0) {
+        printf("Ren'Py execution failed with code: %d\n", rc);
+        PyErr_Print();
         show_error("Ren'Py execution failed");
     }
 
+    printf("Ren'Py finished successfully\n");
+    
     Py_Finalize();
     return 0;
-
-exception:
-    PyConfig_Clear(&config);
-    if (PyStatus_IsExit(status)) {
-        return status.exitcode;
-    }
-    show_error(status.err_msg);
-    Py_ExitStatusException(status);
 }
-
-
-

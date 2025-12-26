@@ -120,39 +120,67 @@ rm ./raw/lib.zip
 cp -r ./renpy_clear/renpy/ ./raw/lib/renpy/
 rm -rf ./raw/lib/renpy/common/
 
+echo "Проверка наличия критических модулей Python..."
 
-# Убедитесь, что кодировки Python скопированы правильно
-echo "Проверка наличия модулей кодировок..."
-if [ ! -d "./raw/lib/encodings" ]; then
-    echo "ОШИБКА: Папка encodings не найдена в raw/lib!"
-    echo "Копирование стандартной библиотеки Python 3.9..."
-    
-    # Копируем стандартную библиотеку Python из devkitpro
-    if [ -d "$DEVKITPRO/portlibs/switch/lib/python3.9" ]; then
-        echo "Копирование из $DEVKITPRO/portlibs/switch/lib/python3.9"
-        cp -r $DEVKITPRO/portlibs/switch/lib/python3.9/* ./raw/lib/
-    else
-        echo "Создание базовой структуры кодировок..."
-        # Создаем минимальную структуру кодировок
-        mkdir -p ./raw/lib/encodings
-        echo "# encoding stub" > ./raw/lib/encodings/__init__.py
-        echo "# utf_8 stub" > ./raw/lib/encodings/utf_8.py
-        echo "# ascii stub" > ./raw/lib/encodings/ascii.py
+# Критически важные модули для Python 3.9
+CRITICAL_MODULES=(
+    "abc.py"
+    "io.py"
+    "_io.py"
+    "codecs.py"
+    "encodings/__init__.py"
+    "encodings/utf_8.py"
+    "encodings/ascii.py"
+    "encodings/latin_1.py"
+    "os.py"
+    "sys.py"
+    "types.py"
+)
+
+# Проверяем каждый модуль
+for module in "${CRITICAL_MODULES[@]}"; do
+    if [ ! -f "./raw/lib/$module" ]; then
+        echo "Предупреждение: $module не найден в raw/lib/"
+        # Пробуем найти в системе
+        if [ -f "/usr/lib/python3.9/$module" ]; then
+            echo "Копируем /usr/lib/python3.9/$module"
+            mkdir -p "./raw/lib/$(dirname "$module")"
+            cp "/usr/lib/python3.9/$module" "./raw/lib/$module"
+        elif [ -f "$DEVKITPRO/portlibs/switch/lib/python3.9/$module" ]; then
+            echo "Копируем из devkitpro: $module"
+            mkdir -p "./raw/lib/$(dirname "$module")"
+            cp "$DEVKITPRO/portlibs/switch/lib/python3.9/$module" "./raw/lib/$module"
+        else
+            echo "ОШИБКА: $module не найден!"
+            # Создаем заглушку для критических модулей
+            if [[ "$module" == *"/"* ]]; then
+                mkdir -p "./raw/lib/$(dirname "$module")"
+            fi
+            echo "# Stub for $module" > "./raw/lib/$module"
+        fi
     fi
+done
+
+# Убедимся, что структура папок правильная
+echo "Создание структуры папок Python..."
+mkdir -p ./raw/lib/encodings
+mkdir -p ./raw/lib/importlib
+mkdir -p ./raw/lib/collections
+
+# Копируем необходимые __init__.py файлы
+if [ ! -f "./raw/lib/__init__.py" ]; then
+    echo "# Python 3.9 package" > ./raw/lib/__init__.py
 fi
 
-# Копируем необходимые файлы кодировок для Python 3.9
-echo "Копирование critical Python modules..."
-cp -r /usr/lib/python3.9/encodings/*.py ./raw/lib/encodings/ 2>/dev/null || true
-cp -r /usr/lib/python3.9/codecs.py ./raw/lib/ 2>/dev/null || true
-cp -r /usr/lib/python3.9/_codecs.py ./raw/lib/ 2>/dev/null || true
-cp -r /usr/lib/python3.9/io.py ./raw/lib/ 2>/dev/null || true
+if [ ! -f "./raw/lib/encodings/__init__.py" ]; then
+    echo "# encodings package" > ./raw/lib/encodings/__init__.py
+fi
 
-# Проверяем содержимое перед созданием lib.zip
+# Проверяем содержимое lib.zip перед созданием
 echo "Содержимое raw/lib перед созданием lib.zip:"
-ls -la ./raw/lib/ | head -20
-echo "Папка encodings:"
-ls -la ./raw/lib/encodings/ | head -10
+find ./raw/lib -name "*.py" | head -20
+echo "Всего .py файлов: $(find ./raw/lib -name "*.py" | wc -l)"
+
 
 
 # Create lib.zip archive

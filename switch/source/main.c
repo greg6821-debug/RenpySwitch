@@ -388,8 +388,8 @@ void init_python(void)
     Py_IgnoreEnvironmentFlag = 1;
     Py_IsolatedFlag = 1;
 
-    Py_SetPythonHome(L"romfs:/Contents");
-    Py_SetPath(L"romfs:/Contents/lib.zip");
+    Py_SetPythonHome(L"Contents");
+    Py_SetPath(L"Contents/lib.zip");
 
     Py_Initialize();
 
@@ -398,7 +398,7 @@ void init_python(void)
 
 int main(int argc, char* argv[])
 {
-    chdir("romfs:/Contents");
+    chdir("romfs:/");
     setlocale(LC_ALL, "C");
 
     appletLockExit();
@@ -406,13 +406,13 @@ int main(int argc, char* argv[])
 
     init_python();
 
-    FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
+    FILE* renpy_file = fopen("Contents/renpy.py", "rb");
     if (!renpy_file)
         show_error("renpy.py not found");
 
     int rc = PyRun_SimpleFileEx(
         renpy_file,
-        "romfs:/Contents/renpy.py",
+        "Contents/renpy.py",
         1
     );
 

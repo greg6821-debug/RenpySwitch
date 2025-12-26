@@ -1,74 +1,41 @@
+#!/bin/bash
 set -e
+
 export DEVKITPRO=/opt/devkitpro
+export PYTHON=python3
+export PYTHON_VERSION=3.9
 
-# Создание директорий
-mkdir -p source/module
-mkdir -p include/module include/module/pygame_sdl2
-
-# Сборка pygame_sdl2 (статическая)
+# Build pygame_sdl2
 pushd pygame_sdl2-source
-PYGAME_SDL2_STATIC=1 python3 setup.py build || true
-rm -rf gen
+rm -rf gen gen-static
+$PYTHON setup.py || true
+PYGAME_SDL2_STATIC=1 $PYTHON setup.py || true
 popd
 
-# Сборка renpy module (статическая)
+# Build renpy module
 pushd renpy-source/module
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3 setup.py build || true
-rm -rf gen
+rm -rf gen gen-static
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local $PYTHON setup.py || true
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 $PYTHON setup.py || true
 popd
 
-# Копирование ВСЕХ .c файлов из renpy-source/module (включая поддиректории)
-find renpy-source/module -name "*.c" -exec cp {} source/module/ \;
-
-# Копирование .c файлов из pygame_sdl2 с проверкой на дубликаты
-find pygame_sdl2-source -name "*.c" | while read file; do
-    basename=$(basename "$file")
-    if [ ! -f "source/module/$basename" ]; then
-        cp "$file" source/module/
-    else
-        # Если файл уже есть, проверяем не из gen3-static ли он
-        if echo "$file" | grep -q "gen3-static"; then
-            cp -f "$file" source/module/
-        fi
-    fi
-done
-
-# Копирование ВСЕХ .h файлов из renpy-source/module
-find renpy-source/module -name "*.h" -exec cp {} include/module/ 2>/dev/null \;
-
-# Копирование .h файлов из pygame_sdl2
-rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
-
-# Перемещение .h файлов из поддиректорий pygame_sdl2
-find include/module/pygame_sdl2 -mindepth 2 -type f -name "*.h" -exec mv -t include/module/pygame_sdl2 {} + 2>/dev/null || true
-
-# Исправление для surface.h
-if [ -f "include/module/pygame_sdl2/surface.h" ]; then
-    mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src/ 2>/dev/null || true
-fi
-
-# Удаление пустых директорий
-find source/module -type d -empty -delete 2>/dev/null || true
-find include/module -type d -empty -delete 2>/dev/null || true
-
-# Установка pygame_sdl2
+# Install pygame_sdl2
 pushd pygame_sdl2-source
-python3 setup.py build
-python3 setup.py install_headers
-python3 setup.py install
+$PYTHON setup.py build
+$PYTHON setup.py install_headers
+$PYTHON setup.py install
 popd
 
-# Установка renpy module
+# Install renpy module
 pushd renpy-source/module
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py build
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py install
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local $PYTHON setup.py build
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local $PYTHON setup.py install
 popd
 
-# Запуск link_sources.bash если он существует
-if [ -f "link_sources.bash" ]; then
-    bash link_sources.bash
-fi
+# Link sources
+bash link_sources.bash
 
+# Build switch modules
 export PREFIXARCHIVE=$(realpath renpy-switch-modules.tar.gz)
 
 rm -rf build-switch
@@ -87,20 +54,16 @@ tar -xf renpy-switch-modules.tar.gz -C $DEVKITPRO/portlibs/switch
 rm renpy-switch-modules.tar.gz
 rm -rf build-switch
 
+# Setup devkitpro environment
 source /opt/devkitpro/switchvars.sh
 
+# Build switch executable
 pushd switch
 rm -rf build
 mkdir build
 pushd build
 cmake ..
 make
-echo "===== PyInit symbols ====="
-nm CMakeFiles/renpy-switch.dir/source/module/*.o | grep PyInit || true
-echo "===== PyInit symbols ====="
-echo "===== PyInit symbols 2 ====="
-nm CMakeFiles/renpy-switch.dir/source/*.o | grep PyInit || true
-echo "===== PyInit symbols 2 ====="
 popd
 popd
 
@@ -108,7 +71,7 @@ mkdir -p ./raw/switch/exefs
 mv ./switch/build/renpy-switch.nso ./raw/switch/exefs/main
 rm -rf switch include source pygame_sdl2-source
 
-
+# Prepare renpy distribution
 rm -rf renpy_clear
 mkdir renpy_clear
 cp ./renpy_sdk/*/renpy.sh ./renpy_clear/renpy.sh
@@ -120,46 +83,48 @@ mv ./script.rpy ./renpy_clear/game/script.rpy
 cp ./renpy_sdk/*/*.exe ./renpy_clear/
 rm -rf renpy-source renpy_sdk ./renpy_clear/lib/*mac*
 
+# Compile Ren'Py project
 pushd renpy_clear
 ./renpy.sh --compile . compile
-find ./renpy/ -regex ".*\.\(pxd\|pyx\|rpym\|pxi\)" -delete  # py\|rpy\| ???
+# Clean up source files
+find ./renpy/ -type f \( -name "*.pxd" -o -name "*.pyx" -o -name "*.rpym" -o -name "*.pxi" \) -delete
 popd
 
-
+# Prepare private data
 rm -rf private
 mkdir private
 mkdir private/lib
 cp -r renpy_clear/renpy private/renpy
-cp -r renpy_clear/lib/python3.9/ private/lib/
+cp -r renpy_clear/lib/python$PYTHON_VERSION/ private/lib/
 cp renpy_clear/renpy.py private/main.py
 rm -rf private/renpy/common
-#python2 generate_private.py
-python3 generate_private.py
+$PYTHON generate_private.py
 rm -rf private
 
-
-
+# Prepare final package structure
 mkdir -p ./raw/switch/romfs/Contents/renpy/common
 mkdir -p ./raw/switch/romfs/Contents/renpy
 mkdir -p ./raw/lib
 
-#mkdir -p ./raw/android/assets/renpy/common
-
+# Copy common assets
 cp -r ./renpy_clear/renpy/common ./raw/switch/romfs/Contents/renpy/
 
-#cp -r ./renpy_clear/renpy/common ./raw/android/assets/renpy/
-#mv private.mp3 ./raw/android/assets
-
+# Copy main script
 cp ./renpy_clear/renpy.py ./raw/switch/romfs/Contents/
+
+# Extract and prepare libraries
 unzip -qq ./raw/lib.zip -d ./raw/lib/
 rm ./raw/lib.zip
 
+# Copy renpy modules
 cp -r ./renpy_clear/renpy/ ./raw/lib/renpy/
 rm -rf ./raw/lib/renpy/common/
+
+# Create lib.zip archive
 7z a -tzip ./raw/switch/romfs/Contents/lib.zip ./raw/lib/*
 rm -rf ./raw/lib
-#rm ./renpy_clear/*.txt
+
+# Cleanup
 rm -rf ./renpy_clear/game
-#mv ./renpy_clear/ ./raw/renpy_clear/
-rm -rf ./renpy_clear
 7z a -tzip raw.zip ./raw/*
+rm -rf ./raw

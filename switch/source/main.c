@@ -380,176 +380,45 @@ static void register_builtin_modules(void)
     PyImport_ExtendInittab(builtins);
 }
 
-/* -------------------------------------------------------
-   Инициализация Python с ручным импортом encodings
-------------------------------------------------------- */
-
-void init_python_manually(void)
+void init_python(void)
 {
-    // 1. Сначала регистрируем все встроенные модули
     register_builtin_modules();
-    
-    // 2. Устанавливаем базовые флаги
-    Py_NoSiteFlag = 1;
-    Py_OptimizeFlag = 2;
-    
-    // 3. Устанавливаем путь к Python
-    wchar_t python_path[512];
-    swprintf(python_path, sizeof(python_path)/sizeof(wchar_t), 
-             L"romfs:/Contents/lib.zip");
-    Py_SetPath(python_path);
-    
-    // 4. Устанавливаем домашний каталог
-    Py_SetPythonHome(L"romfs:/Contents");
-    
-    // 5. Инициализируем Python
-    Py_Initialize();
-    
-    printf("Python initialized successfully\n");
-    
-    // 6. Теперь нам нужно вручную импортировать encodings
-    // Создаем модуль encodings вручную
-    PyObject* encodings_module = PyImport_AddModule("encodings");
-    if (!encodings_module) {
-        printf("Failed to create encodings module\n");
-        return;
-    }
-    
-    // 7. Пытаемся импортировать aliases напрямую из zip
-    printf("Trying to import encodings.aliases...\n");
-    
-    // Создаем объект для поиска в zip
-    PyObject* zipimporter = PyImport_ImportModule("zipimport");
-    if (zipimporter) {
-        PyObject* zipimporter_class = PyObject_GetAttrString(zipimporter, "zipimporter");
-        if (zipimporter_class) {
-            // Создаем импортер для нашего zip-архива
-            PyObject* archive_path = PyUnicode_FromString("romfs:/Contents/lib.zip");
-            PyObject* importer = PyObject_CallFunctionObjArgs(zipimporter_class, archive_path, NULL);
-            
-            if (importer) {
-                // Пробуем загрузить encodings.aliases
-                PyObject* aliases_module = PyObject_CallMethod(importer, "load_module", "s", "encodings.aliases");
-                if (aliases_module) {
-                    printf("Successfully loaded encodings.aliases from zip\n");
-                    // Добавляем aliases в модуль encodings
-                    PyObject_SetAttrString(encodings_module, "aliases", aliases_module);
-                    Py_DECREF(aliases_module);
-                } else {
-                    printf("Failed to load encodings.aliases from zip\n");
-                    PyErr_Print();
-                }
-                Py_DECREF(importer);
-            }
-            Py_DECREF(zipimporter_class);
-        }
-        Py_DECREF(zipimporter);
-    }
-    
-    // 8. Устанавливаем sys.path
-    PyRun_SimpleString(
-        "import sys\n"
-        "sys.path = ['romfs:/Contents/lib.zip', '.']\n"
-        "sys.prefix = 'romfs:/Contents'\n"
-        "sys.exec_prefix = 'romfs:/Contents'\n"
-        "print('Python path configured:', sys.path)\n"
-    );
-}
 
-/* -------------------------------------------------------
-   Основная функция
-------------------------------------------------------- */
+    Py_NoSiteFlag = 1;
+    Py_IgnoreEnvironmentFlag = 1;
+    Py_IsolatedFlag = 1;
+
+    Py_SetPythonHome(L"romfs:/Contents");
+    Py_SetPath(L"romfs:/Contents/lib.zip");
+
+    Py_Initialize();
+
+    printf("Python initialized OK\n");
+}
 
 int main(int argc, char* argv[])
 {
     chdir("romfs:/Contents");
     setlocale(LC_ALL, "C");
-    setenv("MESA_NO_ERROR", "1", 1);
-    
-    // ОЧЕНЬ ВАЖНО: не устанавливаем PYTHONHOME и PYTHONPATH через setenv
-    // Python сам установит их правильно из Py_SetPythonHome и Py_SetPath
-    
+
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
 
-    printf("=== Ren'Py Switch Launcher ===\n");
-    printf("Initializing Python...\n");
-
-    // Инициализируем Python с ручным импортом
-    init_python_manually();
-    
-    printf("Python initialization complete\n");
-
-    // Проверяем наличие необходимых файлов
-    FILE* libzip = fopen("romfs:/Contents/lib.zip", "rb");
-    if (!libzip) {
-        show_error("Could not find lib.zip");
-    }
-    fclose(libzip);
+    init_python();
 
     FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
-    if (!renpy_file) {
-        show_error("Could not find renpy.py");
-    }
+    if (!renpy_file)
+        show_error("renpy.py not found");
 
-    // Тестируем импорт модулей
-    printf("Testing critical imports...\n");
-    
-    // Тест 1: Импортируем encodings.aliases напрямую
-    if (PyRun_SimpleString(
-        "import sys\n"
-        "print('Testing zip import...')\n"
-        "try:\n"
-        "    # Пробуем импортировать через zipimport напрямую\n"
-        "    import zipimport\n"
-        "    zi = zipimport.zipimporter('romfs:/Contents/lib.zip')\n"
-        "    aliases = zi.load_module('encodings.aliases')\n"
-        "    print('Successfully imported encodings.aliases')\n"
-        "    # Теперь пробуем стандартный импорт\n"
-        "    import encodings.aliases\n"
-        "    print('Standard import also works!')\n"
-        "except Exception as e:\n"
-        "    print('Import failed:', e)\n"
-        "    import traceback\n"
-        "    traceback.print_exc()\n"
-    ) == -1) {
-        PyErr_Print();
-    }
-    
-    // Тест 2: Импортируем другие критические модули
-    if (PyRun_SimpleString(
-        "print('\\nTesting other imports...')\n"
-        "try:\n"
-        "    import abc\n"
-        "    print('abc imported')\n"
-        "    import io\n"
-        "    print('io imported')\n"
-        "    import os\n"
-        "    print('os imported')\n"
-        "    import pygame_sdl2\n"
-        "    print('pygame_sdl2 imported')\n"
-        "except Exception as e:\n"
-        "    print('Import error:', e)\n"
-    ) == -1) {
-        PyErr_Print();
-    }
-
-    // Запускаем Ren'Py
-    printf("\nStarting Ren'Py...\n");
     int rc = PyRun_SimpleFileEx(
         renpy_file,
         "romfs:/Contents/renpy.py",
-        1  // Закрыть файл после выполнения
+        1
     );
 
-    if (rc != 0) {
-        printf("Ren'Py execution failed with code: %d\n", rc);
-        PyErr_Print();
-        show_error("Ren'Py execution failed");
-    }
+    if (rc != 0)
+        show_error("Ren'Py crashed");
 
-    printf("Ren'Py finished successfully\n");
-    
     Py_Finalize();
     return 0;
 }

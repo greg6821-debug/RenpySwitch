@@ -380,41 +380,55 @@ static void register_builtin_modules(void)
 }
 
 /* -------------------------------------------------------
-   Вспомогательные функции для инициализации Python
+   Инициализация Python с минимальным набором модулей
 ------------------------------------------------------- */
 
-static void init_python_paths(PyConfig *config)
+void init_python_minimal(void)
 {
-    // Добавляем необходимые пути для Python 3.9
-    PyStatus status;
+    // Регистрируем встроенные модули
+    register_builtin_modules();
     
-    // Устанавливаем домашний каталог Python
-    status = PyConfig_SetString(config, &config->home, L"romfs:/Contents");
-    if (PyStatus_Exception(status)) goto exception;
+    // Устанавливаем минимальные пути
+    Py_NoSiteFlag = 1;
+    Py_OptimizeFlag = 2;
     
-    // Устанавливаем пути поиска модулей
-    config->module_search_paths_set = 1;
+    // Устанавливаем домашний каталог
+    Py_SetPythonHome(L"romfs:/Contents");
     
-    // Добавляем lib.zip как основной путь
-    status = PyWideStringList_Append(&config->module_search_paths, L"romfs:/Contents/lib.zip");
-    if (PyStatus_Exception(status)) goto exception;
+    // Устанавливаем путь к стандартной библиотеке
+    wchar_t python_path[512];
+    swprintf(python_path, sizeof(python_path)/sizeof(wchar_t), 
+             L"romfs:/Contents/lib.zip");
+    Py_SetPath(python_path);
     
-    // Добавляем текущий каталог
-    status = PyWideStringList_Append(&config->module_search_paths, L".");
-    if (PyStatus_Exception(status)) goto exception;
+    // Инициализируем Python
+    Py_Initialize();
     
-    // Устанавливаем кодировку файловой системы
-    status = PyConfig_SetString(config, &config->filesystem_encoding, L"utf-8");
-    if (PyStatus_Exception(status)) goto exception;
+    // Явно импортируем критические модули
+    PyObject* sys_module = PyImport_ImportModule("sys");
+    if (sys_module) {
+        PyObject* sys_path = PySys_GetObject("path");
+        if (sys_path) {
+            // Добавляем путь к lib.zip
+            PyObject* path_str = PyUnicode_FromString("romfs:/Contents/lib.zip");
+            PyList_Insert(sys_path, 0, path_str);
+            Py_DECREF(path_str);
+        }
+        Py_DECREF(sys_module);
+    }
     
-    status = PyConfig_SetString(config, &config->filesystem_errors, L"surrogateescape");
-    if (PyStatus_Exception(status)) goto exception;
+    // Импортируем модули кодировок
+    PyImport_ImportModule("encodings.utf_8");
+    PyImport_ImportModule("encodings.ascii");
+    PyImport_ImportModule("encodings.latin_1");
+    PyImport_ImportModule("encodings.hex_codec");
+    PyImport_ImportModule("codecs");
     
-    return;
-    
-exception:
-    printf("Error setting Python paths: %s\n", status.err_msg);
-    Py_ExitStatusException(status);
+    // Импортируем критически важные модули
+    PyImport_ImportModule("abc");
+    PyImport_ImportModule("io");
+    PyImport_ImportModule("_io");
+    PyImport_ImportModule("os");
 }
 
 /* -------------------------------------------------------
@@ -432,55 +446,12 @@ int main(int argc, char* argv[])
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
 
-    // Регистрируем встроенные модули
-    register_builtin_modules();
+    printf("Initializing Python...\n");
 
-    // Инициализируем конфигурацию Python
-    PyStatus status;
-    PyConfig config;
-    PyConfig_InitPythonConfig(&config);
-
-    // Настраиваем параметры Python
-    config.optimization_level = 2;
-    config.write_bytecode = 0;
-    config.verbose = 0;
-    config.isolated = 0;
-    config.use_environment = 0;
-    config.site_import = 0;
-    config.user_site_directory = 0;
-    config.parse_argv = 0;
-
-    // Настраиваем пути Python
-    init_python_paths(&config);
-
-    // Устанавливаем программу
-    Py_SetProgramName(L"RenPy8.3.7");
+    // Инициализируем Python с минимальным набором
+    init_python_minimal();
     
-    // Устанавливаем путь к стандартной библиотеке
-    wchar_t python_path[512];
-    swprintf(python_path, sizeof(python_path)/sizeof(wchar_t), 
-             L"romfs:/Contents/lib.zip");
-    Py_SetPath(python_path);
-
-    // Устанавливаем argv
-    wchar_t* pyargv[] = {
-        L"romfs:/Contents/renpy.py",
-        NULL
-    };
-    status = PyConfig_SetArgv(&config, 1, pyargv);
-    if (PyStatus_Exception(status)) {
-        PyConfig_Clear(&config);
-        show_error("Failed to set Python argv");
-    }
-
-    // Инициализируем Python
-    status = Py_InitializeFromConfig(&config);
-    if (PyStatus_Exception(status)) {
-        PyConfig_Clear(&config);
-        show_error("Failed to initialize Python");
-    }
-    
-    PyConfig_Clear(&config);
+    printf("Python initialized successfully\n");
 
     // Проверяем наличие необходимых файлов
     FILE* libzip = fopen("romfs:/Contents/lib.zip", "rb");
@@ -494,46 +465,39 @@ int main(int argc, char* argv[])
         show_error("Could not find renpy.py");
     }
 
-    // Устанавливаем sys.path
-    int python_result;
-    python_result = PyRun_SimpleString(
+    // Устанавливаем дополнительные пути
+    PyRun_SimpleString(
         "import sys\n"
         "import os\n"
         "sys.path = ['romfs:/Contents/lib.zip', '.']\n"
         "sys.prefix = 'romfs:/Contents'\n"
         "sys.exec_prefix = 'romfs:/Contents'\n"
-        "sys._base_executable = ''\n"
-        "sys._home = 'romfs:/Contents'\n"
-        "print('Python initialized successfully')\n"
+        "print('Python path set:', sys.path)\n"
     );
-    
-    if (python_result == -1) {
-        show_error("Could not set Python path");
-    }
 
-    // Импортируем необходимые модули
-    #define IMPORT_MODULE(module) \
-        if (PyRun_SimpleString("import " module) == -1) { \
-            printf("Failed to import " module "\n"); \
-            PyErr_Print(); \
-        }
-    
-    IMPORT_MODULE("encodings.utf_8");
-    IMPORT_MODULE("encodings.ascii");
-    IMPORT_MODULE("encodings.latin_1");
-    IMPORT_MODULE("encodings.hex_codec");
-    IMPORT_MODULE("encodings.base64_codec");
-    IMPORT_MODULE("codecs");
-    IMPORT_MODULE("_codecs");
-    IMPORT_MODULE("io");
-    IMPORT_MODULE("os");
-    
-    // Импортируем pygame_sdl2
-    if (PyRun_SimpleString("import pygame_sdl2") == -1) {
-        printf("Warning: Failed to import pygame_sdl2\n");
+    // Проверяем, что можем импортировать abc
+    printf("Testing module imports...\n");
+    if (PyRun_SimpleString(
+        "try:\n"
+        "    import abc\n"
+        "    print('abc imported successfully')\n"
+        "except Exception as e:\n"
+        "    print('Failed to import abc:', e)\n"
+    ) == -1) {
         PyErr_Print();
     }
-    
+
+    // Проверяем pygame_sdl2
+    if (PyRun_SimpleString(
+        "try:\n"
+        "    import pygame_sdl2\n"
+        "    print('pygame_sdl2 imported successfully')\n"
+        "except Exception as e:\n"
+        "    print('Failed to import pygame_sdl2:', e)\n"
+    ) == -1) {
+        PyErr_Print();
+    }
+
     // Запускаем Ren'Py
     printf("Starting Ren'Py...\n");
     int rc = PyRun_SimpleFileEx(

@@ -127,4 +127,4 @@ rm -rf ./raw/lib
 # Cleanup
 rm -rf ./renpy_clear/game
 7z a -tzip raw.zip ./raw/*
-rm -rf ./raw
+#rm -rf ./raw

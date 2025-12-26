@@ -102,9 +102,10 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
 }
 
 /* -------------------------------------------------------
-   Pygame_sdl2 и другие модули
+   Регистрация всех встроенных модулей
 ------------------------------------------------------- */
 
+// Объявления всех PyInit_ функций
 PyMODINIT_FUNC PyInit_pygame_sdl2_color(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_controller(void);
 PyMODINIT_FUNC PyInit_pygame_sdl2_display(void);
@@ -380,55 +381,79 @@ static void register_builtin_modules(void)
 }
 
 /* -------------------------------------------------------
-   Инициализация Python с минимальным набором модулей
+   Инициализация Python с ручным импортом encodings
 ------------------------------------------------------- */
 
-void init_python_minimal(void)
+void init_python_manually(void)
 {
-    // Регистрируем встроенные модули
+    // 1. Сначала регистрируем все встроенные модули
     register_builtin_modules();
     
-    // Устанавливаем минимальные пути
+    // 2. Устанавливаем базовые флаги
     Py_NoSiteFlag = 1;
     Py_OptimizeFlag = 2;
     
-    // Устанавливаем домашний каталог
-    Py_SetPythonHome(L"romfs:/Contents");
-    
-    // Устанавливаем путь к стандартной библиотеке
+    // 3. Устанавливаем путь к Python
     wchar_t python_path[512];
     swprintf(python_path, sizeof(python_path)/sizeof(wchar_t), 
              L"romfs:/Contents/lib.zip");
     Py_SetPath(python_path);
     
-    // Инициализируем Python
+    // 4. Устанавливаем домашний каталог
+    Py_SetPythonHome(L"romfs:/Contents");
+    
+    // 5. Инициализируем Python
     Py_Initialize();
     
-    // Явно импортируем критические модули
-    PyObject* sys_module = PyImport_ImportModule("sys");
-    if (sys_module) {
-        PyObject* sys_path = PySys_GetObject("path");
-        if (sys_path) {
-            // Добавляем путь к lib.zip
-            PyObject* path_str = PyUnicode_FromString("romfs:/Contents/lib.zip");
-            PyList_Insert(sys_path, 0, path_str);
-            Py_DECREF(path_str);
-        }
-        Py_DECREF(sys_module);
+    printf("Python initialized successfully\n");
+    
+    // 6. Теперь нам нужно вручную импортировать encodings
+    // Создаем модуль encodings вручную
+    PyObject* encodings_module = PyImport_AddModule("encodings");
+    if (!encodings_module) {
+        printf("Failed to create encodings module\n");
+        return;
     }
     
-    // Импортируем модули кодировок
-    PyImport_ImportModule("encodings.utf_8");
-    PyImport_ImportModule("encodings.ascii");
-    PyImport_ImportModule("encodings.latin_1");
-    PyImport_ImportModule("encodings.hex_codec");
-    PyImport_ImportModule("codecs");
+    // 7. Пытаемся импортировать aliases напрямую из zip
+    printf("Trying to import encodings.aliases...\n");
     
-    // Импортируем критически важные модули
-    PyImport_ImportModule("abc");
-    PyImport_ImportModule("io");
-    PyImport_ImportModule("_io");
-    PyImport_ImportModule("os");
+    // Создаем объект для поиска в zip
+    PyObject* zipimporter = PyImport_ImportModule("zipimport");
+    if (zipimporter) {
+        PyObject* zipimporter_class = PyObject_GetAttrString(zipimporter, "zipimporter");
+        if (zipimporter_class) {
+            // Создаем импортер для нашего zip-архива
+            PyObject* archive_path = PyUnicode_FromString("romfs:/Contents/lib.zip");
+            PyObject* importer = PyObject_CallFunctionObjArgs(zipimporter_class, archive_path, NULL);
+            
+            if (importer) {
+                // Пробуем загрузить encodings.aliases
+                PyObject* aliases_module = PyObject_CallMethod(importer, "load_module", "s", "encodings.aliases");
+                if (aliases_module) {
+                    printf("Successfully loaded encodings.aliases from zip\n");
+                    // Добавляем aliases в модуль encodings
+                    PyObject_SetAttrString(encodings_module, "aliases", aliases_module);
+                    Py_DECREF(aliases_module);
+                } else {
+                    printf("Failed to load encodings.aliases from zip\n");
+                    PyErr_Print();
+                }
+                Py_DECREF(importer);
+            }
+            Py_DECREF(zipimporter_class);
+        }
+        Py_DECREF(zipimporter);
+    }
+    
+    // 8. Устанавливаем sys.path
+    PyRun_SimpleString(
+        "import sys\n"
+        "sys.path = ['romfs:/Contents/lib.zip', '.']\n"
+        "sys.prefix = 'romfs:/Contents'\n"
+        "sys.exec_prefix = 'romfs:/Contents'\n"
+        "print('Python path configured:', sys.path)\n"
+    );
 }
 
 /* -------------------------------------------------------
@@ -440,18 +465,20 @@ int main(int argc, char* argv[])
     chdir("romfs:/Contents");
     setlocale(LC_ALL, "C");
     setenv("MESA_NO_ERROR", "1", 1);
-    setenv("PYTHONPATH", "romfs:/Contents/lib.zip", 1);
-    setenv("PYTHONHOME", "romfs:/Contents", 1);
-
+    
+    // ОЧЕНЬ ВАЖНО: не устанавливаем PYTHONHOME и PYTHONPATH через setenv
+    // Python сам установит их правильно из Py_SetPythonHome и Py_SetPath
+    
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
 
+    printf("=== Ren'Py Switch Launcher ===\n");
     printf("Initializing Python...\n");
 
-    // Инициализируем Python с минимальным набором
-    init_python_minimal();
+    // Инициализируем Python с ручным импортом
+    init_python_manually();
     
-    printf("Python initialized successfully\n");
+    printf("Python initialization complete\n");
 
     // Проверяем наличие необходимых файлов
     FILE* libzip = fopen("romfs:/Contents/lib.zip", "rb");
@@ -465,41 +492,50 @@ int main(int argc, char* argv[])
         show_error("Could not find renpy.py");
     }
 
-    // Устанавливаем дополнительные пути
-    PyRun_SimpleString(
-        "import sys\n"
-        "import os\n"
-        "sys.path = ['romfs:/Contents/lib.zip', '.']\n"
-        "sys.prefix = 'romfs:/Contents'\n"
-        "sys.exec_prefix = 'romfs:/Contents'\n"
-        "print('Python path set:', sys.path)\n"
-    );
-
-    // Проверяем, что можем импортировать abc
-    printf("Testing module imports...\n");
+    // Тестируем импорт модулей
+    printf("Testing critical imports...\n");
+    
+    // Тест 1: Импортируем encodings.aliases напрямую
     if (PyRun_SimpleString(
+        "import sys\n"
+        "print('Testing zip import...')\n"
         "try:\n"
-        "    import abc\n"
-        "    print('abc imported successfully')\n"
+        "    # Пробуем импортировать через zipimport напрямую\n"
+        "    import zipimport\n"
+        "    zi = zipimport.zipimporter('romfs:/Contents/lib.zip')\n"
+        "    aliases = zi.load_module('encodings.aliases')\n"
+        "    print('Successfully imported encodings.aliases')\n"
+        "    # Теперь пробуем стандартный импорт\n"
+        "    import encodings.aliases\n"
+        "    print('Standard import also works!')\n"
         "except Exception as e:\n"
-        "    print('Failed to import abc:', e)\n"
+        "    print('Import failed:', e)\n"
+        "    import traceback\n"
+        "    traceback.print_exc()\n"
     ) == -1) {
         PyErr_Print();
     }
-
-    // Проверяем pygame_sdl2
+    
+    // Тест 2: Импортируем другие критические модули
     if (PyRun_SimpleString(
+        "print('\\nTesting other imports...')\n"
         "try:\n"
+        "    import abc\n"
+        "    print('abc imported')\n"
+        "    import io\n"
+        "    print('io imported')\n"
+        "    import os\n"
+        "    print('os imported')\n"
         "    import pygame_sdl2\n"
-        "    print('pygame_sdl2 imported successfully')\n"
+        "    print('pygame_sdl2 imported')\n"
         "except Exception as e:\n"
-        "    print('Failed to import pygame_sdl2:', e)\n"
+        "    print('Import error:', e)\n"
     ) == -1) {
         PyErr_Print();
     }
 
     // Запускаем Ren'Py
-    printf("Starting Ren'Py...\n");
+    printf("\nStarting Ren'Py...\n");
     int rc = PyRun_SimpleFileEx(
         renpy_file,
         "romfs:/Contents/renpy.py",

@@ -43,6 +43,8 @@ export PYTHONPATH=$DEVKITPRO/portlibs/switch/lib/python3.9
 $HOST_PYTHON -m pip install --upgrade pip
 $HOST_PYTHON -m pip install setuptools wheel Cython
 
+curl -sS https://bootstrap.pypa.io/get-pip.py | $HOST_PYTHON
+
 # Build pygame_sdl2
 pushd pygame_sdl2-source
 rm -rf gen gen3-static

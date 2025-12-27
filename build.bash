@@ -14,18 +14,54 @@ export SWITCH_PYTHON_INC=$DEVKITPRO/portlibs/switch/include/python3.9
 export SWITCH_PYTHON_LIB=$DEVKITPRO/portlibs/switch/lib
 
 
+
+
+export DEVKITPRO=/opt/devkitpro
+source $DEVKITPRO/switchvars.sh
+
+export CC=aarch64-none-elf-gcc
+export CXX=aarch64-none-elf-g++
+
+export CFLAGS=" \
+ -I$DEVKITPRO/portlibs/switch/include \
+ -I$DEVKITPRO/portlibs/switch/include/python3.9 \
+ -D__SWITCH__ \
+ -fPIC \
+"
+
+export LDFLAGS=" \
+ -L$DEVKITPRO/portlibs/switch/lib \
+ -lpython3.9 \
+"
+
+export PYTHONHOME=$DEVKITPRO/portlibs/switch
+export PYTHONPATH=$DEVKITPRO/portlibs/switch/lib/python3.9
+
+
+
+
 # Build pygame_sdl2
 pushd pygame_sdl2-source
-rm -rf gen gen-static
-$PYTHON setup.py || true
-PYGAME_SDL2_STATIC=1 $PYTHON setup.py || true
+rm -rf gen gen3-static
+
+$HOST_PYTHON setup.py clean
+
+PYGAME_SDL2_STATIC=1 \
+PYTHON=$SWITCH_PYTHON \
+$HOST_PYTHON setup.py build_ext \
+    --include-dirs=$DEVKITPRO/portlibs/switch/include \
+    --library-dirs=$DEVKITPRO/portlibs/switch/lib
 popd
 
 # Build renpy module
 pushd renpy-source/module
-rm -rf gen gen-static
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local $PYTHON setup.py || true
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 $PYTHON setup.py || true
+rm -rf gen gen3-static
+
+RENPY_STATIC=1 \
+PYTHON=$SWITCH_PYTHON \
+$HOST_PYTHON setup.py build_ext \
+    --include-dirs=$DEVKITPRO/portlibs/switch/include \
+    --library-dirs=$DEVKITPRO/portlibs/switch/lib
 popd
 
 # Install pygame_sdl2

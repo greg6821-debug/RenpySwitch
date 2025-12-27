@@ -5,6 +5,15 @@ export DEVKITPRO=/opt/devkitpro
 export PYTHON=python3
 export PYTHON_VERSION=3.9
 
+# host python (для pip, утилит)
+export HOST_PYTHON=/usr/bin/python3.9
+
+# switch python
+export SWITCH_PYTHON=$DEVKITPRO/portlibs/switch/bin/python3.9
+export SWITCH_PYTHON_INC=$DEVKITPRO/portlibs/switch/include/python3.9
+export SWITCH_PYTHON_LIB=$DEVKITPRO/portlibs/switch/lib
+
+
 # Build pygame_sdl2
 pushd pygame_sdl2-source
 rm -rf gen gen-static

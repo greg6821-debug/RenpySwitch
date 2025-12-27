@@ -14,7 +14,9 @@ export SWITCH_PYTHON_INC=$DEVKITPRO/portlibs/switch/include/python3.9
 export SWITCH_PYTHON_LIB=$DEVKITPRO/portlibs/switch/lib
 
 
-
+$HOST_PYTHON -m pip install --upgrade setuptools wheel
+$HOST_PYTHON -m pip install \
+    Cython==3.0.12 setuptools wheel future six typing
 
 export DEVKITPRO=/opt/devkitpro
 source $DEVKITPRO/switchvars.sh

@@ -8,6 +8,13 @@ export PYGAME_SDL2_VER=2.1.0
 apt-get -y update
 apt-get -y upgrade
 
+# host python (для pip, утилит)
+export HOST_PYTHON=/usr/bin/python3.9
+# switch python
+export SWITCH_PYTHON=$DEVKITPRO/portlibs/switch/bin/python3.9
+export SWITCH_PYTHON_INC=$DEVKITPRO/portlibs/switch/include/python3.9
+export SWITCH_PYTHON_LIB=$DEVKITPRO/portlibs/switch/lib
+
 # Установка системных зависимостей
 apt -y install build-essential checkinstall
 apt -y install libncursesw5-dev libssl-dev libsqlite3-dev tk-dev \

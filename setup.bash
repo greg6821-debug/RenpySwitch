@@ -36,9 +36,11 @@ apt-get -y install p7zip-full libsdl2-dev libsdl2-image-dev libjpeg-dev \
     libharfbuzz-dev
 
 # Установка Python пакетов
-python3 -m pip uninstall -y distribute
-python3 -m pip install future six typing requests ecdsa pefile \
-    Cython==3.0.12 setuptools wheel
+$HOST_PYTHON -m pip uninstall -y distribute
+#python3 -m pip install future six typing requests ecdsa pefile \
+    #Cython==3.0.12 setuptools wheel
+$HOST_PYTHON -m pip install \
+    Cython==3.0.12 setuptools wheel future six typing
 
 # Установка devkitPro и зависимостей для Switch
 curl -LOC - https://github.com/greg6821-debug/scripts/releases/download/1.0-scripts/devkitpro-pkgbuild-helpers-2.2.3-1-any.pkg.tar.xz

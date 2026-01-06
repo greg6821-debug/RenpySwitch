@@ -1,0 +1,8 @@
+--- a/src/pygame_sdl2/event.pyx
++++ b/src/pygame_sdl2/event.pyx
+@@ -332,7 +332,7 @@ def pump():
+     The lock must be held when calling this function.
+     """
+-    if isinstance(kinds, (int, long)):
++    if isinstance(kinds, int):
+         kinds = (kinds,)

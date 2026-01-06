@@ -18,12 +18,14 @@ endif()
 set(C_FLAGS
     -DFRIBIDI_ENTRY=
     -DHAVE_CONFIG_H=1
+    -DPy_LIMITED_API=0x03090000  # Для Python 3.9
 )
 
 set(OPTIMIZATION_FLAGS
     -Ofast
 )
 
+# Обновляем пути для Python 3.9
 set(INCLUDES
     ${DEVKITPRO}/portlibs/switch/include/python3.9
     ${DEVKITPRO}/portlibs/switch/include/fribidi
@@ -99,7 +101,7 @@ set(SOURCES
     source/module/write_png.c
     source/module/renpybidicore.c
 
-    #source/module/renpy.compat.dictviews.c
+    source/module/renpy.compat.dictviews.c
     source/module/renpy.gl2.gl2draw.c
     source/module/renpy.gl2.gl2mesh.c
     source/module/renpy.gl2.gl2mesh2.c
@@ -134,6 +136,16 @@ pkg_check_modules(SDL2_MIXER REQUIRED IMPORTED_TARGET SDL2_mixer)
 pkg_check_modules(SDL2_TTF REQUIRED IMPORTED_TARGET SDL2_ttf)
 pkg_check_modules(ZLIB REQUIRED IMPORTED_TARGET zlib)
 
+# Для Ren'Py 8 могут потребоваться дополнительные библиотеки
+pkg_check_modules(HARFBUZZ REQUIRED IMPORTED_TARGET harfbuzz)
+pkg_check_modules(WEBP REQUIRED IMPORTED_TARGET libwebp)
+pkg_check_modules(OPENAL REQUIRED IMPORTED_TARGET openal)
+pkg_check_modules(OGG REQUIRED IMPORTED_TARGET ogg)
+pkg_check_modules(VORBIS REQUIRED IMPORTED_TARGET vorbis)
+pkg_check_modules(OPUSFILE REQUIRED IMPORTED_TARGET opusfile)
+pkg_check_modules(MPG123 REQUIRED IMPORTED_TARGET mpg123)
+pkg_check_modules(MODPLUG REQUIRED IMPORTED_TARGET libmodplug)
+
 # Workaround for pkg-config not expanding $(DEVKITPRO)
 if(LIBDRM_NOUVEAU_INCLUDE_DIRS)
     set_property(TARGET PkgConfig::LIBDRM_NOUVEAU PROPERTY
@@ -142,6 +154,7 @@ endif()
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
+# Обновляем библиотеку Python на 3.9
 target_link_libraries(${PROJECT_NAME}
     ${DEVKITPRO}/portlibs/switch/lib/libpython3.9.a
     ${DEVKITPRO}/portlibs/switch/lib/libfribidi.a
@@ -163,6 +176,14 @@ target_link_libraries(${PROJECT_NAME}
     PkgConfig::SDL2_MIXER
     PkgConfig::SDL2_TTF
     PkgConfig::ZLIB
+    PkgConfig::HARFBUZZ
+    PkgConfig::WEBP
+    PkgConfig::OPENAL
+    PkgConfig::OGG
+    PkgConfig::VORBIS
+    PkgConfig::OPUSFILE
+    PkgConfig::MPG123
+    PkgConfig::MODPLUG
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDES})
@@ -170,4 +191,3 @@ target_compile_options(${PROJECT_NAME} PUBLIC $<$<COMPILE_LANGUAGE:C>:${C_FLAGS}
 target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:RELEASE>:${OPTIMIZATION_FLAGS}>)
 target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:RELWITHDEBINFO>:${OPTIMIZATION_FLAGS}>)
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-

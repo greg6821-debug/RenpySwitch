@@ -2,90 +2,42 @@
 set -e
 
 export DEVKITPRO=/opt/devkitpro
-export PYTHON=python3
-export PYTHON_VERSION=3.9
 
-# host python (для pip, утилит)
-export HOST_PYTHON=/usr/bin/python3.9
+# Установка Python 3.9 для хоста (если еще не установлен)
+if ! command -v python3.9 &> /dev/null; then
+    echo "Installing Python 3.9..."
+    apt-get update
+    apt-get install -y python3.9 python3.9-dev python3.9-distutils
+fi
 
-# switch python
-export SWITCH_PYTHON=$DEVKITPRO/portlibs/switch/bin/python3.9
-export SWITCH_PYTHON_INC=$DEVKITPRO/portlibs/switch/include/python3.9
-export SWITCH_PYTHON_LIB=$DEVKITPRO/portlibs/switch/lib
-
-
-$HOST_PYTHON -m pip install --upgrade setuptools wheel
-$HOST_PYTHON -m pip install \
-    Cython==3.0.12 setuptools wheel future six typing
-
-export DEVKITPRO=/opt/devkitpro
-source $DEVKITPRO/switchvars.sh
-
-export CC=aarch64-none-elf-gcc
-export CXX=aarch64-none-elf-g++
-
-export CFLAGS=" \
- -I$DEVKITPRO/portlibs/switch/include \
- -I$DEVKITPRO/portlibs/switch/include/python3.9 \
- -D__SWITCH__ \
- -fPIC \
-"
-
-export LDFLAGS=" \
- -L$DEVKITPRO/portlibs/switch/lib \
- -lpython3.9 \
-"
-
-export PYTHONHOME=$DEVKITPRO/portlibs/switch
-export PYTHONPATH=$DEVKITPRO/portlibs/switch/lib/python3.9
-
-
-$HOST_PYTHON -m pip install --upgrade pip
-$HOST_PYTHON -m pip install setuptools wheel Cython
-
-curl -sS https://bootstrap.pypa.io/get-pip.py | $HOST_PYTHON
-
-# Build pygame_sdl2
+# Компиляция pygame_sdl2 для хоста
+echo "Building pygame_sdl2 for host..."
 pushd pygame_sdl2-source
-rm -rf gen gen3-static
-
-$HOST_PYTHON setup.py clean
-
-PYGAME_SDL2_STATIC=1 \
-PYTHON=$SWITCH_PYTHON \
-$HOST_PYTHON setup.py build_ext \
-    --include-dirs=$DEVKITPRO/portlibs/switch/include \
-    --library-dirs=$DEVKITPRO/portlibs/switch/lib
+rm -rf gen gen-static build
+python3.9 setup.py build_ext --inplace || true
+PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace || true
 popd
 
-# Build renpy module
+# Компиляция renpy модулей для хоста
+echo "Building Ren'Py modules for host..."
 pushd renpy-source/module
-rm -rf gen gen3-static
-
-RENPY_STATIC=1 \
-PYTHON=$SWITCH_PYTHON \
-$HOST_PYTHON setup.py build_ext \
-    --include-dirs=$DEVKITPRO/portlibs/switch/include \
-    --library-dirs=$DEVKITPRO/portlibs/switch/lib
+rm -rf gen gen-static build
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py build_ext --inplace || true
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
 popd
 
-# Install pygame_sdl2
+# Установка заголовочных файлов
+echo "Installing headers..."
 pushd pygame_sdl2-source
-$PYTHON setup.py build
-$PYTHON setup.py install_headers
-$PYTHON setup.py install
+python3.9 setup.py install_headers
 popd
 
-# Install renpy module
-pushd renpy-source/module
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local $PYTHON setup.py build
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local $PYTHON setup.py install
-popd
-
-# Link sources
+# Создание символических ссылок
+echo "Linking source files..."
 bash link_sources.bash
 
-# Build switch modules
+# Компиляция для Switch
+echo "Building for Switch..."
 export PREFIXARCHIVE=$(realpath renpy-switch-modules.tar.gz)
 
 rm -rf build-switch
@@ -94,88 +46,130 @@ pushd build-switch
 mkdir local_prefix
 export LOCAL_PREFIX=$(realpath local_prefix)
 cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build .
+cmake --build . -j$(nproc)
 mkdir -p $LOCAL_PREFIX/lib
 cp librenpy-switch-modules.a $LOCAL_PREFIX/lib/librenpy-switch-modules.a
 popd
 
+# Установка в devkitpro
+echo "Installing to devkitpro..."
 tar -czvf $PREFIXARCHIVE -C $LOCAL_PREFIX .
 tar -xf renpy-switch-modules.tar.gz -C $DEVKITPRO/portlibs/switch
 rm renpy-switch-modules.tar.gz
 rm -rf build-switch
 
-# Setup devkitpro environment
+# Настройка переменных окружения Switch
 source /opt/devkitpro/switchvars.sh
 
-# Build switch executable
+# Компиляция основного исполняемого файла Switch
+echo "Building main Switch executable..."
 pushd switch
 rm -rf build
 mkdir build
 pushd build
 cmake ..
-make
+make -j$(nproc)
 popd
 popd
 
+# Подготовка структуры данных Ren'Py
+echo "Preparing Ren'Py structure..."
 mkdir -p ./raw/switch/exefs
 mv ./switch/build/renpy-switch.nso ./raw/switch/exefs/main
-rm -rf switch include source pygame_sdl2-source
+rm -rf switch/build
 
-# Prepare renpy distribution
+# Очистка и подготовка Ren'Py SDK
+echo "Cleaning Ren'Py SDK..."
 rm -rf renpy_clear
 mkdir renpy_clear
-cp ./renpy_sdk/*/renpy.sh ./renpy_clear/renpy.sh
-cp -r ./renpy_sdk/*/lib ./renpy_clear/lib
+
+# Для Ren'Py 8 структура SDK может отличаться
+# Ищем правильный путь
+if [ -d "./renpy_sdk/renpy-8.3.7-sdk" ]; then
+    RENPY_SDK_DIR="./renpy_sdk/renpy-8.3.7-sdk"
+elif [ -d "./renpy_sdk/renpy-8.3.7" ]; then
+    RENPY_SDK_DIR="./renpy_sdk/renpy-8.3.7"
+else
+    # Берем первый найденный каталог
+    RENPY_SDK_DIR=$(find ./renpy_sdk -maxdepth 1 -type d | head -2 | tail -1)
+fi
+
+echo "Using Ren'Py SDK from: $RENPY_SDK_DIR"
+
+cp "$RENPY_SDK_DIR/renpy.sh" ./renpy_clear/renpy.sh
+cp -r "$RENPY_SDK_DIR/lib" ./renpy_clear/lib
 mkdir ./renpy_clear/game
 cp -r ./renpy-source/renpy ./renpy_clear/renpy
 cp ./renpy-source/renpy.py ./renpy_clear/renpy.py
-mv ./script.rpy ./renpy_clear/game/script.rpy
-cp ./renpy_sdk/*/*.exe ./renpy_clear/
-rm -rf renpy-source renpy_sdk ./renpy_clear/lib/*mac*
+cp ./script.rpy ./renpy_clear/game/script.rpy
 
-# Compile Ren'Py project
+# Копируем исполняемые файлы (если есть)
+find "$RENPY_SDK_DIR" -name "*.exe" -exec cp {} ./renpy_clear/ \;
+
+# Удаляем ненужные файлы
+rm -rf ./renpy_clear/lib/*mac*
+
+# Компиляция скриптов Ren'Py
+echo "Compiling Ren'Py scripts..."
 pushd renpy_clear
-./renpy.sh --compile . compile
-# Clean up source files
-find ./renpy/ -type f \( -name "*.pxd" -o -name "*.pyx" -o -name "*.rpym" -o -name "*.pxi" \) -delete
+# Используем Python 3.9 для компиляции
+python3.9 ./renpy.py --compile . compile
+find ./renpy/ -regex ".*\.\(pxd\|pyx\|rpym\|pxi\)" -delete
 popd
 
-# Prepare private data
+# Подготовка приватных данных
+echo "Preparing private data..."
 rm -rf private
 mkdir private
 mkdir private/lib
+
+# Копируем Python 3.9 библиотеки
+cp -r renpy_clear/lib/python3.9/ private/lib/
 cp -r renpy_clear/renpy private/renpy
-cp -r renpy_clear/lib/python$PYTHON_VERSION/ private/lib/
 cp renpy_clear/renpy.py private/main.py
 rm -rf private/renpy/common
-$PYTHON generate_private.py
+
+# Генерация приватных данных (если нужен скрипт)
+if [ -f "generate_private.py" ]; then
+    echo "Generating private data..."
+    python3.9 generate_private.py
+fi
+
 rm -rf private
 
-# Prepare final package structure
+# Создание окончательной структуры для Switch
+echo "Creating final Switch structure..."
 mkdir -p ./raw/switch/romfs/Contents/renpy/common
 mkdir -p ./raw/switch/romfs/Contents/renpy
 mkdir -p ./raw/lib
 
-# Copy common assets
+# Копирование общих файлов
 cp -r ./renpy_clear/renpy/common ./raw/switch/romfs/Contents/renpy/
 
-# Copy main script
+# Копирование основного скрипта
 cp ./renpy_clear/renpy.py ./raw/switch/romfs/Contents/
 
-# Extract and prepare libraries
-unzip -qq ./raw/lib.zip -d ./raw/lib/
-rm ./raw/lib.zip
+# Распаковка lib.zip если существует
+if [ -f "./raw/lib.zip" ]; then
+    unzip -qq ./raw/lib.zip -d ./raw/lib/
+    rm ./raw/lib.zip
+fi
 
-# Copy renpy modules
+# Копирование библиотек Ren'Py
 cp -r ./renpy_clear/renpy/ ./raw/lib/renpy/
 rm -rf ./raw/lib/renpy/common/
 
+# Создание архива библиотек
+if [ -d "./raw/lib" ]; then
+    7z a -tzip ./raw/switch/romfs/Contents/lib.zip ./raw/lib/*
+    rm -rf ./raw/lib
+fi
 
-# Create lib.zip archive
-7z a -tzip ./raw/switch/romfs/Contents/lib.zip ./raw/lib/*
-rm -rf ./raw/lib
-
-# Cleanup
+# Очистка
 rm -rf ./renpy_clear/game
+
+# Создание финального архива
+echo "Creating final archive..."
 7z a -tzip raw.zip ./raw/*
-#rm -rf ./raw
+
+echo "Build completed successfully!"

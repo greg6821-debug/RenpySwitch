@@ -1,0 +1,14 @@
+--- a/renpy/gl/glenviron_shader.pyx
++++ b/renpy/gl/glenviron_shader.pyx
+@@ -281,9 +281,9 @@ def get_shader_log(handle, shader):
+         glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &log_length)
+     else:
+         glGetProgramiv(handle, GL_INFO_LOG_LENGTH, &log_length)
+-    log = ' ' * log_length
++    log = b' ' * log_length
+     if shader:
+-        glGetShaderInfoLog(handle, log_length, &log_length, <char *> log)
++        glGetShaderInfoLog(handle, log_length, &log_length, <char *> log if log is not None else NULL)
+     else:
+-        glGetProgramInfoLog(handle, log_length, &log_length, <char *> log)
++        glGetProgramInfoLog(handle, log_length, &log_length, <char *> log if log is not None else NULL)

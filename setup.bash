@@ -9,19 +9,19 @@ export PYGAME_SDL2_VER=2.1.0
 apt-get -y update
 apt-get -y upgrade
 
-# Базовые инструменты и Python 3.11 (как в Vita порте)
+# Базовые инструменты и Python 3.9 (как в Vita порте)
 apt -y install build-essential checkinstall git cmake ninja-build rsync
-apt -y install python3.11 python3.11-dev python3.11-distutils python3-pip
+apt -y install python3.9 python3.9-dev python3.9-distutils python3-pip
 
-# Установка pip для Python 3.11
-curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
-pip3.11 --version
+# Установка pip для Python 3.9
+curl -sS https://bootstrap.pypa.io/get-pip.py | python3.9
+pip3.9 --version
 
 # Фиксация КРИТИЧЕСКИ важных версий (как в Vita порте)
-pip3.11 install --upgrade pip
-pip3.11 install "Cython==0.29.37"  # Не использовать > 3.0!
-pip3.11 install future six typing requests ecdsa pefile setuptools wheel
-pip3.11 install pycryptodomex
+pip3.9 install --upgrade pip
+pip3.9 install "Cython==0.29.37"  # Не использовать > 3.0!
+pip3.9 install future six typing requests ecdsa pefile setuptools wheel
+pip3.9 install pycryptodomex
 
 # Системные зависимости
 apt-get -y install p7zip-full libsdl2-dev libsdl2-image-dev libjpeg-dev \
@@ -38,9 +38,9 @@ curl -LOC - https://github.com/greg6821-debug/scripts/releases/download/1.0-scri
 dkp-pacman -U --noconfirm devkitpro-pkgbuild-helpers-2.2.3-1-any.pkg.tar.xz
 dkp-pacman -U --noconfirm switch-libfribidi-1.0.12-1-any.pkg.tar.xz
 
-# Python 3.11 для Switch (нужно найти или собрать)
-echo "Installing Python 3.11 for Switch..."
-# Пока используем 3.9, но нужно искать 3.11
+# Python 3.9 для Switch (нужно найти или собрать)
+echo "Installing Python 3.9 for Switch..."
+# Пока используем 3.9, но нужно искать 3.9
 curl -LOC - https://github.com/knautilus/Utils/releases/download/v1.0/python39-switch.zip
 unzip -qq python39-switch.zip -C $DEVKITPRO/portlibs/switch
 rm python39-switch.zip

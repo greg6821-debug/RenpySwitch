@@ -195,7 +195,7 @@ pkg_check_modules(MODPLUG REQUIRED libmodplug)
 pkg_check_modules(FLAC REQUIRED flac)  # Добавляем FLAC поддержку
 
 # Дополнительные библиотеки, которые могут понадобиться
-pkg_check_modules(LIBDRM REQUIRED libdrm)
+pkg_check_modules(LIBDRM REQUIRED libdrm_nouveau)
 pkg_check_modules(LIBPNG REQUIRED libpng)
 pkg_check_modules(LIBJPEG REQUIRED libjpeg)
 

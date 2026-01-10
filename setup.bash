@@ -193,7 +193,7 @@ if [ -f "../generate_private.py" ]; then
     echo "generate_private.py скопирован"
     cp ../CMakeLists.txt .
     echo "CMakeLists.txt скопирован"
-    cp ../switch .
+    cp -r ../switch .
     echo "Папка switch скопирована"
 fi
 

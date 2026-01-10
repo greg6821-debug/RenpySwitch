@@ -42,7 +42,7 @@ dkp-pacman -U --noconfirm switch-libfribidi-1.0.12-1-any.pkg.tar.xz
 echo "Installing Python 3.9 for Switch..."
 # Пока используем 3.9, но нужно искать 3.9
 curl -LOC - https://github.com/knautilus/Utils/releases/download/v1.0/python39-switch.zip
-unzip -qq python39-switch.zip -C $DEVKITPRO/portlibs/switch
+unzip -qq python39-switch.zip -d $DEVKITPRO/portlibs/switch
 rm python39-switch.zip
 
 # Установка mpg123 для Switch (чтобы исправить ошибку CMake)

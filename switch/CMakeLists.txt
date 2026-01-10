@@ -71,7 +71,7 @@ pkg_check_modules(OPENAL REQUIRED IMPORTED_TARGET openal)
 pkg_check_modules(OGG REQUIRED IMPORTED_TARGET ogg)
 pkg_check_modules(VORBIS REQUIRED IMPORTED_TARGET vorbis)
 pkg_check_modules(OPUSFILE REQUIRED IMPORTED_TARGET opusfile)
-pkg_check_modules(MPG123 REQUIRED IMPORTED_TARGET mpg123)
+pkg_check_modules(MPG123 REQUIRED IMPORTED_TARGET switch-mpg123)
 pkg_check_modules(MODPLUG REQUIRED IMPORTED_TARGET libmodplug)
 
 # Workaround для pkg-config
@@ -110,7 +110,7 @@ target_link_libraries(${PROJECT_NAME}
     PkgConfig::OGG
     PkgConfig::VORBIS
     PkgConfig::OPUSFILE
-    PkgConfig::MPG123
+    PkgConfig::switch-mpg123
     PkgConfig::MODPLUG
 )
 

@@ -26,10 +26,10 @@ pip3.9 install pycryptodomex
 # Системные зависимости
 apt-get -y install p7zip-full libsdl2-dev libsdl2-image-dev libjpeg-dev \
     libpng-dev libsdl2-ttf-dev libsdl2-mixer-dev libavformat-dev \
-    libfreetype6-dev libswscale-dev libglew-dev libfribidi-dev \
+    switch-freetype libswscale-dev libglew-dev libfribidi-dev \
     libavcodec-dev libswresample-dev libsdl2-gfx-dev libgl1-mesa-glx \
-    libharfbuzz-dev libwebp-dev libopenal-dev libvorbis-dev \
-    libopusfile-dev libmpg123-dev libmodplug-dev
+    switch-harfbuzz libwebp-dev libopenal-dev libvorbis-dev \
+    libopusfile-dev switch-mpg123 libmodplug-dev
 
 # Установка devkitpro зависимостей
 curl -LOC - https://github.com/greg6821-debug/scripts/releases/download/1.0-scripts/devkitpro-pkgbuild-helpers-2.2.3-1-any.pkg.tar.xz
@@ -46,12 +46,12 @@ unzip -qq python39-switch.zip -d $DEVKITPRO/portlibs/switch
 rm python39-switch.zip
 
 # Установка mpg123 для Switch (чтобы исправить ошибку CMake)
-echo "Installing mpg123 for Switch..."
-dkp-pacman -S --noconfirm switch-mpg123
+#echo "Installing mpg123 for Switch..."
+#dkp-pacman -S --noconfirm switch-mpg123
 
 # Сборка harfbuzz с поддержкой freetype (как в Vita порте)
-echo "Building harfbuzz with freetype support..."
-dkp-pacman -S --noconfirm switch-freetype switch-harfbuzz
+#echo "Building harfbuzz with freetype support..."
+#dkp-pacman -S --noconfirm switch-freetype switch-harfbuzz
 
 # Исправление CMake флагов
 /bin/bash -c 'sed -i'"'"'.bak'"'"' '"'"'s/set(CMAKE_EXE_LINKER_FLAGS_INIT "/set(CMAKE_EXE_LINKER_FLAGS_INIT "-fPIC /'"'"' $DEVKITPRO/switch.cmake'

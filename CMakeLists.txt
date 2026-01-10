@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.0.2)
 
+# Проверка кросс-компиляции ДО определения проекта
 if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     if(DEFINED ENV{DEVKITPRO})
         set(DEVKITPRO $ENV{DEVKITPRO})
@@ -11,20 +12,30 @@ endif()
 
 project(renpy-switch-modules)
 
-set(PKG_CONFIG_EXECUTABLE /opt/devkitpro/portlibs/switch/bin/aarch64-none-elf-pkg-config)
+# Устанавливаем переменные окружения для pkg-config ПЕРЕД find_package
+set(ENV{PKG_CONFIG_EXECUTABLE} /opt/devkitpro/portlibs/switch/bin/aarch64-none-elf-pkg-config)
+set(ENV{PKG_CONFIG_PATH} /opt/devkitpro/portlibs/switch/lib/pkgconfig)
+set(ENV{PKG_CONFIG_LIBDIR} /opt/devkitpro/portlibs/switch/lib/pkgconfig)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
+# Добавляем флаги для Switch и кросс-компиляции
 set(C_FLAGS
     -DFRIBIDI_ENTRY=
     -DHAVE_CONFIG_H=1
-    -DPy_LIMITED_API=0x03090000  # Для Python 3.9
+    -DPy_LIMITED_API=0x03090000
+    -D__SWITCH__  # Важно для Switch-специфичного кода
+    -mcpu=cortex-a57+fp+simd  # Архитектура Switch
+    -ffunction-sections
+    -fdata-sections
 )
 
 set(OPTIMIZATION_FLAGS
     -Ofast
+    -flto
+    -fno-stack-protector
 )
 
 # Обновляем пути для Python 3.9
@@ -39,6 +50,7 @@ set(INCLUDES
 # source/libnx_wrap.c disabled for the time being
 
 set(SOURCES
+    # Ваши исходные файлы...
     source/module/IMG_savepng.c
     source/module/SDL2_rotozoom.c
     source/module/SDL_gfxPrimitives.c
@@ -119,77 +131,136 @@ set(SOURCES
     source/module/renpy.display.quaternion.c
 )
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
-pkg_check_modules(FREETYPE2 REQUIRED IMPORTED_TARGET freetype2)
-pkg_check_modules(GLAPI REQUIRED IMPORTED_TARGET glapi)
-pkg_check_modules(GLESV2 REQUIRED IMPORTED_TARGET glesv2)
-pkg_check_modules(LIBAVCODEC REQUIRED IMPORTED_TARGET libavcodec)
-pkg_check_modules(LIBAVFILTER REQUIRED IMPORTED_TARGET libavfilter)
-pkg_check_modules(LIBAVFORMAT REQUIRED IMPORTED_TARGET libavformat)
-pkg_check_modules(LIBAVUTIL REQUIRED IMPORTED_TARGET libavutil)
-pkg_check_modules(LIBDRM_NOUVEAU REQUIRED IMPORTED_TARGET libdrm_nouveau)
-pkg_check_modules(LIBSWRESAMPLE REQUIRED IMPORTED_TARGET libswresample)
-pkg_check_modules(LIBSWSCALE REQUIRED IMPORTED_TARGET libswscale)
-pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
-pkg_check_modules(SDL2_GFX REQUIRED IMPORTED_TARGET SDL2_gfx)
-pkg_check_modules(SDL2_IMAGE REQUIRED IMPORTED_TARGET SDL2_image)
-pkg_check_modules(SDL2_MIXER REQUIRED IMPORTED_TARGET SDL2_mixer)
-pkg_check_modules(SDL2_TTF REQUIRED IMPORTED_TARGET SDL2_ttf)
-pkg_check_modules(ZLIB REQUIRED IMPORTED_TARGET zlib)
-
-# Для Ren'Py 8 могут потребоваться дополнительные библиотеки
-pkg_check_modules(HARFBUZZ REQUIRED IMPORTED_TARGET harfbuzz)
-pkg_check_modules(WEBP REQUIRED IMPORTED_TARGET libwebp)
-pkg_check_modules(OPENAL REQUIRED IMPORTED_TARGET openal)
-pkg_check_modules(OGG REQUIRED IMPORTED_TARGET ogg)
-pkg_check_modules(VORBIS REQUIRED IMPORTED_TARGET vorbis)
-pkg_check_modules(OPUSFILE REQUIRED IMPORTED_TARGET opusfile)
-pkg_check_modules(MPG123 REQUIRED IMPORTED_TARGET libmpg123)
-pkg_check_modules(MODPLUG REQUIRED IMPORTED_TARGET libmodplug)
-
-# Workaround for pkg-config not expanding $(DEVKITPRO)
-if(LIBDRM_NOUVEAU_INCLUDE_DIRS)
-    set_property(TARGET PkgConfig::LIBDRM_NOUVEAU PROPERTY
-                 INTERFACE_INCLUDE_DIRECTORIES "${DEVKITPRO}/portlibs/switch/include")
+# Проверяем кросс-компиляцию
+if(NOT CMAKE_CROSSCOMPILING)
+    message(WARNING "Project is not being cross-compiled! Use -DCMAKE_TOOLCHAIN_FILE")
 endif()
+
+# Устанавливаем корректные пути для Python
+find_file(PYTHON_LIBRARY libpython3.9.a 
+    PATHS ${DEVKITPRO}/portlibs/switch/lib
+    NO_DEFAULT_PATH
+    REQUIRED
+)
+
+find_path(PYTHON_INCLUDE_DIR Python.h
+    PATHS ${DEVKITPRO}/portlibs/switch/include/python3.9
+    NO_DEFAULT_PATH
+    REQUIRED
+)
+
+find_package(PkgConfig REQUIRED)
+
+# Проверяем библиотеки с правильными именами для devkitPro
+pkg_check_modules(EGL REQUIRED egl)
+pkg_check_modules(FREETYPE2 REQUIRED freetype2)
+pkg_check_modules(GLAPI REQUIRED glapi)
+pkg_check_modules(GLESV2 REQUIRED glesv2)
+pkg_check_modules(LIBAVCODEC REQUIRED libavcodec)
+pkg_check_modules(LIBAVFILTER REQUIRED libavfilter)
+pkg_check_modules(LIBAVFORMAT REQUIRED libavformat)
+pkg_check_modules(LIBAVUTIL REQUIRED libavutil)
+pkg_check_modules(LIBSWRESAMPLE REQUIRED libswresample)
+pkg_check_modules(LIBSWSCALE REQUIRED libswscale)
+pkg_check_modules(SDL2 REQUIRED sdl2)
+pkg_check_modules(SDL2_GFX REQUIRED SDL2_gfx)
+pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
+pkg_check_modules(SDL2_MIXER REQUIRED SDL2_mixer)
+pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
+pkg_check_modules(ZLIB REQUIRED zlib)
+
+# Для Ren'Py 8
+pkg_check_modules(HARFBUZZ REQUIRED harfbuzz)
+pkg_check_modules(WEBP REQUIRED libwebp)
+pkg_check_modules(OPENAL REQUIRED openal-soft)  # Важно: openal-soft, а не openal
+pkg_check_modules(OGG REQUIRED ogg)
+pkg_check_modules(VORBIS REQUIRED vorbis)
+pkg_check_modules(VORBISFILE REQUIRED vorbisfile)  # Добавляем vorbisfile
+pkg_check_modules(OPUSFILE REQUIRED opusfile)
+pkg_check_modules(MPG123 REQUIRED libmpg123)
+pkg_check_modules(MODPLUG REQUIRED libmodplug)
+pkg_check_modules(FLAC REQUIRED flac)  # Добавляем FLAC поддержку
+
+# Дополнительные библиотеки, которые могут понадобиться
+pkg_check_modules(LIBDRM REQUIRED libdrm)
+pkg_check_modules(LIBPNG REQUIRED libpng)
+pkg_check_modules(LIBJPEG REQUIRED libjpeg)
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
-# Обновляем библиотеку Python на 3.9
+# Связываем библиотеки - УБИРАЕМ IMPORTED_TARGET
 target_link_libraries(${PROJECT_NAME}
-    ${DEVKITPRO}/portlibs/switch/lib/libpython3.9.a
+    ${PYTHON_LIBRARY}
     ${DEVKITPRO}/portlibs/switch/lib/libfribidi.a
     m
-    PkgConfig::EGL
-    PkgConfig::FREETYPE2
-    PkgConfig::GLAPI
-    PkgConfig::GLESV2
-    PkgConfig::LIBAVCODEC
-    PkgConfig::LIBAVFILTER
-    PkgConfig::LIBAVFORMAT
-    PkgConfig::LIBAVUTIL
-    PkgConfig::LIBDRM_NOUVEAU
-    PkgConfig::LIBSWRESAMPLE
-    PkgConfig::LIBSWSCALE
-    PkgConfig::SDL2
-    PkgConfig::SDL2_GFX
-    PkgConfig::SDL2_IMAGE
-    PkgConfig::SDL2_MIXER
-    PkgConfig::SDL2_TTF
-    PkgConfig::ZLIB
-    PkgConfig::HARFBUZZ
-    PkgConfig::WEBP
-    PkgConfig::OPENAL
-    PkgConfig::OGG
-    PkgConfig::VORBIS
-    PkgConfig::OPUSFILE
-    PkgConfig::MPG123
-    PkgConfig::MODPLUG
+    ${EGL_LIBRARIES}
+    ${FREETYPE2_LIBRARIES}
+    ${GLAPI_LIBRARIES}
+    ${GLESV2_LIBRARIES}
+    ${LIBAVCODEC_LIBRARIES}
+    ${LIBAVFILTER_LIBRARIES}
+    ${LIBAVFORMAT_LIBRARIES}
+    ${LIBAVUTIL_LIBRARIES}
+    ${LIBSWRESAMPLE_LIBRARIES}
+    ${LIBSWSCALE_LIBRARIES}
+    ${SDL2_LIBRARIES}
+    ${SDL2_GFX_LIBRARIES}
+    ${SDL2_IMAGE_LIBRARIES}
+    ${SDL2_MIXER_LIBRARIES}
+    ${SDL2_TTF_LIBRARIES}
+    ${ZLIB_LIBRARIES}
+    ${HARFBUZZ_LIBRARIES}
+    ${WEBP_LIBRARIES}
+    ${OPENAL_LIBRARIES}
+    ${OGG_LIBRARIES}
+    ${VORBIS_LIBRARIES}
+    ${VORBISFILE_LIBRARIES}
+    ${OPUSFILE_LIBRARIES}
+    ${MPG123_LIBRARIES}
+    ${MODPLUG_LIBRARIES}
+    ${FLAC_LIBRARIES}
+    ${LIBDRM_LIBRARIES}
+    ${LIBPNG_LIBRARIES}
+    ${LIBJPEG_LIBRARIES}
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDES})
-target_compile_options(${PROJECT_NAME} PUBLIC $<$<COMPILE_LANGUAGE:C>:${C_FLAGS}>)
-target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:RELEASE>:${OPTIMIZATION_FLAGS}>)
-target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:RELWITHDEBINFO>:${OPTIMIZATION_FLAGS}>)
-set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
+# Устанавливаем include директории из pkg-config
+target_include_directories(${PROJECT_NAME} PUBLIC 
+    ${INCLUDES}
+    ${EGL_INCLUDE_DIRS}
+    ${FREETYPE2_INCLUDE_DIRS}
+    ${SDL2_INCLUDE_DIRS}
+    ${SDL2_MIXER_INCLUDE_DIRS}
+    ${OPENAL_INCLUDE_DIRS}
+    ${HARFBUZZ_INCLUDE_DIRS}
+)
+
+# Флаги компиляции
+target_compile_options(${PROJECT_NAME} PUBLIC 
+    $<$<COMPILE_LANGUAGE:C>:${C_FLAGS}>
+    $<$<COMPILE_LANGUAGE:CXX>:${C_FLAGS}>
+)
+
+target_compile_options(${PROJECT_NAME} PUBLIC 
+    $<$<CONFIG:RELEASE>:${OPTIMIZATION_FLAGS}>
+    $<$<CONFIG:RELWITHDEBINFO>:${OPTIMIZATION_FLAGS}>
+)
+
+# Линкер флаги
+target_link_options(${PROJECT_NAME} PUBLIC
+    -specs=${DEVKITPRO}/libnx/switch.specs
+    -Wl,-Map,${PROJECT_NAME}.map
+    -Wl,--gc-sections
+    -Wl,--start-group
+    -Wl,--end-group
+)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    LINKER_LANGUAGE C
+    POSITION_INDEPENDENT_CODE ON
+)
+
+# Проверяем, что все библиотеки найдены
+message(STATUS "EGL libraries: ${EGL_LIBRARIES}")
+message(STATUS "MPG123 libraries: ${MPG123_LIBRARIES}")
+message(STATUS "OPENAL libraries: ${OPENAL_LIBRARIES}")

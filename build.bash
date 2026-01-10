@@ -3,6 +3,21 @@ set -e
 
 export DEVKITPRO=/opt/devkitpro
 
+# Проверяем, находимся ли мы в правильной директории
+if [ ! -d "pygame_sdl2-source" ] && [ -d "renpy-build" ]; then
+    echo "Переход в директорию renpy-build..."
+    cd renpy-build
+fi
+
+# Проверяем, существует ли директория pygame_sdl2-source
+if [ ! -d "pygame_sdl2-source" ]; then
+    echo "Ошибка: Директория pygame_sdl2-source не найдена!"
+    echo "Текущая директория: $(pwd)"
+    echo "Содержимое:"
+    ls -la
+    exit 1
+fi
+
 # Установка Python 3.9 для хоста (если еще не установлен)
 if ! command -v python3.9 &> /dev/null; then
     echo "Installing Python 3.9..."

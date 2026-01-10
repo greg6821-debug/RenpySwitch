@@ -184,6 +184,64 @@ rm -f renpy-$RENPY_VER-source.tar.bz2
 unzip -qq renpy-$RENPY_VER-sdk.zip -d renpy_sdk
 rm -f renpy-$RENPY_VER-sdk.zip
 
+
+# Копируем вспомогательные скрипты сборки
+echo "Копирование вспомогательных скриптов..."
+# Копируем link_sources.bash, если он существует в родительской директории
+if [ -f "../link_sources.bash" ]; then
+    cp ../link_sources.bash .
+    echo "link_sources.bash скопирован"
+elif [ -f "../../link_sources.bash" ]; then
+    cp ../../link_sources.bash .
+    echo "link_sources.bash скопирован из родительской директории"
+else
+    echo "Внимание: link_sources.bash не найден, будет создан автоматически"
+    # Создаем минимальный link_sources.bash
+    cat > link_sources.bash << 'EOF'
+#!/bin/bash
+# Скрипт для создания символических ссылок на исходные файлы
+
+echo "Creating symbolic links..."
+
+# Создаем директории, если их нет
+mkdir -p include/module
+mkdir -p source/module
+
+# Копируем файлы pygame_sdl2
+if [ -d "pygame_sdl2-source" ]; then
+    echo "Copying pygame_sdl2 files..."
+    find pygame_sdl2-source -name "*.c" -exec cp {} source/module/ \;
+    find pygame_sdl2-source -name "*.h" -exec cp {} include/module/ \;
+    
+    # Копируем заголовочные файлы из gen3
+    if [ -d "pygame_sdl2-source/gen3" ]; then
+        cp -r pygame_sdl2-source/gen3/*.h include/module/ 2>/dev/null || true
+    fi
+fi
+
+# Копируем файлы renpy-source/module
+if [ -d "renpy-source/module" ]; then
+    echo "Copying Ren'Py module files..."
+    find renpy-source/module -name "*.c" -exec cp {} source/module/ \;
+    find renpy-source/module -name "*.h" -exec cp {} include/module/ \;
+    
+    # Копируем заголовочные файлы из gen3
+    if [ -d "renpy-source/module/gen3" ]; then
+        cp -r renpy-source/module/gen3/*.h include/module/ 2>/dev/null || true
+    fi
+    
+    # Копируем заголовочные файлы из gen3-static
+    if [ -d "renpy-source/module/gen3-static" ]; then
+        cp -r renpy-source/module/gen3-static/*.h include/module/ 2>/dev/null || true
+    fi
+fi
+
+echo "Symbolic links created successfully!"
+EOF
+    chmod +x link_sources.bash
+fi
+
+
 # ========== Настройка переменных окружения ==========
 echo "Настройка переменных окружения..."
 cat >> ~/.bashrc << EOF

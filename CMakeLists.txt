@@ -149,6 +149,19 @@ find_path(PYTHON_INCLUDE_DIR Python.h
     REQUIRED
 )
 
+
+message(STATUS "PKG_CONFIG_EXECUTABLE = $ENV{PKG_CONFIG_EXECUTABLE}")
+message(STATUS "PKG_CONFIG_PATH = $ENV{PKG_CONFIG_PATH}")
+message(STATUS "PKG_CONFIG_LIBDIR = $ENV{PKG_CONFIG_LIBDIR}")
+
+# Проверьте, какие пакеты находит pkg-config
+execute_process(
+    COMMAND $ENV{PKG_CONFIG_EXECUTABLE} --list-all
+    OUTPUT_VARIABLE PKG_CONFIG_LIST
+)
+message(STATUS "Available pkg-config packages:\n${PKG_CONFIG_LIST}")
+
+
 find_package(PkgConfig REQUIRED)
 
 # Проверяем библиотеки с правильными именами для devkitPro
@@ -172,13 +185,13 @@ pkg_check_modules(ZLIB REQUIRED zlib)
 # Для Ren'Py 8
 pkg_check_modules(HARFBUZZ REQUIRED harfbuzz)
 pkg_check_modules(WEBP REQUIRED libwebp)
-pkg_check_modules(OPENAL REQUIRED openal-soft)  # Важно: openal-soft, а не openal
+pkg_check_modules(OPENAL REQUIRED openal) 
 pkg_check_modules(OGG REQUIRED ogg)
 pkg_check_modules(VORBIS REQUIRED vorbis)
 pkg_check_modules(VORBISFILE REQUIRED vorbisfile)  # Добавляем vorbisfile
 pkg_check_modules(OPUSFILE REQUIRED opusfile)
-pkg_check_modules(MPG123 REQUIRED libmpg123)
-pkg_check_modules(MODPLUG REQUIRED libmodplug)
+pkg_check_modules(MPG123 REQUIRED mpg123)
+pkg_check_modules(MODPLUG REQUIRED modplug)
 pkg_check_modules(FLAC REQUIRED flac)  # Добавляем FLAC поддержку
 
 # Дополнительные библиотеки, которые могут понадобиться

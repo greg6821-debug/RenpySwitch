@@ -60,12 +60,12 @@ source /etc/profile.d/devkit-env.sh 2>/dev/null || true
 echo "Установка библиотек для Nintendo Switch..."
 
 # Основные инструменты и библиотеки
-dkp-pacman -S --noconfirm devkitA64 devkitpro-pkgbuild-helpers \
+dkp-pacman -S --noconfirm devkitA64 dkp-toolchain-vars \
     switch-dev switch-tools switch-pkg-config switch-cmake \
     switch-libconfig switch-mesa switch-glad
 
-# Python для Switch
-dkp-pacman -S --noconfirm switch-python3 switch-python3-pip
+# Python для Switch (если доступен)
+# dkp-pacman -S --noconfirm switch-libpython  # может быть недоступен
 
 # Графические библиотеки
 dkp-pacman -S --noconfirm switch-sdl2 switch-sdl2_gfx switch-sdl2_image \

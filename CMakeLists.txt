@@ -190,8 +190,8 @@ pkg_check_modules(OGG REQUIRED ogg)
 pkg_check_modules(VORBIS REQUIRED vorbis)
 pkg_check_modules(VORBISFILE REQUIRED vorbisfile)  # Добавляем vorbisfile
 pkg_check_modules(OPUSFILE REQUIRED opusfile)
-pkg_check_modules(MPG123 REQUIRED mpg123)
-pkg_check_modules(MODPLUG REQUIRED modplug)
+pkg_check_modules(MPG123 REQUIRED libmpg123)
+pkg_check_modules(MODPLUG REQUIRED libmodplug)
 pkg_check_modules(FLAC REQUIRED flac)  # Добавляем FLAC поддержку
 
 # Дополнительные библиотеки, которые могут понадобиться

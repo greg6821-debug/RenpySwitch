@@ -3,6 +3,15 @@ set -e
 
 export DEVKITPRO=/opt/devkitpro
 
+# ЗАГРУЖАЕМ ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ devkitPro ПЕРЕД НАЧАЛОМ
+if [ -f "/opt/devkitpro/switchvars.sh" ]; then
+    echo "Загрузка переменных окружения Switch..."
+    source /opt/devkitpro/switchvars.sh
+else
+    echo "Ошибка: switchvars.sh не найден!"
+    exit 1
+fi
+
 # Проверяем, находимся ли мы в правильной директории
 if [ ! -d "pygame_sdl2-source" ] && [ -d "renpy-build" ]; then
     echo "Переход в директорию renpy-build..."
@@ -47,20 +56,57 @@ bash link_sources.bash
 echo "Building Ren'Py modules for host..."
 pushd renpy-source/module
 rm -rf gen gen-static build
+
+# СОЗДАЕМ ДИРЕКТОРИЮ ПЕРЕД СБОРКОЙ
+mkdir -p renpy/audio
+
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py build_ext --inplace || true
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
 popd
 
 # Компиляция для Switch
 echo "Building for Switch..."
-export PREFIXARCHIVE=$(realpath renpy-switch-modules.tar.gz)
+# ПРОВЕРЯЕМ НАЛИЧИЕ switch.cmake
+if [ ! -f "$DEVKITPRO/switch.cmake" ]; then
+    echo "Ошибка: $DEVKITPRO/switch.cmake не найден!"
+    echo "Ищем альтернативные расположения..."
+    
+    # Проверяем другие возможные расположения
+    if [ -f "$DEVKITPRO/cmake/Switch.cmake" ]; then
+        SWITCH_CMAKE="$DEVKITPRO/cmake/Switch.cmake"
+        echo "Найден: $SWITCH_CMAKE"
+    elif [ -f "$DEVKITPRO/libnx/switch.cmake" ]; then
+        SWITCH_CMAKE="$DEVKITPRO/libnx/switch.cmake"
+        echo "Найден: $SWITCH_CMAKE"
+    else
+        echo "Пытаемся найти в системе..."
+        find $DEVKITPRO -name "*switch*.cmake" -type f | head -5
+        exit 1
+    fi
+else
+    SWITCH_CMAKE="$DEVKITPRO/switch.cmake"
+fi
 
+
+export PREFIXARCHIVE=$(realpath renpy-switch-modules.tar.gz)
 rm -rf build-switch
 mkdir build-switch
 pushd build-switch
 mkdir local_prefix
 export LOCAL_PREFIX=$(realpath local_prefix)
-cmake -DCMAKE_BUILD_TYPE=Release ..
+
+# ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЙ CMAKE С TOOLCHAIN
+echo "Запуск CMake с toolchain: $SWITCH_CMAKE"
+cmake -DCMAKE_TOOLCHAIN_FILE="$SWITCH_CMAKE" -DCMAKE_BUILD_TYPE=Release ..
+
+# ПРОВЕРЯЕМ, ЧТО MAKE УСТАНОВЛЕН
+if ! command -v make &> /dev/null; then
+    echo "Установка make..."
+    apt-get update
+    apt-get install -y make
+fi
+
+#cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . -j$(nproc)
 mkdir -p $LOCAL_PREFIX/lib
 cp librenpy-switch-modules.a $LOCAL_PREFIX/lib/librenpy-switch-modules.a
@@ -73,25 +119,29 @@ tar -xf renpy-switch-modules.tar.gz -C $DEVKITPRO/portlibs/switch
 rm renpy-switch-modules.tar.gz
 rm -rf build-switch
 
-# Настройка переменных окружения Switch
-source /opt/devkitpro/switchvars.sh
-
-# Компиляция основного исполняемого файла Switch
-echo "Building main Switch executable..."
-pushd switch
-rm -rf build
-mkdir build
-pushd build
-cmake ..
-make -j$(nproc)
-popd
-popd
-
-# Подготовка структуры данных Ren'Py
-echo "Preparing Ren'Py structure..."
-mkdir -p ./raw/switch/exefs
-mv ./switch/build/renpy-switch.nso ./raw/switch/exefs/main
-rm -rf switch/build
+# Проверяем наличие директории switch
+if [ -d "switch" ]; then
+    # Компиляция основного исполняемого файла Switch
+    echo "Building main Switch executable..."
+    pushd switch
+    rm -rf build
+    mkdir build
+    pushd build
+    cmake -DCMAKE_TOOLCHAIN_FILE="$SWITCH_CMAKE" ..
+    make -j$(nproc)
+    popd
+    popd
+    
+    # Подготовка структуры данных Ren'Py
+    echo "Preparing Ren'Py structure..."
+    mkdir -p ./raw/switch/exefs
+    if [ -f "switch/build/renpy-switch.nso" ]; then
+        mv switch/build/renpy-switch.nso ./raw/switch/exefs/main
+    fi
+    rm -rf switch/build
+else
+    echo "Директория 'switch' не найдена, пропускаем создание исполняемого файла"
+fi
 
 # Очистка и подготовка Ren'Py SDK
 echo "Cleaning Ren'Py SDK..."
@@ -107,6 +157,11 @@ elif [ -d "./renpy_sdk/renpy-8.3.7" ]; then
 else
     # Берем первый найденный каталог
     RENPY_SDK_DIR=$(find ./renpy_sdk -maxdepth 1 -type d | head -2 | tail -1)
+fi
+
+if [ -z "$RENPY_SDK_DIR" ] || [ ! -d "$RENPY_SDK_DIR" ]; then
+    echo "Ошибка: Не удалось найти директорию Ren'Py SDK!"
+    exit 1
 fi
 
 echo "Using Ren'Py SDK from: $RENPY_SDK_DIR"

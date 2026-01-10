@@ -187,6 +187,16 @@ rm -f renpy-$RENPY_VER-sdk.zip
 
 # Копируем вспомогательные скрипты сборки
 echo "Копирование вспомогательных скриптов..."
+
+if [ -f "../generate_private.py" ]; then
+    cp ../generate_private.py .
+    echo "generate_private.py скопирован"
+elif [ -f "../../generate_private.py" ]; then
+    cp ../../generate_private.py .
+    echo "generate_private.py скопирован из родительской директории"
+else
+    echo "Внимание: generate_private.py не найден"
+
 # Копируем link_sources.bash, если он существует в родительской директории
 if [ -f "../link_sources.bash" ]; then
     cp ../link_sources.bash .

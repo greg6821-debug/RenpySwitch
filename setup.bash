@@ -83,8 +83,8 @@ dkp-pacman -S --noconfirm switch-ffmpeg switch-libtheora \
     switch-libwebp switch-libjpeg-turbo switch-libpng
 
 # Шрифты и текст
-dkp-pacman -S --noconfirm switch-freetype switch-harfbuzz \
-    switch-fribidi
+dkp-pacman -S --noconfirm switch-freetype switch-harfbuzz
+ 
 
 # Дополнительные утилиты
 dkp-pacman -S --noconfirm switch-zlib switch-bzip2 \

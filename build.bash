@@ -18,14 +18,6 @@ python3.9 setup.py build_ext --inplace || true
 PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace || true
 popd
 
-# Компиляция renpy модулей для хоста
-echo "Building Ren'Py modules for host..."
-pushd renpy-source/module
-rm -rf gen gen-static build
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py build_ext --inplace || true
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
-popd
-
 # Установка заголовочных файлов
 echo "Installing headers..."
 pushd pygame_sdl2-source
@@ -35,6 +27,14 @@ popd
 # Создание символических ссылок
 echo "Linking source files..."
 bash link_sources.bash
+
+# Компиляция renpy модулей для хоста
+echo "Building Ren'Py modules for host..."
+pushd renpy-source/module
+rm -rf gen gen-static build
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py build_ext --inplace || true
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
+popd
 
 # Компиляция для Switch
 echo "Building for Switch..."

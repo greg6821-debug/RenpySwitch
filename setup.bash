@@ -191,11 +191,10 @@ echo "Копирование вспомогательных скриптов..."
 if [ -f "../generate_private.py" ]; then
     cp ../generate_private.py .
     echo "generate_private.py скопирован"
-elif [ -f "../../generate_private.py" ]; then
-    cp ../../generate_private.py .
-    echo "generate_private.py скопирован из родительской директории"
-else
-    echo "Внимание: generate_private.py не найден"
+    cp ../CMakeLists.txt .
+    echo "CMakeLists.txt скопирован"
+    cp ../switch .
+    echo "Папка switch скопирована"
 
 # Копируем link_sources.bash, если он существует в родительской директории
 if [ -f "../link_sources.bash" ]; then

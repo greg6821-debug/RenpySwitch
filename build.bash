@@ -119,14 +119,6 @@ tar -xf renpy-switch-modules.tar.gz -C $DEVKITPRO/portlibs/switch
 rm renpy-switch-modules.tar.gz
 rm -rf build-switch
 
-
-# В build.bash добавьте перед запуском CMake:
-echo "Проверка пакетов для Switch..."
-/opt/devkitpro/portlibs/switch/bin/aarch64-none-elf-pkg-config --list-all | grep -i openal
-/opt/devkitpro/portlibs/switch/bin/aarch64-none-elf-pkg-config --list-all | grep -i mpg123
-/opt/devkitpro/portlibs/switch/bin/aarch64-none-elf-pkg-config --list-all | grep -i modplug
-
-
 # Проверяем наличие директории switch
 if [ -d "switch" ]; then
     # Компиляция основного исполняемого файла Switch

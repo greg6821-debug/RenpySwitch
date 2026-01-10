@@ -11,6 +11,8 @@ endif()
 
 project(renpy-switch-modules)
 
+set(PKG_CONFIG_EXECUTABLE /opt/devkitpro/portlibs/switch/bin/aarch64-none-elf-pkg-config)
+
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
@@ -143,7 +145,7 @@ pkg_check_modules(OPENAL REQUIRED IMPORTED_TARGET openal)
 pkg_check_modules(OGG REQUIRED IMPORTED_TARGET ogg)
 pkg_check_modules(VORBIS REQUIRED IMPORTED_TARGET vorbis)
 pkg_check_modules(OPUSFILE REQUIRED IMPORTED_TARGET opusfile)
-pkg_check_modules(MPG123 REQUIRED IMPORTED_TARGET mpg123)
+pkg_check_modules(MPG123 REQUIRED IMPORTED_TARGET libmpg123)
 pkg_check_modules(MODPLUG REQUIRED IMPORTED_TARGET libmodplug)
 
 # Workaround for pkg-config not expanding $(DEVKITPRO)

@@ -195,6 +195,7 @@ if [ -f "../generate_private.py" ]; then
     echo "CMakeLists.txt скопирован"
     cp ../switch .
     echo "Папка switch скопирована"
+fi
 
 # Копируем link_sources.bash, если он существует в родительской директории
 if [ -f "../link_sources.bash" ]; then

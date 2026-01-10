@@ -110,7 +110,7 @@ target_link_libraries(${PROJECT_NAME}
     PkgConfig::OGG
     PkgConfig::VORBIS
     PkgConfig::OPUSFILE
-    PkgConfig::switch-mpg123
+    PkgConfig::MPG123
     PkgConfig::MODPLUG
 )
 

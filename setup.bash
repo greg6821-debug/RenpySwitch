@@ -76,7 +76,7 @@ dkp-pacman -S --noconfirm switch-sdl2 switch-sdl2_gfx switch-sdl2_image \
 dkp-pacman -S --noconfirm switch-openal-soft switch-libvorbis \
     switch-libvorbisidec switch-libogg switch-opusfile \
     switch-mpg123 switch-libmodplug switch-flac \
-    switch-libmad switch-mikmod
+    switch-libmad
 
 # Медиа библиотеки
 dkp-pacman -S --noconfirm switch-ffmpeg switch-libtheora \

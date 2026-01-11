@@ -9,7 +9,7 @@ on:
 jobs:
     build-artifact:
         name: Build
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-20.04
         container: devkitpro/devkita64:20241023
 
         steps:

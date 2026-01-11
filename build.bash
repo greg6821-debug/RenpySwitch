@@ -15,17 +15,44 @@ RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 pyth
 rm -rf gen
 popd
 
-rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
-rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module
+#rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
+#rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module
+#find source/module -mindepth 2 -type f -exec mv -t source/module {} +
+#find source/module -type d -empty -delete
+
+#rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
+#find include/module/pygame_sdl2 -mindepth 2 -type f -exec mv -t include/module/pygame_sdl2 {} +
+#mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src
+#rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ include/module
+##mv source/module/hydrogen.c include/module/libhydrogen
+#find include/module -type d -empty -delete
+
+
+# --- Создаем папки include/module и source/module ---
+mkdir -p source/module
+mkdir -p include/module
+
+# --- Копируем исходники pygame_sdl2 в source/module (только .c) ---
+rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module/
+
+# --- Копируем исходники renpy в source/module (только .c) ---
+rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module/
+
+# --- Переносим все файлы из подкаталогов source/module на верхний уровень ---
 find source/module -mindepth 2 -type f -exec mv -t source/module {} +
+
+# --- Удаляем пустые директории в source/module ---
 find source/module -type d -empty -delete
 
-rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
-find include/module/pygame_sdl2 -mindepth 2 -type f -exec mv -t include/module/pygame_sdl2 {} +
-mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src
-rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ include/module
-#mv source/module/hydrogen.c include/module/libhydrogen
+# --- Копируем заголовки pygame_sdl2 в include/module с сохранением структуры ---
+rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/
+
+# --- Копируем заголовки renpy в include/module ---
+rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ include/module/
+
+# --- Удаляем пустые директории в include/module ---
 find include/module -type d -empty -delete
+
 
 pushd pygame_sdl2-source
 python3.9 setup.py build

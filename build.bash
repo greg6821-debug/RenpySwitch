@@ -48,7 +48,7 @@ fi
 # Компиляция pygame_sdl2 для хоста
 echo "Building pygame_sdl2 for host..."
 pushd pygame_sdl2-source
-rm -rf gen gen-static build
+rm -rf gen3 gen3-static build
 python3.9 setup.py build_ext --inplace || true
 PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace || true
 popd
@@ -59,14 +59,14 @@ pushd pygame_sdl2-source
 python3.9 setup.py install_headers
 popd
 
-# Создание символических ссылок
-echo "Linking source files..."
-bash link_sources.bash
-
 # Компиляция renpy модулей для хоста
 echo "Building Ren'Py modules for host..."
 pushd renpy-source/module
-rm -rf gen gen-static build
+rm -rf gen3 gen3-static build
+
+# Создание символических ссылок
+echo "Linking source files..."
+bash link_sources.bash
 
 # СОЗДАЕМ ДИРЕКТОРИЮ ПЕРЕД СБОРКОЙ
 mkdir -p renpy/audio

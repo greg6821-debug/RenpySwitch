@@ -240,9 +240,9 @@ if [ -d "renpy-source/module" ]; then
         cp -r renpy-source/module/gen3/*.h include/module/ 2>/dev/null || true
     fi
     
-    # Копируем заголовочные файлы из gen3-static
-    if [ -d "renpy-source/module/gen3-static" ]; then
-        cp -r renpy-source/module/gen3-static/*.h include/module/ 2>/dev/null || true
+    # Копируем заголовочные файлы из gen-static
+    if [ -d "renpy-source/module/gen-static" ]; then
+        cp -r renpy-source/module/gen-static/*.h include/module/ 2>/dev/null || true
     fi
 fi
 

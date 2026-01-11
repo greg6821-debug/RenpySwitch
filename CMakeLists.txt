@@ -17,40 +17,6 @@ project(renpy-switch-modules)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 11)
 
-# Пытаемся найти Python 3.9
-find_package(Python3 3.9 REQUIRED)
-
-# Если не нашли, то задаем вручную
-if(NOT Python3_FOUND)
-    set(Python3_INCLUDE_DIRS /opt/devkitpro/portlibs/switch/include/python3.9)
-    set(Python3_LIBRARIES /opt/devkitpro/portlibs/switch/lib/libpython3.9.a)
-endif()
-
-# Добавляем библиотеку
-if(NOT TARGET renpy-switch-modules)
-    add_library(renpy-switch-modules STATIC ${SOURCES})
-else()
-    message(STATUS "Target renpy-switch-modules already exists, adding sources...")
-    target_sources(renpy-switch-modules PRIVATE ${SOURCES})
-endif()
-
-# Подключаем заголовки
-target_include_directories(renpy-switch-modules PRIVATE
-    ${Python3_INCLUDE_DIRS}
-    include/module
-)
-
-# Линкуем Python библиотеку
-target_link_libraries(renpy-switch-modules
-    ${Python3_LIBRARIES}
-)
-
-# Устанавливаем флаги компиляции
-target_compile_options(renpy-switch-modules PRIVATE
-    -fPIC
-    -O2
-)
-
 
 
 # Устанавливаем переменные окружения для pkg-config ПЕРЕД find_package
@@ -240,7 +206,7 @@ pkg_check_modules(LIBDRM REQUIRED libdrm_nouveau)
 pkg_check_modules(LIBPNG REQUIRED libpng)
 pkg_check_modules(LIBJPEG REQUIRED libjpeg)
 
-# add_library(${PROJECT_NAME} STATIC ${SOURCES})
+add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 # Связываем библиотеки - УБИРАЕМ IMPORTED_TARGET
 target_link_libraries(${PROJECT_NAME}

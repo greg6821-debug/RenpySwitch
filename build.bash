@@ -139,8 +139,8 @@ mkdir local_prefix
 export LOCAL_PREFIX=$(realpath local_prefix)
 
 # ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЙ CMAKE С TOOLCHAIN
-echo "Запуск CMake с toolchain: $SWITCH_CMAKE"
-cmake -DCMAKE_TOOLCHAIN_FILE="$SWITCH_CMAKE" -DCMAKE_BUILD_TYPE=Release ..
+#echo "Запуск CMake с toolchain: $SWITCH_CMAKE"
+#cmake -DCMAKE_TOOLCHAIN_FILE="$SWITCH_CMAKE" -DCMAKE_BUILD_TYPE=Release ..
 
 # ПРОВЕРЯЕМ, ЧТО MAKE УСТАНОВЛЕН
 if ! command -v make &> /dev/null; then
@@ -170,7 +170,7 @@ if [ -d "switch" ]; then
     rm -rf build
     mkdir build
     pushd build
-    cmake -DCMAKE_TOOLCHAIN_FILE="$SWITCH_CMAKE" ..
+    cmake# -DCMAKE_TOOLCHAIN_FILE="$SWITCH_CMAKE" ..
     make -j$(nproc)
     popd
     popd

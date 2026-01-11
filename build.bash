@@ -5,10 +5,10 @@ export DEVKITPRO=/opt/devkitpro
 mkdir -p source/module
 mkdir -p include/module include/module/pygame_sdl2
 
-
+# Установка заголовочных файлов
+echo "Installing headers..."
 pushd pygame_sdl2-source
-CFLAGS="-I$PWD/../include/module" \
-python3.9 setup.py build_ext --inplace || true
+RENPY_STATIC=1 python3.9 setup.py install_headers
 popd
 
 # Сначала копируем заголовочные файлы из pygame_sdl2-source

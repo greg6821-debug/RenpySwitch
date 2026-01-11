@@ -63,8 +63,8 @@ set(INCLUDES
     include
     include/module
     include/module/src
-    include/module/pygame_sdl2
-    include/module/pygame_sdl2/src
+    #include/module/pygame_sdl2
+    #include/module/pygame_sdl2/src
 )
 
 # ------------------------------------------------------------------------------

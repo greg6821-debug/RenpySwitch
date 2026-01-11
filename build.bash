@@ -2,6 +2,8 @@
 set -e
 
 export DEVKITPRO=/opt/devkitpro
+export CFLAGS="-DCYTHON_USE_PYTHON_UNICODE=0"
+export CPPFLAGS="-DCYTHON_USE_PYTHON_UNICODE=0"
 
 # ========== СБОРКА ДЛЯ ХОСТА (без переменных окружения Switch) ==========
 echo "=== Сборка хостовых модулей ==="
@@ -54,8 +56,8 @@ cython --version
 echo "Building pygame_sdl2 for host..."
 pushd pygame_sdl2-source
 rm -rf gen3 gen3-static build
-CC=gcc CXX=g++ python3.9 setup.py build_ext --inplace --cython-language=c --cython-c-in-temp || true
-PYGAME_SDL2_STATIC=1 CC=gcc CXX=g++ python3.9 setup.py build_ext --inplace --cython-language=c --cython-c-in-temp || true
+python3.9 setup.py build_ext --inplace --cython-language=c || true
+PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace --cython-language=c || true
 popd
 
 # Установка заголовочных файлов
@@ -79,8 +81,8 @@ mkdir -p renpy/gl2
 mkdir -p renpy/text
 
 
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local CC=gcc CXX=g++ python3.9 setup.py build_ext --inplace --cython-language=c --cython-c-in-temp || true
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 CC=gcc CXX=g++ python3.9 setup.py build_ext --inplace --cython-language=c --cython-c-in-temp || true
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py build_ext --inplace --cython-language=c || true
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace --cython-language=c || true
 popd
 
 # Создание символических ссылок

@@ -96,7 +96,7 @@ ls -la /opt/devkitpro/portlibs/switch/lib/pkgconfig/ | grep -E "sdl2|openal|mpg1
 
 # ========== НАСТРОЙКА Python для Switch ==========
 echo "Настройка Python для Switch..."
-if [ ! -f "$DEVKITPRO/portlibs/switch/lib/libpython3.11.a" ] && [ ! -f "$DEVKITPRO/portlibs/switch/lib/libpython3.9.a" ]; then
+if [ ! -f "$DEVKITPRO/portlibs/switch/lib/libpython3.9.a" ]; then
     echo "Python для Switch не найден. Установка..."
     
     # Попробуем найти альтернативный источник Python для Switch

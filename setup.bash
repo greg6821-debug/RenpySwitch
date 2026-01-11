@@ -25,7 +25,7 @@ python3.9 -m pip --version
 
 # Установка Cython 0.29.x (обязательно, а не 3.0+)
 python3.9 -m pip install --upgrade pip
-python3.9 -m pip install "Cython==0.29.24"  # Критически важно!
+python3.9 -m pip install "Cython==0.29.37"  # Критически важно!
 python3.9 -m pip install future six typing requests ecdsa pefile setuptools wheel
 python3.9 -m pip install pycryptodomex numpy
 

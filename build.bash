@@ -3,14 +3,25 @@ set -e
 
 export DEVKITPRO=/opt/devkitpro
 
-# ЗАГРУЖАЕМ ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ devkitPro ПЕРЕД НАЧАЛОМ
-if [ -f "/opt/devkitpro/switchvars.sh" ]; then
-    echo "Загрузка переменных окружения Switch..."
-    source /opt/devkitpro/switchvars.sh
-else
-    echo "Ошибка: switchvars.sh не найден!"
-    exit 1
-fi
+# ========== СБОРКА ДЛЯ ХОСТА (без переменных окружения Switch) ==========
+echo "=== Сборка хостовых модулей ==="
+
+# Сохраняем текущие переменные окружения
+OLD_PATH="$PATH"
+OLD_CC="$CC"
+OLD_CXX="$CXX"
+OLD_CFLAGS="$CFLAGS"
+OLD_LDFLAGS="$LDFLAGS"
+
+# Очищаем переменные окружения devkitPro для хостовой сборки
+export PATH=$(echo "$PATH" | sed 's|/opt/devkitpro/[^:]*:||g' | sed 's|:/opt/devkitpro/[^:]*||g')
+unset CC
+unset CXX
+unset CFLAGS
+unset LDFLAGS
+unset PKG_CONFIG_PATH
+unset PKG_CONFIG_LIBDIR
+
 
 # Проверяем, находимся ли мы в правильной директории
 if [ ! -d "pygame_sdl2-source" ] && [ -d "renpy-build" ]; then
@@ -63,6 +74,25 @@ mkdir -p renpy/audio
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py build_ext --inplace || true
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
 popd
+
+
+
+echo "=== Сборка для Nintendo Switch ==="
+
+# Восстанавливаем переменные окружения devkitPro
+export PATH="$OLD_PATH"
+export CC="$OLD_CC"
+export CXX="$OLD_CXX"
+export CFLAGS="$OLD_CFLAGS"
+export LDFLAGS="$OLD_LDFLAGS"
+# ЗАГРУЖАЕМ ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ devkitPro ПЕРЕД НАЧАЛОМ
+if [ -f "/opt/devkitpro/switchvars.sh" ]; then
+    echo "Загрузка переменных окружения Switch..."
+    source /opt/devkitpro/switchvars.sh
+else
+    echo "Ошибка: switchvars.sh не найден!"
+    exit 1
+fi
 
 # Компиляция для Switch
 echo "Building for Switch..."

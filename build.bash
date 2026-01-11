@@ -47,6 +47,8 @@ fi
 
 echo "Cython version:"
 python3.9 -m cython --version
+which cython
+cython --version
 
 # Компиляция pygame_sdl2 для хоста
 echo "Building pygame_sdl2 for host..."

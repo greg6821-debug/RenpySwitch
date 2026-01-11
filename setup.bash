@@ -128,20 +128,20 @@ fi
 
 # ========== Исправление CMake флагов ==========
 echo "Исправление CMake флагов для Switch..."
-if [ -f "$DEVKITPRO/switch.cmake" ]; then
+if [ -f "$DEVKITPRO/cmake/Switch.cmake" ]; then
     # Создаем backup оригинального файла
-    cp "$DEVKITPRO/switch.cmake" "$DEVKITPRO/switch.cmake.backup"
+    cp "$DEVKITPRO/cmake/Switch.cmake" "$DEVKITPRO/cmake/Switch.cmake.backup"
     
     # Исправляем флаги линковки
-    sed -i 's/set(CMAKE_EXE_LINKER_FLAGS_INIT "/set(CMAKE_EXE_LINKER_FLAGS_INIT "-fPIC /g' "$DEVKITPRO/switch.cmake"
+    sed -i 's/set(CMAKE_EXE_LINKER_FLAGS_INIT "/set(CMAKE_EXE_LINKER_FLAGS_INIT "-fPIC /g' "$DEVKITPRO/cmake/Switch.cmake"
     
     # Добавляем поддержку статических библиотек Python
-    echo "" >> "$DEVKITPRO/switch.cmake"
-    echo "# Python поддержка" >> "$DEVKITPRO/switch.cmake"
-    echo 'set(Python3_LIBRARIES ${PORTLIBS}/lib/libpython3.9.a)' >> "$DEVKITPRO/switch.cmake"
-    echo 'set(Python3_INCLUDE_DIRS ${PORTLIBS}/include/python3.9)' >> "$DEVKITPRO/switch.cmake"
-    echo 'set(PYTHON_LIBRARY ${PORTLIBS}/lib/libpython3.9.a)' >> "$DEVKITPRO/switch.cmake"
-    echo 'set(PYTHON_INCLUDE_DIR ${PORTLIBS}/include/python3.9)' >> "$DEVKITPRO/switch.cmake"
+    echo "" >> "$DEVKITPRO/cmake/Switch.cmake"
+    echo "# Python поддержка" >> "$DEVKITPRO/cmake/Switch.cmake"
+    echo 'set(Python3_LIBRARIES ${PORTLIBS}/lib/libpython3.9.a)' >> "$DEVKITPRO/cmake/Switch.cmake"
+    echo 'set(Python3_INCLUDE_DIRS ${PORTLIBS}/include/python3.9)' >> "$DEVKITPRO/cmake/Switch.cmake"
+    echo 'set(PYTHON_LIBRARY ${PORTLIBS}/lib/libpython3.9.a)' >> "$DEVKITPRO/cmake/Switch.cmake"
+    echo 'set(PYTHON_INCLUDE_DIR ${PORTLIBS}/include/python3.9)' >> "$DEVKITPRO/cmake/Switch.cmake"
     
     echo "Файл switch.cmake обновлен"
 else

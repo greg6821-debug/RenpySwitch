@@ -45,6 +45,9 @@ if ! command -v python3.9 &> /dev/null; then
     apt-get install -y python3.9 python3.9-dev python3.9-distutils
 fi
 
+echo "Cython version:"
+python3.9 -m cython --version
+
 # Компиляция pygame_sdl2 для хоста
 echo "Building pygame_sdl2 for host..."
 pushd pygame_sdl2-source

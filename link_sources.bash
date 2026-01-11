@@ -4,17 +4,17 @@ mkdir -p source/module
 mkdir -p include/module include/module/pygame_sdl2 include/module/src
 
 # Временная отладка в link_sources.bash
-echo "Файлы в renpy-source/:"
-if [ -d "renpy-source/" ]; then
-    echo "Содержимое renpy-source/:"
-    ls -la renpy-source/
-    
-    echo ""
-    echo "Рекурсивный обход renpy-source/:"
-    find renpy-source/ -type f | sort
-else
-    echo "Директория renpy-source/ не существует"
-fi
+#echo "Файлы в renpy-source/:"
+#if [ -d "renpy-source/" ]; then
+#    echo "Содержимое renpy-source/:"
+#    ls -la renpy-source/
+#    
+#    echo ""
+#    echo "Рекурсивный обход renpy-source/:"
+#    find renpy-source/ -type f | sort
+#else
+#    echo "Директория renpy-source/ не существует"
+#fi
 
 # Проверяем существование файлов перед созданием ссылок
 check_and_link() {

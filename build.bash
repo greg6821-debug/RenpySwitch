@@ -68,7 +68,7 @@ rm -rf gen3 gen3-static build
 mkdir -p renpy/audio
 mkdir -p renpy/styledata
 mkdir -p renpy/display
-
+mkdir -p renpy/uguu
 
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py build_ext --inplace || true
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true

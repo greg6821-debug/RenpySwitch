@@ -16,7 +16,7 @@ project(renpy-switch-modules)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 11)
-
+add_compile_definitions(__SWITCH__)
 
 
 # Устанавливаем переменные окружения для pkg-config ПЕРЕД find_package

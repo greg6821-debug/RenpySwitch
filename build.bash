@@ -11,48 +11,23 @@ pushd pygame_sdl2-source
 RENPY_STATIC=1 python3.9 setup.py install_headers
 popd
 
-# Сначала копируем заголовочные файлы из pygame_sdl2-source
-echo "Копируем заголовочные файлы pygame_sdl2..."
-if [ -d "pygame_sdl2-source/include/pygame_sdl2" ]; then
-    cp -r pygame_sdl2-source/include/pygame_sdl2/* include/module/pygame_sdl2/
-elif [ -d "pygame_sdl2-source/pygame_sdl2" ]; then
-    # Ищем .h файлы в исходниках
-    find pygame_sdl2-source -name "*.h" -exec cp --parents {} include/module/ \;
-else
-    echo "Предупреждение: Не могу найти заголовочные файлы pygame_sdl2"
-fi
-
-# Проверяем, что файлы скопированы
-echo "Проверка скопированных файлов:"
-find include/module -name "*.h" | head -10
-
-# Теперь собираем pygame_sdl2 с указанием include-путей
 pushd pygame_sdl2-source
-CFLAGS="-I$PWD/../include/module" PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace || true
+PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace || true
+rm -rf gen
 popd
 
-# Копируем собранные файлы и заголовки для renpy
-cp -r pygame_sdl2-source/pygame_sdl2/*.so pygame_sdl2-source/pygame_sdl2/*.py source/module/ 2>/dev/null || true
-
-# Теперь собираем renpy с указанием путей
 pushd renpy-source/module
-CFLAGS="-I$PWD/../../include/module -I$PWD/../../pygame_sdl2-source" \
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local \
-RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
+# СОЗДАЕМ ДИРЕКТОРИЮ ПЕРЕД СБОРКОЙ
+mkdir -p renpy/audio
+mkdir -p renpy/styledata
+mkdir -p renpy/display
+mkdir -p renpy/uguu
+mkdir -p renpy/gl
+mkdir -p renpy/gl2
+mkdir -p renpy/text
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
+rm -rf gen
 popd
-
-
-
-
-# pushd pygame_sdl2-source
-# PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace || true
-# rm -rf gen
-# popd
-
-# pushd renpy-source/module
-# RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
-# rm -rf gen
-# popd
 
 rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
 rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module

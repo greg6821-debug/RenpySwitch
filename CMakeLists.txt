@@ -30,9 +30,14 @@ endif()
 # ------------------------------------------------------------------------------
 # Compile definitions (Python / Switch)
 # ------------------------------------------------------------------------------
+#add_compile_definitions(
+#    __SWITCH__
+#    Py_NO_ENABLE_SHARED
+#)
 add_compile_definitions(
     __SWITCH__
     Py_NO_ENABLE_SHARED
+    RENPY_PYGAME_SDL2
 )
 
 # ------------------------------------------------------------------------------
@@ -259,7 +264,7 @@ endif()
 # Executable
 # ------------------------------------------------------------------------------
 add_executable(renpy-switch
-    source/main.c
+    #source/main.c
     ${SOURCES}
 )
 

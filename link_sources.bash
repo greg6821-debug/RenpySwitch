@@ -71,8 +71,8 @@ check_and_link "renpy-source/module/renpysound_core.c" "source/module/renpysound
 check_and_link "renpy-source/module/ttgsubtable.c" "source/module/ttgsubtable.c"
 
 # Сгенерированные файлы renpy
-check_and_link "renpy-source/module/gen3-static/_renpy.c" "source/module/_renpy.c"
-check_and_link "renpy-source/module/gen3-static/_renpybidi.c" "source/module/_renpybidi.c"
+#check_and_link "renpy-source/module/gen3-static/_renpy.c" "source/module/_renpy.c"
+#check_and_link "renpy-source/module/gen3-static/_renpybidi.c" "source/module/_renpybidi.c"
 check_and_link "renpy-source/module/gen3-static/renpy.audio.renpysound.c" "source/module/renpy.audio.renpysound.c"
 check_and_link "renpy-source/module/gen3-static/renpy.display.accelerator.c" "source/module/renpy.display.accelerator.c"
 check_and_link "renpy-source/module/gen3-static/renpy.display.matrix.c" "source/module/renpy.display.matrix.c"
@@ -82,7 +82,7 @@ check_and_link "renpy-source/module/gen3-static/renpy.gl.glenviron_shader.c" "so
 check_and_link "renpy-source/module/gen3-static/renpy.gl.glrtt_copy.c" "source/module/renpy.gl.glrtt_copy.c"
 check_and_link "renpy-source/module/gen3-static/renpy.gl.glrtt_fbo.c" "source/module/renpy.gl.glrtt_fbo.c"
 check_and_link "renpy-source/module/gen3-static/renpy.gl.gltexture.c" "source/module/renpy.gl.gltexture.c"
-check_and_link "renpy-source/module/gen3-static/renpy.pydict.c" "source/module/renpy.pydict.c"
+#check_and_link "renpy-source/module/gen3-static/renpy.pydict.c" "source/module/renpy.pydict.c"
 check_and_link "renpy-source/module/gen3-static/renpy.style.c" "source/module/renpy.style.c"
 check_and_link "renpy-source/module/gen3-static/renpy.styledata.style_activate_functions.c" "source/module/renpy.styledata.style_activate_functions.c"
 check_and_link "renpy-source/module/gen3-static/renpy.styledata.style_functions.c" "source/module/renpy.styledata.style_functions.c"
@@ -194,8 +194,8 @@ echo "=== Checking for additional header files ==="
 # ADD. Проверяем наличие всех необходимых файлов
 echo "=== Verifying all required files ==="
 required_files=(
-    "source/module/_renpy.c"
-    "source/module/_renpybidi.c"
+    #"source/module/_renpy.c"
+    #"source/module/_renpybidi.c"
     "source/module/renpy.audio.renpysound.c"
     "source/module/renpysound_core.c"
     "source/module/renpy.display.accelerator.c"
@@ -206,7 +206,7 @@ required_files=(
     "source/module/renpy.gl.glrtt_copy.c"
     "source/module/renpy.gl.glrtt_fbo.c"
     "source/module/renpy.gl.gltexture.c"
-    "source/module/renpy.pydict.c"
+    #"source/module/renpy.pydict.c"
     "source/module/renpy.style.c"
 )
 

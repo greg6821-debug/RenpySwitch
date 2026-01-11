@@ -27,7 +27,12 @@ if(NOT Python3_FOUND)
 endif()
 
 # Добавляем библиотеку
-add_library(renpy-switch-modules STATIC source/module/*.c)
+if(NOT TARGET renpy-switch-modules)
+    add_library(renpy-switch-modules STATIC ${SOURCES})
+else()
+    message(STATUS "Target renpy-switch-modules already exists, adding sources...")
+    target_sources(renpy-switch-modules PRIVATE ${SOURCES})
+endif()
 
 # Подключаем заголовки
 target_include_directories(renpy-switch-modules PRIVATE

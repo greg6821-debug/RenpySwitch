@@ -36,7 +36,7 @@ find source/module -type d -empty -delete
 
 rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
 find include/module/pygame_sdl2 -mindepth 2 -type f -exec mv -t include/module/pygame_sdl2 {} +
-mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src
+#mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src
 rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ include/module
 #mv source/module/hydrogen.c include/module/libhydrogen
 find include/module -type d -empty -delete

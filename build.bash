@@ -55,7 +55,7 @@ cython --version
 # Компиляция pygame_sdl2 для хоста
 echo "Building pygame_sdl2 for host..."
 pushd pygame_sdl2-source
-rm -rf gen gen-static build
+rm -rf gen3 gen3-static build
 python3.9 setup.py build_ext --inplace --cython-language=c || true
 PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace --cython-language=c || true
 popd
@@ -69,7 +69,7 @@ popd
 # Компиляция renpy модулей для хоста
 echo "Building Ren'Py modules for host..."
 pushd renpy-source/module
-rm -rf gen gen-static build
+rm -rf gen3 gen3-static build
 
 # СОЗДАЕМ ДИРЕКТОРИЮ ПЕРЕД СБОРКОЙ
 mkdir -p renpy/audio

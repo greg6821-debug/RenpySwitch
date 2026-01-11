@@ -95,7 +95,7 @@ cp sources/main.c source/main.c
 pushd source/module
 echo "== list source/module =="
 ls
-rm renpy.encryption.c hydrogen.c tinyfiledialogs.c
+rm renpy.encryption.c tinyfiledialogs.c #hydrogen.c 
 #rm tinyfiledialogs.c _renpytfd.c sdl2.c pygame_sdl2.mixer.c pygame_sdl2.font.c pygame_sdl2.mixer_music.c
 popd
 

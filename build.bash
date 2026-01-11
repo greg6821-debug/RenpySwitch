@@ -32,31 +32,27 @@ set -e
 
 export DEVKITPRO=/opt/devkitpro
 
-# Создаем директории для исходников и заголовков
-mkdir -p source/module
-mkdir -p include/module include/module/pygame_sdl2
-
-# 1. Сначала собираем и устанавливаем pygame_sdl2
-echo "=== Building pygame_sdl2 ==="
+# 1. Устанавливаем pygame_sdl2 как обычный пакет Python
 pushd pygame_sdl2-source
-PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace
-python3.9 setup.py build
-python3.9 setup.py install_headers
-python3.9 setup.py install --user
+pip3 install --user .
 popd
 
-# 2. Копируем заголовочные файлы pygame_sdl2
-echo "=== Copying pygame_sdl2 headers ==="
-rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
-find include/module/pygame_sdl2 -mindepth 2 -type f -exec mv -t include/module/pygame_sdl2 {} +
+# 2. Находим, куда установились заголовки
+PYGAME_SDL2_INCLUDE=$(python3 -c "import pygame_sdl2; import os; print(os.path.dirname(pygame_sdl2.__file__))" 2>/dev/null || echo "")
+if [ -n "$PYGAME_SDL2_INCLUDE" ]; then
+    echo "Found pygame_sdl2 at: $PYGAME_SDL2_INCLUDE"
+    # Копируем заголовки
+    find "$PYGAME_SDL2_INCLUDE" -name "*.h" -exec cp {} include/module/pygame_sdl2/ 2>/dev/null || true
+fi
 
-# 3. Теперь собираем модуль Ren'Py
-echo "=== Building Ren'Py module ==="
+# 3. Компилируем Ren'Py с указанием правильных путей
 pushd renpy-source/module
-# Указываем путь к заголовкам pygame_sdl2
-export C_INCLUDE_PATH="$(pwd)/../../include/module:$C_INCLUDE_PATH"
-export CFLAGS="-I$(pwd)/../../include/module"
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace
+# Находим системные пути Python
+PYTHON_INCLUDE=$(python3 -c "from sysconfig import get_paths; print(get_paths()['include'])")
+# Компилируем с явными путями
+CFLAGS="-I$PYTHON_INCLUDE -I/usr/include/SDL2" \
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local \
+python3.9 setup.py build_ext --inplace
 popd
 
 # 4. Копируем исходники модулей

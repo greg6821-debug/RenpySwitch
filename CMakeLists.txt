@@ -37,7 +37,9 @@ endif()
 add_compile_definitions(
     __SWITCH__
     Py_NO_ENABLE_SHARED
-    RENPY_PYGAME_SDL2
+    RENPY_BUILD
+    RENPY_PYTHON
+    PYGAME_SDL2_INTERNAL
 )
 
 # ------------------------------------------------------------------------------

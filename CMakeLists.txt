@@ -32,7 +32,7 @@ endif()
 set(C_FLAGS
     -DFRIBIDI_ENTRY=
     -DHAVE_CONFIG_H=1
-    -DPy_LIMITED_API=0x03090000
+    #-DPy_LIMITED_API=0x03090000
     -D__SWITCH__  # Важно для Switch-специфичного кода
     -mcpu=cortex-a57+fp+simd  # Архитектура Switch
     -ffunction-sections
@@ -47,7 +47,7 @@ set(OPTIMIZATION_FLAGS
 
 # Обновляем пути для Python 3.9
 set(INCLUDES
-    ${DEVKITPRO}/portlibs/switch/include/python3.9
+    #${DEVKITPRO}/portlibs/switch/include/python3.9
     ${DEVKITPRO}/portlibs/switch/include/fribidi
     include
     include/module
@@ -61,8 +61,8 @@ set(SOURCES
     source/module/IMG_savepng.c
     source/module/SDL2_rotozoom.c
     source/module/SDL_gfxPrimitives.c
-    source/module/_renpy.c
-    source/module/_renpybidi.c
+    #source/module/_renpy.c
+    #source/module/_renpybidi.c
     source/module/alphablit.c
     source/module/core.c
     source/module/ffmedia.c
@@ -99,7 +99,7 @@ set(SOURCES
     source/module/renpy.gl.glrtt_copy.c
     source/module/renpy.gl.glrtt_fbo.c
     source/module/renpy.gl.gltexture.c
-    source/module/renpy.pydict.c
+    #source/module/renpy.pydict.c
     source/module/renpy.style.c
     source/module/renpy.styledata.style_activate_functions.c
     source/module/renpy.styledata.style_functions.c
@@ -144,17 +144,17 @@ if(NOT CMAKE_CROSSCOMPILING)
 endif()
 
 # Устанавливаем корректные пути для Python
-find_file(PYTHON_LIBRARY libpython3.9.a 
-    PATHS ${DEVKITPRO}/portlibs/switch/lib
-    NO_DEFAULT_PATH
-    REQUIRED
-)
+#find_file(PYTHON_LIBRARY libpython3.9.a 
+#    PATHS ${DEVKITPRO}/portlibs/switch/lib
+#    NO_DEFAULT_PATH
+#    REQUIRED
+#)
 
-find_path(PYTHON_INCLUDE_DIR Python.h
-    PATHS ${DEVKITPRO}/portlibs/switch/include/python3.9
-    NO_DEFAULT_PATH
-    REQUIRED
-)
+#find_path(PYTHON_INCLUDE_DIR Python.h
+#    PATHS ${DEVKITPRO}/portlibs/switch/include/python3.9
+#    NO_DEFAULT_PATH
+#    REQUIRED
+#)
 
 
 message(STATUS "PKG_CONFIG_EXECUTABLE = $ENV{PKG_CONFIG_EXECUTABLE}")
@@ -210,7 +210,7 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 # Связываем библиотеки - УБИРАЕМ IMPORTED_TARGET
 target_link_libraries(${PROJECT_NAME}
-    ${PYTHON_LIBRARY}
+    #${PYTHON_LIBRARY}
     ${DEVKITPRO}/portlibs/switch/lib/libfribidi.a
     m
     ${EGL_LIBRARIES}

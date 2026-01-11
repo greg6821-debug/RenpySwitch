@@ -145,7 +145,7 @@ check_and_link "renpy-source/module/renpysound_core.h" "include/module/renpysoun
 check_and_link "renpy-source/module/ttgsubtable.h" "include/module/ttgsubtable.h"
 
 # Новые модули для Ren'Py 8
-check_and_link "renpy-source/module/gen3-static/renpy.compat.dictviews.c" "source/module/renpy.compat.dictviews.c"
+#check_and_link "renpy-source/module/gen3-static/renpy.compat.dictviews.c" "source/module/renpy.compat.dictviews.c"
 check_and_link "renpy-source/module/gen3-static/renpy.gl2.gl2draw.c" "source/module/renpy.gl2.gl2draw.c"
 check_and_link "renpy-source/module/gen3-static/renpy.gl2.gl2mesh.c" "source/module/renpy.gl2.gl2mesh.c"
 check_and_link "renpy-source/module/gen3-static/renpy.gl2.gl2mesh2.c" "source/module/renpy.gl2.gl2mesh2.c"

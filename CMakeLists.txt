@@ -240,7 +240,7 @@ pkg_check_modules(LIBDRM REQUIRED libdrm_nouveau)
 pkg_check_modules(LIBPNG REQUIRED libpng)
 pkg_check_modules(LIBJPEG REQUIRED libjpeg)
 
-add_library(${PROJECT_NAME} STATIC ${SOURCES})
+# add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 # Связываем библиотеки - УБИРАЕМ IMPORTED_TARGET
 target_link_libraries(${PROJECT_NAME}

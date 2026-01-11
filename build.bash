@@ -2,8 +2,6 @@
 set -e
 
 export DEVKITPRO=/opt/devkitpro
-export CFLAGS="-DCYTHON_USE_PYTHON_UNICODE=0"
-export CPPFLAGS="-DCYTHON_USE_PYTHON_UNICODE=0"
 
 # ========== СБОРКА ДЛЯ ХОСТА (без переменных окружения Switch) ==========
 echo "=== Сборка хостовых модулей ==="
@@ -98,6 +96,11 @@ export CC="$OLD_CC"
 export CXX="$OLD_CXX"
 export CFLAGS="$OLD_CFLAGS"
 export LDFLAGS="$OLD_LDFLAGS"
+
+export DEVKITPRO=/opt/devkitpro
+export CFLAGS="-DCYTHON_USE_PYTHON_UNICODE=0"
+export CPPFLAGS="-DCYTHON_USE_PYTHON_UNICODE=0"
+
 # ЗАГРУЖАЕМ ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ devkitPro ПЕРЕД НАЧАЛОМ
 if [ -f "/opt/devkitpro/switchvars.sh" ]; then
     echo "Загрузка переменных окружения Switch..."

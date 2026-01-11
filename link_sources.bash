@@ -3,6 +3,10 @@
 mkdir -p source/module
 mkdir -p include/module include/module/pygame_sdl2 include/module/src
 
+# Временная отладка в link_sources.bash
+echo "=== DEBUG: Searching for all .c files ==="
+find . -name "*.c" -type f | grep -i renpy | head -30
+
 # Проверяем существование файлов перед созданием ссылок
 check_and_link() {
     if [ -f "$1" ]; then

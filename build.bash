@@ -15,17 +15,123 @@ RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 pyth
 rm -rf gen
 popd
 
-rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
+#rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
 rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module
 find source/module -mindepth 2 -type f -exec mv -t source/module {} +
-find source/module -type d -empty -delete
+#find source/module -type d -empty -delete
 
-rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
-find include/module/pygame_sdl2 -mindepth 2 -type f -exec mv -t include/module/pygame_sdl2 {} +
-mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src
+#rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
+#find include/module/pygame_sdl2 -mindepth 2 -type f -exec mv -t include/module/pygame_sdl2 {} +
+#mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src
 rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ include/module
-#mv source/module/hydrogen.c include/module/libhydrogen
-find include/module -type d -empty -delete
+##mv source/module/hydrogen.c include/module/libhydrogen
+#find include/module -type d -empty -delete
+
+
+
+
+# Исправленный блок копирования заголовочных файлов pygame_sdl2:
+echo "Копирование заголовочных файлов pygame_sdl2..."
+rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/
+find include/module -name "*.h" -exec mv -t include/module {} + 2>/dev/null || true
+
+# Явное копирование критических файлов
+cp -f pygame_sdl2-source/src/pygame_sdl2.h include/module/
+mkdir -p include/module/pygame_sdl2
+cp -f pygame_sdl2-source/src/pygame_sdl2.h include/module/pygame_sdl2/
+cp -f pygame_sdl2-source/src/surface.h include/module/pygame_sdl2/
+
+# Копирование в системные директории для сборки
+sudo mkdir -p /usr/include/python3.9/pygame_sdl2
+sudo cp -f pygame_sdl2-source/src/pygame_sdl2.h /usr/include/python3.9/pygame_sdl2/
+sudo cp -f pygame_sdl2-source/src/*.h /usr/include/python3.9/pygame_sdl2/ 2>/dev/null || true
+
+
+echo "=== DEBUG: Проверка содержимого pygame_sdl2-source ==="
+echo "Текущая директория: $(pwd)"
+echo ""
+
+# Проверяем существование директории
+if [ -d "pygame_sdl2-source" ]; then
+    echo "Директория pygame_sdl2-source существует"
+    echo "Полный путь: $(realpath pygame_sdl2-source)"
+    echo ""
+    
+    # Выводим структуру директории
+    echo "Структура директории:"
+    find pygame_sdl2-source -type f -name "*.h" | sort
+    echo ""
+    
+    echo "Все файлы .h в pygame_sdl2-source:"
+    find pygame_sdl2-source -name "*.h" -type f -exec ls -la {} \; | head -30
+    echo ""
+    
+    echo "Ищем файл pygame_sdl2.h:"
+    find pygame_sdl2-source -name "pygame_sdl2.h" -type f
+    echo ""
+    
+    # Проверяем конкретные пути
+    echo "Проверка src/pygame_sdl2.h:"
+    if [ -f "pygame_sdl2-source/src/pygame_sdl2.h" ]; then
+        echo "Файл найден: $(realpath pygame_sdl2-source/src/pygame_sdl2.h)"
+        echo "Размер: $(wc -l < pygame_sdl2-source/src/pygame_sdl2.h) строк"
+        echo "Первые 5 строк файла:"
+        head -5 pygame_sdl2-source/src/pygame_sdl2.h
+    else
+        echo "Файл НЕ найден: pygame_sdl2-source/src/pygame_sdl2.h"
+    fi
+    echo ""
+    
+    echo "Содержимое src/:"
+    ls -la pygame_sdl2-source/src/ 2>/dev/null || echo "Директория src не существует"
+    echo ""
+    
+    echo "Содержимое build/:"
+    find pygame_sdl2-source/build -name "*.h" -type f 2>/dev/null | head -10
+    echo ""
+    
+    # Проверяем include-директории
+    echo "Проверка include директорий:"
+    echo "/usr/include/python3.9/pygame_sdl2/:"
+    ls -la /usr/include/python3.9/pygame_sdl2/ 2>/dev/null || echo "Директория не существует"
+    echo ""
+    
+    echo "include/module/:"
+    find include/module -name "*.h" -type f 2>/dev/null | head -20
+    echo ""
+    
+    echo "include/module/pygame_sdl2/:"
+    ls -la include/module/pygame_sdl2/ 2>/dev/null || echo "Директория не существует"
+    echo ""
+    
+    # Выводим дерево структуры
+    echo "Дерево директории (первые 3 уровня):"
+    tree -L 3 pygame_sdl2-source 2>/dev/null || find pygame_sdl2-source -maxdepth 3 -type d | sed 's|[^/]*/|- |g'
+    echo ""
+    
+    # Проверяем конфигурацию setup.py
+    echo "Проверка setup.py:"
+    if [ -f "pygame_sdl2-source/setup.py" ]; then
+        echo "Настройки include_dirs:"
+        grep -n "include_dirs\|include.*dir" pygame_sdl2-source/setup.py | head -10
+    fi
+    echo ""
+    
+    # Проверяем файлы в сборке
+    echo "Сгенерированные файлы после build_ext:"
+    find pygame_sdl2-source -name "*.so" -o -name "*.c" -o -name "*.pyx" | head -20
+    echo ""
+    
+else
+    echo "ОШИБКА: Директория pygame_sdl2-source не существует!"
+    echo "Содержимое текущей директории:"
+    ls -la
+fi
+
+echo "=== КОНЕЦ DEBUG ==="
+echo ""
+
+
 
 
 

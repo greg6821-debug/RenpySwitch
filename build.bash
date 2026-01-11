@@ -23,6 +23,11 @@ unset PKG_CONFIG_PATH
 unset PKG_CONFIG_LIBDIR
 
 
+# --- FIX: запрет Py_UNICODE для Cython (Python 3.9+) ---
+export CFLAGS="-DCYTHON_USE_PYTHON_UNICODE=0"
+export CPPFLAGS="-DCYTHON_USE_PYTHON_UNICODE=0"
+
+
 # Проверяем, находимся ли мы в правильной директории
 if [ ! -d "pygame_sdl2-source" ] && [ -d "renpy-build" ]; then
     echo "Переход в директорию renpy-build..."
@@ -54,7 +59,10 @@ cython --version
 echo "Building pygame_sdl2 for host..."
 pushd pygame_sdl2-source
 rm -rf gen3 gen3-static build
+CFLAGS="$CFLAGS" CPPFLAGS="$CPPFLAGS" \
 python3.9 setup.py build_ext --inplace || true
+
+CFLAGS="$CFLAGS" CPPFLAGS="$CPPFLAGS" \
 PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace || true
 popd
 
@@ -79,14 +87,22 @@ mkdir -p renpy/gl2
 mkdir -p renpy/text
 
 
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py build_ext --inplace || true
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
+CFLAGS="$CFLAGS" CPPFLAGS="$CPPFLAGS" \
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local \
+python3.9 setup.py build_ext --inplace || true
+
+CFLAGS="$CFLAGS" CPPFLAGS="$CPPFLAGS" \
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local \
+RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
 popd
 
 # Создание символических ссылок
 echo "Linking source files..."
 bash link_sources.bash
 
+echo "=== Контрольная проверка  Py_UNICODE ==="
+grep -R "Py_UNICODE" renpy-source/module/gen3
+grep -R "Py_UNICODE" pygame_sdl2-source/gen3
 
 echo "=== Сборка для Nintendo Switch ==="
 
@@ -98,8 +114,6 @@ export CFLAGS="$OLD_CFLAGS"
 export LDFLAGS="$OLD_LDFLAGS"
 
 export DEVKITPRO=/opt/devkitpro
-export CFLAGS="-DCYTHON_USE_PYTHON_UNICODE=0"
-export CPPFLAGS="-DCYTHON_USE_PYTHON_UNICODE=0"
 
 # ЗАГРУЖАЕМ ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ devkitPro ПЕРЕД НАЧАЛОМ
 if [ -f "/opt/devkitpro/switchvars.sh" ]; then

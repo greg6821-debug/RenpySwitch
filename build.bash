@@ -82,12 +82,12 @@ mkdir -p source/module
 mkdir -p include/module include/module/pygame_sdl2
 
 pushd pygame_sdl2-source
-PYGAME_SDL2_STATIC=1 python3 setup.py || true
+PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace || true
 rm -rf gen
 popd
 
 pushd renpy-source/module
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3 setup.py || true
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
 rm -rf gen
 popd
 
@@ -104,14 +104,14 @@ rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ inc
 find include/module -type d -empty -delete
 
 pushd pygame_sdl2-source
-python3 setup.py build
-python3 setup.py install_headers
-python3 setup.py install
+python3.9 setup.py build
+python3.9 setup.py install_headers
+python3.9 setup.py install
 popd
 
 pushd renpy-source/module
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py build
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3 setup.py install
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py build
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py install
 popd
 
 cp sources/main.c source/main.c
@@ -165,7 +165,7 @@ cp -r renpy_clear/renpy private/renpy
 cp -r renpy_clear/lib/python3.9/ private/lib/
 cp renpy_clear/renpy.py private/main.py
 rm -rf private/renpy/common
-python3 generate_private.py
+python3.9 generate_private.py
 rm -rf private
 
 

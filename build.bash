@@ -64,10 +64,6 @@ echo "Building Ren'Py modules for host..."
 pushd renpy-source/module
 rm -rf gen3 gen3-static build
 
-# Создание символических ссылок
-echo "Linking source files..."
-bash link_sources.bash
-
 # СОЗДАЕМ ДИРЕКТОРИЮ ПЕРЕД СБОРКОЙ
 mkdir -p renpy/audio
 mkdir -p renpy/styledata
@@ -76,6 +72,9 @@ RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py 
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
 popd
 
+# Создание символических ссылок
+echo "Linking source files..."
+bash link_sources.bash
 
 
 echo "=== Сборка для Nintendo Switch ==="

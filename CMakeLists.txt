@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.10)
 
 # Проверка кросс-компиляции ДО определения проекта
 if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
@@ -11,6 +11,42 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 endif()
 
 project(renpy-switch-modules)
+
+
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11)
+
+# Пытаемся найти Python 3.9
+find_package(Python3 3.9 REQUIRED)
+
+# Если не нашли, то задаем вручную
+if(NOT Python3_FOUND)
+    set(Python3_INCLUDE_DIRS /opt/devkitpro/portlibs/switch/include/python3.9)
+    set(Python3_LIBRARIES /opt/devkitpro/portlibs/switch/lib/libpython3.9.a)
+endif()
+
+# Добавляем библиотеку
+add_library(renpy-switch-modules STATIC source/module/*.c)
+
+# Подключаем заголовки
+target_include_directories(renpy-switch-modules PRIVATE
+    ${Python3_INCLUDE_DIRS}
+    include/module
+)
+
+# Линкуем Python библиотеку
+target_link_libraries(renpy-switch-modules
+    ${Python3_LIBRARIES}
+)
+
+# Устанавливаем флаги компиляции
+target_compile_options(renpy-switch-modules PRIVATE
+    -fPIC
+    -O2
+)
+
+
 
 # Устанавливаем переменные окружения для pkg-config ПЕРЕД find_package
 set(ENV{PKG_CONFIG_EXECUTABLE} /opt/devkitpro/portlibs/switch/bin/aarch64-none-elf-pkg-config)

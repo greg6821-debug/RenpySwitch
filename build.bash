@@ -6,7 +6,10 @@ mkdir -p source/module
 mkdir -p include/module include/module/pygame_sdl2
 
 
-
+pushd pygame_sdl2-source
+CFLAGS="-I$PWD/../include/module" \
+python3.9 setup.py build_ext --inplace || true
+popd
 
 # Сначала копируем заголовочные файлы из pygame_sdl2-source
 echo "Копируем заголовочные файлы pygame_sdl2..."

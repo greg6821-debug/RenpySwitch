@@ -10,14 +10,38 @@ apt-get -y upgrade
 apt -y install build-essential checkinstall
 apt -y install libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev
 
-apt -y install python3.9 python3.9-dev python3.9-pip
+#apt -y install python3 python3-dev python3-pip
 
-apt-get -y install p7zip-full libsdl2-dev libsdl2-image-dev libjpeg-dev libpng-dev libsdl2-ttf-dev libsdl2-mixer-dev libavformat-dev libfreetype6-dev libswscale-dev libglew-dev libfribidi-dev libavcodec-dev  libswresample-dev libsdl2-gfx-dev libgl1-mesa-glx
-pip3 uninstall distribute
-pip3 install future six typing requests ecdsa pefile Cython==3.0.12 setuptools
+
+apt -y install python3.9 python3.9-dev python3.9-distutils python3-pip curl wget unzip p7zip-full
+# Установка pip для Python 3.9
+curl -sS https://bootstrap.pypa.io/get-pip.py | python3.9
+python3.9 -m pip --version
+
+
+#apt-get -y install p7zip-full libsdl2-dev libsdl2-image-dev libjpeg-dev libpng-dev libsdl2-ttf-dev libsdl2-mixer-dev libavformat-dev libfreetype6-dev libswscale-dev libglew-dev libfribidi-dev libavcodec-dev  libswresample-dev libsdl2-gfx-dev libgl1-mesa-glx
+#pip3 uninstall distribute
+#pip3 install future six typing requests ecdsa pefile Cython==3.0.12 setuptools
+
+
+# Установка Cython 0.29.x (обязательно, а не 3.0+)
+python3.9 -m pip install --upgrade pip
+python3.9 -m pip install "Cython==0.29.37"  # Критически важно!
+python3.9 -m pip install future six typing requests ecdsa pefile setuptools wheel
+python3.9 -m pip install pycryptodomex numpy
+
+
+# Системные зависимости для компиляции хост-инструментов
+apt-get -y install libsdl2-dev libsdl2-image-dev libjpeg-dev \
+    libpng-dev libsdl2-ttf-dev libsdl2-mixer-dev libavformat-dev \
+    libswscale-dev libglew-dev libfribidi-dev libharfbuzz-dev \
+    libavcodec-dev libswresample-dev libsdl2-gfx-dev libgl1-mesa-glx \
+    libwebp-dev libopenal-dev libvorbis-dev libopusfile-dev \
+    libmpg123-dev libmodplug-dev libflac-dev \
+    pkg-config autoconf automake libtool
+
 
 python3 --version
-python3.9 --version
 
 #curl -LOC - https://github.com/knautilus/Utils/releases/download/v1.0/devkitpro-pkgbuild-helpers-2.2.4-2-any.pkg.tar.xz
 curl -LOC - https://github.com/knautilus/Utils/releases/download/v1.0/python39-switch.zip

@@ -65,6 +65,13 @@ set(INCLUDES
     include/module/src
     include/module/pygame_sdl2
     include/module/pygame_sdl2/src
+	# Добавьте эти пути:
+    ${DEVKITPRO}/portlibs/switch/include
+    /usr/include/python3.9
+    /usr/local/include/python3.9
+    # Путь к сгенерированным заголовочным файлам pygame_sdl2
+    ${CMAKE_CURRENT_SOURCE_DIR}/pygame_sdl2-source/build/lib.linux-x86_64-3.9/pygame_sdl2
+    ${CMAKE_CURRENT_SOURCE_DIR}/pygame_sdl2-source/src
 )
 
 # ------------------------------------------------------------------------------

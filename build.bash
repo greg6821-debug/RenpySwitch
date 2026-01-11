@@ -1,71 +1,31 @@
 set -e
 
-# export DEVKITPRO=/opt/devkitpro
-
-# mkdir -p source/module
-# mkdir -p include/module include/module/pygame_sdl2
-
-# pushd pygame_sdl2-source
-# PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace || true
-# rm -rf gen
-# popd
-
-# pushd renpy-source/module
-# RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
-# rm -rf gen
-# popd
-
-# rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
-# rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module
-# find source/module -mindepth 2 -type f -exec mv -t source/module {} +
-# find source/module -type d -empty -delete
-
-# rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
-# find include/module/pygame_sdl2 -mindepth 2 -type f -exec mv -t include/module/pygame_sdl2 {} +
-# mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src
-# rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ include/module
-# #mv source/module/hydrogen.c include/module/libhydrogen
-# find include/module -type d -empty -delete
-
-
-
-
 export DEVKITPRO=/opt/devkitpro
 
-# 1. Устанавливаем pygame_sdl2 как обычный пакет Python
+mkdir -p source/module
+mkdir -p include/module include/module/pygame_sdl2
+
 pushd pygame_sdl2-source
-pip3 install --user .
+PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace || true
+rm -rf gen
 popd
 
-# 2. Находим, куда установились заголовки
-PYGAME_SDL2_INCLUDE=$(python3 -c "import pygame_sdl2; import os; print(os.path.dirname(pygame_sdl2.__file__))" 2>/dev/null || echo "")
-if [ -n "$PYGAME_SDL2_INCLUDE" ]; then
-    echo "Found pygame_sdl2 at: $PYGAME_SDL2_INCLUDE"
-    # Копируем заголовки
-    find "$PYGAME_SDL2_INCLUDE" -name "*.h" -exec cp {} include/module/pygame_sdl2/ 2>/dev/null || true
-fi
-
-# 3. Компилируем Ren'Py с указанием правильных путей
 pushd renpy-source/module
-# Находим системные пути Python
-PYTHON_INCLUDE=$(python3 -c "from sysconfig import get_paths; print(get_paths()['include'])")
-# Компилируем с явными путями
-CFLAGS="-I$PYTHON_INCLUDE -I/usr/include/SDL2" \
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local \
-python3.9 setup.py build_ext --inplace
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
+rm -rf gen
 popd
 
-# 4. Копируем исходники модулей
-echo "=== Copying module sources ==="
+rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
 rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module
 find source/module -mindepth 2 -type f -exec mv -t source/module {} +
 find source/module -type d -empty -delete
 
-# 5. Копируем заголовочные файлы Ren'Py
-echo "=== Copying Ren'Py headers ==="
+rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
+find include/module/pygame_sdl2 -mindepth 2 -type f -exec mv -t include/module/pygame_sdl2 {} +
+mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src
 rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ include/module
+#mv source/module/hydrogen.c include/module/libhydrogen
 find include/module -type d -empty -delete
-
 
 
 

@@ -446,15 +446,6 @@ int main(int argc, char* argv[])
     argv_w[0] = program_name;
     PySys_SetArgv(1, argv_w);
     
-    
-    // Note: Other modules should be loaded dynamically, not via inittab
-    // because they're large and not needed at startup
-
-    wchar_t* wargv[2];
-    wargv[0] = Py_DecodeLocale("romfs:/Contents/renpy.py", NULL);
-    wargv[1] = NULL;
-
-    PySys_SetArgvEx(1, wargv, 1);
 
     FILE* f = fopen("romfs:/Contents/renpy.py", "r");
     PyRun_SimpleFileEx(f, "renpy.py");

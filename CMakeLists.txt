@@ -30,17 +30,11 @@ endif()
 # ------------------------------------------------------------------------------
 # Compile definitions (Python / Switch)
 # ------------------------------------------------------------------------------
-#add_compile_definitions(
-#    __SWITCH__
-#    Py_NO_ENABLE_SHARED
-#)
 add_compile_definitions(
     __SWITCH__
     Py_NO_ENABLE_SHARED
-    RENPY_BUILD
-    RENPY_PYTHON
-    PYGAME_SDL2_INTERNAL
 )
+
 
 # ------------------------------------------------------------------------------
 # Compiler flags

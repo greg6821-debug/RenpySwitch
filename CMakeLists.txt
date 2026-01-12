@@ -199,6 +199,7 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 # Связываем библиотеки - УБИРАЕМ IMPORTED_TARGET
 target_link_libraries(${PROJECT_NAME}
     #${PYTHON_LIBRARY}
+    ${DEVKITPRO}/portlibs/switch/lib/libpython3.9.a
     ${DEVKITPRO}/portlibs/switch/include
     ${DEVKITPRO}/portlibs/switch/lib/libfribidi.a
     m

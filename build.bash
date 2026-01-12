@@ -114,7 +114,7 @@ popd
 mkdir -p ./raw/switch/exefs
 
 mkdir -p ./raw/switch/exefs2
-cp -r /usr/local/lib/python3.9/dist-packages /raw/switch/exefs2
+cp -r /usr/local/lib/python3.9/dist-packages ./raw/switch/exefs2
 
 mv ./build/renpy-switch.nso ./raw/switch/exefs/main
 rm -rf build include source pygame_sdl2-source

@@ -157,11 +157,20 @@ export C_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$C_INCLUDE_PATH
 export CPLUS_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$CPLUS_INCLUDE_PATH
 
 export PREFIXARCHIVE=$(realpath renpy-switch-modules.tar.gz)
+
+echo "Find pyfree 1"
+find renpy-source -name pyfreetype.h
+echo "End find 1"
+
 rm -rf build-switch
 mkdir build-switch
 pushd build-switch
 mkdir local_prefix
 export LOCAL_PREFIX=$(realpath local_prefix)
+
+echo "Find pyfree 2"
+find renpy-source -name pyfreetype.h
+echo "End find 2"
 
 # ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЙ CMAKE С TOOLCHAIN
 echo "Запуск CMake с toolchain: $SWITCH_CMAKE"

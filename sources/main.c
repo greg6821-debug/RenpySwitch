@@ -441,7 +441,7 @@ int main(int argc, char* argv[])
         {"pygame_sdl2.controller", PyInit_controller},
         {"pygame_sdl2.display", PyInit_display},
         {"pygame_sdl2.draw", PyInit_draw},
-        //{"pygame_sdl2.error", PyInit_error},
+        {"pygame_sdl2.error", PyInit_error},
         {"pygame_sdl2.event", PyInit_event},
         {"pygame_sdl2.gfxdraw", PyInit_gfxdraw},
         {"pygame_sdl2.image", PyInit_image},
@@ -454,7 +454,7 @@ int main(int argc, char* argv[])
         {"pygame_sdl2.rect", PyInit_rect}, 
         {"pygame_sdl2.rwobject", PyInit_rwobject},
         {"pygame_sdl2.scrap", PyInit_scrap},
-        //{"pygame_sdl2.surface", PyInit_surface},
+        {"pygame_sdl2.surface", PyInit_surface},
         {"pygame_sdl2.transform", PyInit_transform},
    
         {"pygame_sdl2.render", PyInit_render},

@@ -47,7 +47,8 @@ set(OPTIMIZATION_FLAGS
 
 # Обновляем пути для Python 3.9
 set(INCLUDES
-    #${DEVKITPRO}/portlibs/switch/include/python3.9
+    {DEVKITPRO}/portlibs/switch/include
+    ${DEVKITPRO}/portlibs/switch/include/python3.9
     ${DEVKITPRO}/portlibs/switch/include/fribidi
     include
     include/module
@@ -143,19 +144,6 @@ if(NOT CMAKE_CROSSCOMPILING)
     message(WARNING "Project is not being cross-compiled! Use -DCMAKE_TOOLCHAIN_FILE")
 endif()
 
-# Устанавливаем корректные пути для Python
-#find_file(PYTHON_LIBRARY libpython3.9.a 
-#    PATHS ${DEVKITPRO}/portlibs/switch/lib
-#    NO_DEFAULT_PATH
-#    REQUIRED
-#)
-
-#find_path(PYTHON_INCLUDE_DIR Python.h
-#    PATHS ${DEVKITPRO}/portlibs/switch/include/python3.9
-#    NO_DEFAULT_PATH
-#    REQUIRED
-#)
-
 
 message(STATUS "PKG_CONFIG_EXECUTABLE = $ENV{PKG_CONFIG_EXECUTABLE}")
 message(STATUS "PKG_CONFIG_PATH = $ENV{PKG_CONFIG_PATH}")
@@ -211,6 +199,7 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 # Связываем библиотеки - УБИРАЕМ IMPORTED_TARGET
 target_link_libraries(${PROJECT_NAME}
     #${PYTHON_LIBRARY}
+    ${DEVKITPRO}/portlibs/switch/include
     ${DEVKITPRO}/portlibs/switch/lib/libfribidi.a
     m
     ${EGL_LIBRARIES}

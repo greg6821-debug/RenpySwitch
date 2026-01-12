@@ -332,9 +332,7 @@ int main(int argc, char* argv[])
     PyConfig_InitPythonConfig(&config);
 
     /* ---- Указываем Python'у его местоположение ---- */
-    /* Это устранит ошибку "Could not find platform independent libraries" */
-    PyStatus status;
-    
+    /* Это устранит ошибку "Could not find platform independent libraries" */ 
     status = PyConfig_SetString(&config, &config.home, L"romfs:/Contents");
     if (PyStatus_Exception(status)) goto exception;
 

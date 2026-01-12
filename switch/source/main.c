@@ -453,7 +453,40 @@ int main(int argc, char* argv[])
     if (!f) {
         show_error("Could not open renpy.py", 1);
     }
-    PyRun_SimpleFileExFlags(f, "renpy.py", 1, NULL);
+
+    // Получаем длину файла
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    // Выделяем буфер
+    char *source = malloc(fsize + 1);
+    fread(source, 1, fsize, f);
+    source[fsize] = '\0';
+    fclose(f);
+
+    // Компилируем код
+    PyObject *compiled = Py_CompileString(source, "renpy.py", Py_file_input);
+    free(source);
+
+    if (!compiled) {
+        PyErr_Print();
+        show_error("Failed to compile renpy.py", 1);
+    }
+
+    // Выполняем в __main__ модуле
+    PyObject *main_module = PyImport_AddModule("__main__");
+    PyObject *main_dict = PyModule_GetDict(main_module);
+
+    PyObject *result = PyEval_EvalCode(compiled, main_dict, main_dict);
+    Py_XDECREF(compiled);
+
+    if (!result) {
+        PyErr_Print();
+        show_error("Failed to execute renpy.py", 1);
+    }
+    Py_XDECREF(result);
+
 
     Py_Finalize();
     PyMem_Free(program_name);

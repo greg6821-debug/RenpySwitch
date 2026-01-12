@@ -47,7 +47,9 @@ set(OPTIMIZATION_FLAGS
 
 # Обновляем пути для Python 3.9
 set(INCLUDES
-    $DEVKITPRO/portlibs/switch/include/freetype2
+    ${CMAKE_SOURCE_DIR}/renpy-build/source/module
+    ${CMAKE_SOURCE_DIR}/renpy-build/source/module/gen3
+    ${CMAKE_SOURCE_DIR}/renpy-build/source/module/gen3-static
     ${DEVKITPRO}/portlibs/switch/include
     ${DEVKITPRO}/portlibs/switch/include/python3.9
     ${DEVKITPRO}/portlibs/switch/include/fribidi

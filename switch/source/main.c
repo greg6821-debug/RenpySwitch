@@ -1,3 +1,4 @@
+#define PY_SSIZE_T_CLEAN
 #include <switch.h>
 #include <Python.h>
 #include <stdio.h>
@@ -159,76 +160,73 @@ PyMODINIT_FUNC PyInit_renpy_lexersupport(void);
 PyMODINIT_FUNC PyInit_renpy_display_quaternion(void);
 
 // Python 3.9 builtin modules array
-static struct _inittab builtins[] = {
-    {"_otrhlibnx", PyInit__otrhlibnx},
+PyImport_AppendInittab("_otrhlibnx", PyInit__otrhlibnx);
     
-    {"pygame_sdl2.color", PyInit_pygame_sdl2_color},
-    {"pygame_sdl2.controller", PyInit_pygame_sdl2_controller},
-    {"pygame_sdl2.display", PyInit_pygame_sdl2_display},
-    {"pygame_sdl2.draw", PyInit_pygame_sdl2_draw},
-    {"pygame_sdl2.error", PyInit_pygame_sdl2_error},
-    {"pygame_sdl2.event", PyInit_pygame_sdl2_event},
-    {"pygame_sdl2.gfxdraw", PyInit_pygame_sdl2_gfxdraw},
-    {"pygame_sdl2.image", PyInit_pygame_sdl2_image},
-    {"pygame_sdl2.joystick", PyInit_pygame_sdl2_joystick},
-    {"pygame_sdl2.key", PyInit_pygame_sdl2_key},
-    {"pygame_sdl2.locals", PyInit_pygame_sdl2_locals},
-    {"pygame_sdl2.mouse", PyInit_pygame_sdl2_mouse},
-    {"pygame_sdl2.power", PyInit_pygame_sdl2_power},
-    {"pygame_sdl2.pygame_time", PyInit_pygame_sdl2_pygame_time},
-    {"pygame_sdl2.rect", PyInit_pygame_sdl2_rect},
-    {"pygame_sdl2.render", PyInit_pygame_sdl2_render},
-    {"pygame_sdl2.rwobject", PyInit_pygame_sdl2_rwobject},
-    {"pygame_sdl2.scrap", PyInit_pygame_sdl2_scrap},
-    {"pygame_sdl2.surface", PyInit_pygame_sdl2_surface},
-    {"pygame_sdl2.transform", PyInit_pygame_sdl2_transform},
+PyImport_AppendInittab("pygame_sdl2.color", PyInit_pygame_sdl2_color);
+PyImport_AppendInittab("pygame_sdl2.controller", PyInit_pygame_sdl2_controller);
+PyImport_AppendInittab("pygame_sdl2.display", PyInit_pygame_sdl2_display);
+PyImport_AppendInittab("pygame_sdl2.draw", PyInit_pygame_sdl2_draw);
+PyImport_AppendInittab("pygame_sdl2.error", PyInit_pygame_sdl2_error);
+PyImport_AppendInittab("pygame_sdl2.event", PyInit_pygame_sdl2_event);
+PyImport_AppendInittab("pygame_sdl2.gfxdraw", PyInit_pygame_sdl2_gfxdraw);
+PyImport_AppendInittab("pygame_sdl2.image", PyInit_pygame_sdl2_image);
+PyImport_AppendInittab("pygame_sdl2.joystick", PyInit_pygame_sdl2_joystick);
+PyImport_AppendInittab("pygame_sdl2.key", PyInit_pygame_sdl2_key);
+PyImport_AppendInittab("pygame_sdl2.locals", PyInit_pygame_sdl2_locals);
+PyImport_AppendInittab("pygame_sdl2.mouse", PyInit_pygame_sdl2_mouse);
+PyImport_AppendInittab("pygame_sdl2.power", PyInit_pygame_sdl2_power);
+PyImport_AppendInittab("pygame_sdl2.pygame_time", PyInit_pygame_sdl2_pygame_time);
+PyImport_AppendInittab("pygame_sdl2.rect", PyInit_pygame_sdl2_rect);
+PyImport_AppendInittab("pygame_sdl2.render", PyInit_pygame_sdl2_render);
+PyImport_AppendInittab("pygame_sdl2.rwobject", PyInit_pygame_sdl2_rwobject);
+PyImport_AppendInittab("pygame_sdl2.scrap", PyInit_pygame_sdl2_scrap);
+PyImport_AppendInittab("pygame_sdl2.surface", PyInit_pygame_sdl2_surface);
+PyImport_AppendInittab("pygame_sdl2.transform", PyInit_pygame_sdl2_transform);
 
-    {"_renpy", PyInit__renpy},
-    {"_renpybidi", PyInit__renpybidi},
-    {"renpy.audio.renpysound", PyInit_renpy_audio_renpysound},
-    {"renpy.display.accelerator", PyInit_renpy_display_accelerator},
-    {"renpy.display.matrix", PyInit_renpy_display_matrix},
-    {"renpy.display.render", PyInit_renpy_display_render},
-    {"renpy.gl.gldraw", PyInit_renpy_gl_gldraw},
-    {"renpy.gl.glenviron_shader", PyInit_renpy_gl_glenviron_shader},
-    {"renpy.gl.glrtt_copy", PyInit_renpy_gl_glrtt_copy},
-    {"renpy.gl.glrtt_fbo", PyInit_renpy_gl_glrtt_fbo},
-    {"renpy.gl.gltexture", PyInit_renpy_gl_gltexture},
-    {"renpy.pydict", PyInit_renpy_pydict},
-    {"renpy.style", PyInit_renpy_style},
-    {"renpy.styledata.style_activate_functions", PyInit_renpy_styledata_style_activate_functions},
-    {"renpy.styledata.style_functions", PyInit_renpy_styledata_style_functions},
-    {"renpy.styledata.style_hover_functions", PyInit_renpy_styledata_style_hover_functions},
-    {"renpy.styledata.style_idle_functions", PyInit_renpy_styledata_style_idle_functions},
-    {"renpy.styledata.style_insensitive_functions", PyInit_renpy_styledata_style_insensitive_functions},
-    {"renpy.styledata.style_selected_activate_functions", PyInit_renpy_styledata_style_selected_activate_functions},
-    {"renpy.styledata.style_selected_functions", PyInit_renpy_styledata_style_selected_functions},
-    {"renpy.styledata.style_selected_hover_functions", PyInit_renpy_styledata_style_selected_hover_functions},
-    {"renpy.styledata.style_selected_idle_functions", PyInit_renpy_styledata_style_selected_idle_functions},
-    {"renpy.styledata.style_selected_insensitive_functions", PyInit_renpy_styledata_style_selected_insensitive_functions},
-    {"renpy.styledata.styleclass", PyInit_renpy_styledata_styleclass},
-    {"renpy.styledata.stylesets", PyInit_renpy_styledata_stylesets},
-    {"renpy.text.ftfont", PyInit_renpy_text_ftfont},
-    {"renpy.text.textsupport", PyInit_renpy_text_textsupport},
-    {"renpy.text.texwrap", PyInit_renpy_text_texwrap},
+PyImport_AppendInittab("_renpy", PyInit__renpy);
+PyImport_AppendInittab("_renpybidi", PyInit__renpybidi);
+PyImport_AppendInittab("renpy.audio.renpysound", PyInit_renpy_audio_renpysound);
+PyImport_AppendInittab("renpy.display.accelerator", PyInit_renpy_display_accelerator);
+PyImport_AppendInittab("renpy.display.matrix", PyInit_renpy_display_matrix);
+PyImport_AppendInittab("renpy.display.render", PyInit_renpy_display_render);
+PyImport_AppendInittab("renpy.gl.gldraw", PyInit_renpy_gl_gldraw);
+PyImport_AppendInittab("renpy.gl.glenviron_shader", PyInit_renpy_gl_glenviron_shader);
+PyImport_AppendInittab("renpy.gl.glrtt_copy", PyInit_renpy_gl_glrtt_copy);
+PyImport_AppendInittab("renpy.gl.glrtt_fbo", PyInit_renpy_gl_glrtt_fbo);
+PyImport_AppendInittab("renpy.gl.gltexture", PyInit_renpy_gl_gltexture);
+PyImport_AppendInittab("renpy.pydict", PyInit_renpy_pydict);
+PyImport_AppendInittab("renpy.style", PyInit_renpy_style);
+PyImport_AppendInittab("renpy.styledata.style_activate_functions", PyInit_renpy_styledata_style_activate_functions);
+PyImport_AppendInittab("renpy.styledata.style_functions", PyInit_renpy_styledata_style_functions);
+PyImport_AppendInittab("renpy.styledata.style_hover_functions", PyInit_renpy_styledata_style_hover_functions);
+PyImport_AppendInittab("renpy.styledata.style_idle_functions", PyInit_renpy_styledata_style_idle_functions);
+PyImport_AppendInittab("renpy.styledata.style_insensitive_functions", PyInit_renpy_styledata_style_insensitive_functions);
+PyImport_AppendInittab("renpy.styledata.style_selected_activate_functions", PyInit_renpy_styledata_style_selected_activate_functions);
+PyImport_AppendInittab("renpy.styledata.style_selected_functions", PyInit_renpy_styledata_style_selected_functions);
+PyImport_AppendInittab("renpy.styledata.style_selected_hover_functions", PyInit_renpy_styledata_style_selected_hover_functions);
+PyImport_AppendInittab("renpy.styledata.style_selected_idle_functions", PyInit_renpy_styledata_style_selected_idle_functions);
+PyImport_AppendInittab("renpy.styledata.style_selected_insensitive_functions", PyInit_renpy_styledata_style_selected_insensitive_functions);
+PyImport_AppendInittab("renpy.styledata.styleclass", PyInit_renpy_styledata_styleclass);
+PyImport_AppendInittab("renpy.styledata.stylesets", PyInit_renpy_styledata_stylesets);
+PyImport_AppendInittab("renpy.text.ftfont", PyInit_renpy_text_ftfont);
+PyImport_AppendInittab("renpy.text.textsupport", PyInit_renpy_text_textsupport);
+PyImport_AppendInittab("renpy.text.texwrap", PyInit_renpy_text_texwrap);
 
-    {"renpy.compat.dictviews", PyInit_renpy_compat_dictviews},
-    {"renpy.gl2.gl2draw", PyInit_renpy_gl2_gl2draw},
-    {"renpy.gl2.gl2mesh", PyInit_renpy_gl2_gl2mesh},
-    {"renpy.gl2.gl2mesh2", PyInit_renpy_gl2_gl2mesh2},
-    {"renpy.gl2.gl2mesh3", PyInit_renpy_gl2_gl2mesh3},
-    {"renpy.gl2.gl2model", PyInit_renpy_gl2_gl2model},
-    {"renpy.gl2.gl2polygon", PyInit_renpy_gl2_gl2polygon},
-    {"renpy.gl2.gl2shader", PyInit_renpy_gl2_gl2shader},
-    {"renpy.gl2.gl2texture", PyInit_renpy_gl2_gl2texture},
-    {"renpy.uguu.gl", PyInit_renpy_uguu_gl},
-    {"renpy.uguu.uguu", PyInit_renpy_uguu_uguu},
+PyImport_AppendInittab("renpy.compat.dictviews", PyInit_renpy_compat_dictviews);
+PyImport_AppendInittab("renpy.gl2.gl2draw", PyInit_renpy_gl2_gl2draw);
+PyImport_AppendInittab("renpy.gl2.gl2mesh", PyInit_renpy_gl2_gl2mesh);
+PyImport_AppendInittab("renpy.gl2.gl2mesh2", PyInit_renpy_gl2_gl2mesh2);
+PyImport_AppendInittab("renpy.gl2.gl2mesh3", PyInit_renpy_gl2_gl2mesh3);
+PyImport_AppendInittab("renpy.gl2.gl2model", PyInit_renpy_gl2_gl2model);
+PyImport_AppendInittab("renpy.gl2.gl2polygon", PyInit_renpy_gl2_gl2polygon);
+PyImport_AppendInittab("renpy.gl2.gl2shader", PyInit_renpy_gl2_gl2shader);
+PyImport_AppendInittab("renpy.gl2.gl2texture", PyInit_renpy_gl2_gl2texture);
+PyImport_AppendInittab("renpy.uguu.gl", PyInit_renpy_uguu_gl);
+PyImport_AppendInittab("renpy.uguu.uguu", PyInit_renpy_uguu_uguu);
     
-    {"renpy.lexersupport", PyInit_renpy_lexersupport},
-    {"renpy.display.quaternion", PyInit_renpy_display_quaternion},
+PyImport_AppendInittab("renpy.lexersupport", PyInit_renpy_lexersupport);
+PyImport_AppendInittab("renpy.display.quaternion", PyInit_renpy_display_quaternion);
 
-    {NULL, NULL}
-};
 
 // Override the heap initialization function
 void __libnx_initheap(void)
@@ -304,7 +302,7 @@ void userAppInit()
         if (count > 1) {
             pselShowUserSelector(&userID, &settings);
         } else {
-            size_t loadedUsers;
+            s32 loadedUsers;
             AccountUid account_ids[count];
             accountListAllUsers(account_ids, count, &loadedUsers);
             if (count > 0) {
@@ -391,11 +389,7 @@ int main(int argc, char* argv[])
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
 
     // Python 3.9 initialization flags
-    Py_NoSiteFlag = 1;
-    Py_IgnoreEnvironmentFlag = 1;
-    Py_NoUserSiteDirectory = 1;
-    Py_DontWriteBytecodeFlag = 1;
-    Py_OptimizeFlag = 2;
+    
 
     FILE* sysconfigdata_file = fopen("romfs:/Contents/lib.zip", "rb");
     FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
@@ -416,6 +410,11 @@ int main(int argc, char* argv[])
     PyStatus status;
     PyConfig config;
     PyConfig_InitPythonConfig(&config);
+    config.isolated = 1;
+    config.use_environment = 0;
+    config.site_import = 0;
+    config.write_bytecode = 0;
+    config.optimization_level = 2;
     
     // Set Python home and program name
     config.home = Py_DecodeLocale("romfs:/Contents/lib.zip", NULL);
@@ -434,56 +433,18 @@ int main(int argc, char* argv[])
     if (PyStatus_Exception(status)) {
         show_error("Failed to initialize Python", 1);
     }
-
-    // Add builtin modules to inittab
-    PyImport_AppendInittab("_otrhlibnx", PyInit__otrhlibnx);
     
     // Note: Other modules should be loaded dynamically, not via inittab
     // because they're large and not needed at startup
 
-    char* pyargs[] = {
-        "romfs:/Contents/renpy.py",
-        NULL,
-    };
+    wchar_t* wargv[2];
+    wargv[0] = Py_DecodeLocale("romfs:/Contents/renpy.py", NULL);
+    wargv[1] = NULL;
 
-    PySys_SetArgvEx(1, pyargs, 1);
+    PySys_SetArgvEx(1, wargv, 1);
 
-    int python_result;
-
-    // Set Python path
-    python_result = PyRun_SimpleString(
-        "import sys\n"
-        "sys.path = ['romfs:/Contents/lib.zip']\n"
-        "sys.path_importer_cache.clear()\n"
-    );
-
-    if (python_result == -1)
-    {
-        show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.", 1);
-    }
-
-    // Import essential modules
-#define IMPORT_MODULE(lib) \
-    { \
-        if (PyRun_SimpleString("import " lib) == -1) \
-        { \
-            show_error("Could not import python library " lib ".\n\nPlease ensure that you have extracted the files correctly so that the \"lib\" folder is in the same directory as the nsp file, and that the \"lib\" folder contains the folder \"python3.9\". \nInside that folder, the file \"" lib ".py\" or folder \"" lib "\" needs to exist.", 1); \
-        } \
-    }
-
-    IMPORT_MODULE("os");
-    IMPORT_MODULE("pygame_sdl2");
-    IMPORT_MODULE("encodings");
-
-#undef IMPORT_MODULE
-
-    // Execute main Ren'Py script
-    python_result = PyRun_SimpleFileEx(renpy_file, "romfs:/Contents/renpy.py", 1);
-
-    if (python_result == -1)
-    {
-        show_error("An uncaught Python exception occurred during renpy.py execution.\n\nPlease look in the save:// folder for more information about this exception.", 1);
-    }
+    FILE* f = fopen("romfs:/Contents/renpy.py", "r");
+    PyRun_SimpleFileEx(f, "renpy.py", 1);
 
     Py_Finalize();
     return 0;

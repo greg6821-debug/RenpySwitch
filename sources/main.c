@@ -343,7 +343,7 @@ int main(int argc, char* argv[])
     if (PyStatus_Exception(status)) goto exception;
    
     /* Добавляем путь к корневой папке Contents, если lib.zip там не найдется сразу */
-    PyWideStringList_Append(&config.module_search_paths, L"romfs:/Contents");
+    //PyWideStringList_Append(&config.module_search_paths, L"romfs:/Contents");
    
     /* ---- Critical for Python 3.9 embedded ---- */
     config.isolated = 0;
@@ -368,8 +368,9 @@ int main(int argc, char* argv[])
     /* ---- stdlib: ONLY lib.zip ---- */
     config.module_search_paths_set = 1;
 
-    status = PyWideStringList_Append(
-        &config.module_search_paths,
+    status = PyWideStringList_Insert(
+        &config.module_search_paths, 
+        0, // Вставляем в НАЧАЛО списка (индекс 0)
         L"romfs:/Contents/lib.zip"
     );
     if (PyStatus_Exception(status)) goto exception;

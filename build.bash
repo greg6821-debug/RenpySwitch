@@ -217,7 +217,7 @@ if [ -d "switch" ]; then
     rm -rf build
     mkdir build
     pushd build
-    cmake# -DCMAKE_TOOLCHAIN_FILE="$SWITCH_CMAKE" ..
+    cmake -DCMAKE_TOOLCHAIN_FILE="$SWITCH_CMAKE" ..
     make -j$(nproc)
     popd
     popd

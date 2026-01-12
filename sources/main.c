@@ -477,7 +477,32 @@ int main(int argc, char* argv[])
     PyConfig_Clear(&config);
 
 
-    PyRun_SimpleString("import pygame_sdl2");
+    /* ---- Force load C-modules before pygame_sdl2 import ---- */
+    PyRun_SimpleString(
+        "import sys\n"
+        "import pygame_sdl2.error\n"
+        "import pygame_sdl2.color\n"
+        "import pygame_sdl2.controller\n"
+        "import pygame_sdl2.display\n"
+        "import pygame_sdl2.draw\n"
+        "import pygame_sdl2.event\n"
+        "import pygame_sdl2.gfxdraw\n"
+        "import pygame_sdl2.image\n"
+        "import pygame_sdl2.joystick\n"
+        "import pygame_sdl2.key\n"
+        "import pygame_sdl2.locals\n"
+        "import pygame_sdl2.mouse\n"
+        "import pygame_sdl2.power\n"
+        "import pygame_sdl2.pygame_time\n"
+        "import pygame_sdl2.rect\n"
+        "import pygame_sdl2.rwobject\n"
+        "import pygame_sdl2.scrap\n"
+        "import pygame_sdl2.surface\n"
+        "import pygame_sdl2.transform\n"
+        "import pygame_sdl2.render\n"
+        "import pygame_sdl2.mixer\n"
+        "import pygame_sdl2.mixer_music\n"
+    );
    
 
     int python_result;

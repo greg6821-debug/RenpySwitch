@@ -65,8 +65,8 @@ set(SOURCES
     source/module/IMG_savepng.c
     source/module/SDL2_rotozoom.c
     source/module/SDL_gfxPrimitives.c
-    #source/module/_renpy.c
-    #source/module/_renpybidi.c
+    source/module/_renpy.c
+    source/module/_renpybidi.c
     source/module/alphablit.c
     source/module/core.c
     source/module/ffmedia.c
@@ -103,7 +103,7 @@ set(SOURCES
     source/module/renpy.gl.glrtt_copy.c
     source/module/renpy.gl.glrtt_fbo.c
     source/module/renpy.gl.gltexture.c
-    #source/module/renpy.pydict.c
+    source/module/renpy.pydict.c
     source/module/renpy.style.c
     source/module/renpy.styledata.style_activate_functions.c
     source/module/renpy.styledata.style_functions.c

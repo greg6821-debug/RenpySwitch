@@ -469,7 +469,7 @@ int main(int argc, char* argv[])
     }   
 
     
-    register_builtin_modules();
+    #register_builtin_modules();
    
     /* ---- Initialize Python ---- */
     status = Py_InitializeFromConfig(&config);

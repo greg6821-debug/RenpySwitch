@@ -417,10 +417,9 @@ int main(int argc, char* argv[])
     // ===== Python legacy initialization =====
  
     // Эквиваленты PyConfig
-    Py_IsolatedFlag = 1;
     Py_IgnoreEnvironmentFlag = 1;
     Py_NoSiteFlag = 1;
-    Py_DontWriteBytecodeFlag = 1;
+    Py_FrozenFlag = 1; 
     Py_OptimizeFlag = 2;
 
     // Program name
@@ -448,11 +447,6 @@ int main(int argc, char* argv[])
     PySys_SetArgv(1, argv_w);
     
     
-    
-    if (PyStatus_Exception(status)) {
-        show_error("Failed to initialize Python", 1);
-    }
-    
     // Note: Other modules should be loaded dynamically, not via inittab
     // because they're large and not needed at startup
 
@@ -463,11 +457,11 @@ int main(int argc, char* argv[])
     PySys_SetArgvEx(1, wargv, 1);
 
     FILE* f = fopen("romfs:/Contents/renpy.py", "r");
-    PyRun_SimpleFileEx(f, "renpy.py", 1);
+    PyRun_SimpleFileEx(f, "renpy.py");
 
     Py_Finalize();
-    PyMem_RawFree(program_name);
-    PyMem_RawFree(python_home);
-    PyMem_RawFree(python_path);
+    PyMem_Free(program_name);
+    PyMem_Free(python_home);
+    PyMem_Free(python_path);
     return 0;
 }

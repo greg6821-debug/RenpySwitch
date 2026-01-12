@@ -126,7 +126,7 @@ fi
 
 # Компиляция для Switch
 echo "Building for Switch..."
-SWITCH_CMAKE="$DEVKITPRO/switch.cmake"
+SWITCH_CMAKE="$DEVKITPRO/cmake/Switch.cmake"
 # ========== Исправление CMake флагов ==========
 echo "Исправление CMake флагов для Switch..."
 if [ -f "$DEVKITPRO/cmake/Switch.cmake" ]; then

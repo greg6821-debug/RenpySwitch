@@ -450,7 +450,10 @@ int main(int argc, char* argv[])
     
 
     FILE* f = fopen("romfs:/Contents/renpy.py", "r");
-    PyRun_SimpleFile(f, "renpy.py");
+    if (!f) {
+        show_error("Could not open renpy.py", 1);
+    }
+    PyRun_SimpleFileExFlags(f, "renpy.py", 1, NULL);
 
     Py_Finalize();
     PyMem_Free(program_name);

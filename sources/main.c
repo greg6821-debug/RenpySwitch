@@ -492,34 +492,48 @@ int main(int argc, char* argv[])
     PyConfig_Clear(&config);
 
 
-   /* -------------------------------------------------------
-       FIX: Pre-import all static modules to sys.modules
-       Это гарантирует, что когда pygame_sdl2/__init__.py 
-       попытается сделать import .error, модуль уже будет найден
-       в кэше, и поисковик ZIP не будет мешать.
+  /* -------------------------------------------------------
+       FIX: Manual Injection of Static Modules
+       
+       Мы вызываем PyInit_* функции напрямую и вталкиваем модули
+       в sys.modules. Это обходит zipimporter и предотвращает 
+       ошибки типа "No module named ..." при запуске __init__.py.
     ------------------------------------------------------- */
     {
         PyObject* sys_modules = PyImport_GetModuleDict();
+        
         for (int i = 0; builtins[i].name != NULL; i++) {
-            const char* name = builtins[i].name;
-            
-            // Мы импортируем только модули, имена которых содержат точку.
-            // Например, "pygame_sdl2.error".
-            // Это подтянет и родительский пакет (если нужно), 
-            // но если родительского пакета нет в sys.modules, 
-            // Python попытается его загрузить. 
-            
-            // ВАЖНО: Убедитесь, что PyInit_error не зависит от кода pygame_sdl2/__init__.py.
-            // Обычно extension модули независимы.
-            
-            PyObject* module = PyImport_ImportModule(name);
+            const char* fullname = builtins[i].name;
+            PyObject* (*initfunc)(void) = builtins[i].initfunc;
+
+            if (!initfunc) continue;
+
+            // Проверяем, не загружен ли уже модуль (на всякий случай)
+            if (PyDict_GetItemString(sys_modules, fullname)) {
+                continue;
+            }
+
+            // Непосредственный вызов функции инициализации (из C-API)
+            PyObject* module = initfunc();
+
             if (module == NULL) {
-                // Если модуль не смог загрузиться, это критическая ошибка для статической сборки
+                fprintf(stderr, "CRITICAL: Failed to initialize static module: %s\n", fullname);
                 PyErr_Print();
-                fprintf(stderr, "Failed to pre-import static module: %s\n", name);
-                // Можно продолжить, но лучше знать, что сломалось
+                // Не выходим, возможно, это необязательный модуль
             } else {
+                // Ручная вставка модуля в словарь sys.modules
+                // PyDict_SetItemString НЕ крадет ссылку ( Incref сам), 
+                // поэтому мы должны убрать нашу ссылку через Py_DECREF
+                if (PyDict_SetItemString(sys_modules, fullname, module) < 0) {
+                    fprintf(stderr, "Failed to inject %s into sys.modules\n", fullname);
+                    PyErr_Print();
+                }
                 Py_DECREF(module);
+                
+                // Дополнительно: если это пакет, Python должен знать,
+                // что он находится в sys.modules, чтобы submodules нашли его.
+                // Но т.к. мы сюда втыкаем и субмодули (pygame_sdl2.error),
+                // то при импорте родителя (pygame_sdl2) из zip, он просто подхватит уже готовые.
             }
         }
     }

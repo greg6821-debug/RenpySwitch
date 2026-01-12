@@ -1,7 +1,7 @@
 #define PY_SSIZE_T_CLEAN
-#include <switch.h>
 #include <Python.h>
 #include <stdio.h>
+#include <switch.h>
 #include <string.h>
 
 u64 cur_progid = 0;
@@ -414,23 +414,22 @@ int main(int argc, char* argv[])
     
     
     
-    // ===== Python legacy initialization =====
- 
-    // Эквиваленты PyConfig
-    Py_IgnoreEnvironmentFlag = 1;
-    Py_NoSiteFlag = 1;
-    Py_FrozenFlag = 1; 
-    Py_OptimizeFlag = 2;
+    // ===== Python 3.9 legacy embedding (CORRECT) =====
 
-    // Program name
+    // 1. Environment isolation
+    setenv("PYTHONNOUSERSITE", "1", 1);
+    setenv("PYTHONDONTWRITEBYTECODE", "1", 1);
+    setenv("PYTHONOPTIMIZE", "2", 1);
+
+    // 2. Program name
     wchar_t *program_name = Py_DecodeLocale("renpy-switch", NULL);
     Py_SetProgramName(program_name);
 
-    // Python home (lib.zip!)
+    // 3. Python home (lib.zip)
     wchar_t *python_home = Py_DecodeLocale("romfs:/Contents/lib.zip", NULL);
     Py_SetPythonHome(python_home);
 
-    // Python sys.path
+    // 4. sys.path (CRITICAL)
     wchar_t *python_path = Py_DecodeLocale(
         "romfs:/Contents/lib.zip:"
         "romfs:/Contents",
@@ -438,17 +437,20 @@ int main(int argc, char* argv[])
     );
     Py_SetPath(python_path);
 
-    // Init Python
+    // 5. Initialize Python
     Py_Initialize();
 
-    // argv
-    wchar_t *argv_w[1];
-    argv_w[0] = program_name;
-    PySys_SetArgv(1, argv_w);
+    // 6. sys.argv with flags (-S -OO)
+    wchar_t *argv_w[] = {
+        program_name,
+        L"-S",
+        L"-OO",
+    };
+    PySys_SetArgv(3, argv_w);
     
 
     FILE* f = fopen("romfs:/Contents/renpy.py", "r");
-    PyRun_SimpleFileEx(f, "renpy.py");
+    PyRun_SimpleFile(f, "renpy.py");
 
     Py_Finalize();
     PyMem_Free(program_name);

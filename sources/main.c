@@ -493,106 +493,101 @@ int main(int argc, char* argv[])
 
 
      /* -------------------------------------------------------
-       FIX: Manual Injection of Static Modules + pygame_sdl2 Fix
+       FIX: Manual Injection + Order Fix + __all__ Hack
+       
+       1. Создаем и внедряем пакет pygame_sdl2 (чтобы submodules видели родителя).
+       2. Создаем и внедряем все C-подмодули.
+       3. Добавляем пустой __all__ в C-подмодули (исправляет from-import-*).
+       4. Выполняем __init__.py.
     ------------------------------------------------------- */
     {
         PyObject* sys_modules = PyImport_GetModuleDict();
         
-        // --- 1. Внедряем все статические подмодули ---
+        // --- 1. Сначала создаем пустой пакет pygame_sdl2 ---
+        const char* pkg_name = "pygame_sdl2";
+        PyObject* pkg_module = PyModule_New(pkg_name);
+        
+        if (pkg_module) {
+            // Устанавливаем атрибуты пакета
+            PyModule_AddStringConstant(pkg_module, "__path__", "romfs:/Contents/lib.zip/pygame_sdl2");
+            PyModule_AddStringConstant(pkg_module, "__file__", "romfs:/Contents/lib.zip/pygame_sdl2/__init__.py");
+            
+            // Внедряем пакет в sys.modules ДО инициализации подмодулей
+            if (PyDict_SetItemString(sys_modules, pkg_name, pkg_module) < 0) {
+                fprintf(stderr, "Failed to inject %s into sys.modules\n", pkg_name);
+                PyErr_Print();
+            }
+            Py_DECREF(pkg_module); // sys_modules держит ссылку
+        } else {
+            fprintf(stderr, "Failed to create package %s\n", pkg_name);
+            PyErr_Print();
+        }
+
+        // --- 2. Внедряем подмодули (pygame_sdl2.error, etc.) ---
         for (int i = 0; builtins[i].name != NULL; i++) {
             const char* fullname = builtins[i].name;
             PyObject* (*initfunc)(void) = builtins[i].initfunc;
 
+            // Пропускаем сам пакет и модули без initfunc
             if (!initfunc) continue;
-            if (PyDict_GetItemString(sys_modules, fullname)) continue;
+            // Можно также пропустить корневые пакеты, если нужно, но обрабатываем все builtins
+            
+            if (PyDict_GetItemString(sys_modules, fullname)) {
+                continue; // Уже загружен
+            }
 
             PyObject* module = initfunc();
 
             if (module == NULL) {
-                fprintf(stderr, "CRITICAL: Failed to init module: %s\n", fullname);
+                fprintf(stderr, "CRITICAL: Failed to initialize static module: %s\n", fullname);
                 PyErr_Print();
             } else {
+                // --- 3. ФИКС: Добавляем пустой __all__, если его нет ---
+                // Это решает ошибку "no __dict__ and no __all__" при import *
+                if (!PyObject_HasAttrString(module, "__all__")) {
+                    PyObject* all_list = PyList_New(0);
+                    if (all_list) {
+                        PyModule_AddObject(module, "__all__", all_list);
+                    }
+                }
+
+                // Внедряем модуль
                 if (PyDict_SetItemString(sys_modules, fullname, module) < 0) {
-                    fprintf(stderr, "Failed to inject %s\n", fullname);
+                    fprintf(stderr, "Failed to inject %s into sys.modules\n", fullname);
                     PyErr_Print();
                 }
                 Py_DECREF(module);
             }
         }
 
-        // --- 2. Специальная обработка пакета pygame_sdl2 ---
-        const char* pkg_name = "pygame_sdl2";
-        
-        if (PyDict_GetItemString(sys_modules, pkg_name) == NULL) {
-            PyObject* pkg_module = PyModule_New(pkg_name);
-            if (pkg_module) {
-                // Устанавливаем __path__ (список путей)
-                PyObject* path_list = PyList_New(1);
-                if (path_list) {
-                    PyObject* path_str = PyUnicode_FromString("romfs:/Contents/lib.zip/pygame_sdl2");
-                    if (path_str) {
-                        // PyList_SET_ITEM "крадет" ссылку на path_str, поэтому DECREF не нужен
-                        PyList_SET_ITEM(path_list, 0, path_str);
-                    } else {
-                        Py_DECREF(path_list);
-                        path_list = NULL;
-                    }
-                }
+        // --- 4. Выполняем __init__.py для pygame_sdl2 ---
+        // Убираем try...except из Python-кода, чтобы увидеть настоящую ошибку, если что-то пойдет не так
+        if (pkg_module) {
+            const char* init_script = 
+                "import zipfile\n"
+                "zip_path = 'romfs:/Contents/lib.zip'\n"
+                "pkg_name = 'pygame_sdl2'\n"
+                "\n"
+                "# Читаем и выполняем __init__.py\n"
+                "with zipfile.ZipFile(zip_path, 'r') as zf:\n"
+                "    source = zf.read('pygame_sdl2/__init__.py').decode('utf-8')\n"
+                "\n"
+                "# Выполняем в контексте модуля.\n"
+                "# Если здесь будет ошибка, она вылетит наружу, и мы её увидим в логе.\n"
+                "exec(source, sys.modules[pkg_name].__dict__)\n"
+            ;
 
-                if (path_list) {
-                    // PyModule_AddObject "крадет" ссылку на path_list.
-                    // Если успех, нам не нужно делать Py_DECREF(path_list).
-                    if (PyModule_AddObject(pkg_module, "__path__", path_list) < 0) {
-                        fprintf(stderr, "Failed to set __path__ for %s\n", pkg_name);
-                        Py_DECREF(path_list); // Очищаем только если была ошибка
-                        PyErr_Print();
-                        Py_DECREF(pkg_module);
-                        pkg_module = NULL;
-                    } else {
-                         // Устанавливаем __file__
-                        PyModule_AddStringConstant(pkg_module, "__file__", "romfs:/Contents/lib.zip/pygame_sdl2/__init__.pyc");
-
-                        // Добавляем модуль в sys.modules
-                        if (PyDict_SetItemString(sys_modules, pkg_name, pkg_module) < 0) {
-                            fprintf(stderr, "Failed to inject %s\n", pkg_name);
-                            PyErr_Print();
-                            Py_DECREF(pkg_module);
-                            pkg_module = NULL;
-                        } else {
-                            // --- 3. Загрузка и выполнение кода через zipimport ---
-                            const char* loader_script = 
-                                "import zipimport, sys\n"
-                                "zip_path = 'romfs:/Contents/lib.zip'\n"
-                                "pkg_name = 'pygame_sdl2'\n"
-                                "try:\n"
-                                "    importer = zipimport.zipimporter(zip_path)\n"
-                                "    code = importer.get_code(pkg_name)\n"
-                                "    if code:\n"
-                                "        exec(code, sys.modules[pkg_name].__dict__)\n"
-                                "        print(f'[PYGAME_SDL2] Loaded successfully via zipimport.')\n"
-                                "    else:\n"
-                                "        raise ImportError('zipimport.get_code returned None')\n"
-                                "except Exception as e:\n"
-                                "    import traceback\n"
-                                "    traceback.print_exc()\n"
-                                "    raise\n"
-                            ;
-
-                            PyObject* globals = PyModule_GetDict(pkg_module);
-                            PyObject* result = PyRun_String(loader_script, Py_file_input, globals, globals);
-                            
-                            if (result == NULL) {
-                                fprintf(stderr, "Failed to execute pygame_sdl2 loader script\n");
-                                PyErr_Print();
-                            } else {
-                                Py_DECREF(result);
-                            }
-                        }
-                    }
-                } else {
-                    Py_DECREF(pkg_module);
-                    pkg_module = NULL;
-                }
+            PyObject* globals = PyModule_GetDict(pkg_module);
+            PyObject* result = PyRun_String(init_script, Py_file_input, globals, globals);
+            
+            if (result == NULL) {
+                fprintf(stderr, "!!! FATAL ERROR: Failed to execute pygame_sdl2/__init__.py !!!\n");
+                PyErr_Print();
+                // Важно: если тут ошибка, pygame_sdl2 будет сломан, но программа может попытаться продолжить.
+                // В идеале тут стоит выход, но Ren'Py сам проверит импорт.
+            } else {
+                Py_DECREF(result);
+                printf("pygame_sdl2 initialized successfully.\n");
             }
         }
     }

@@ -126,27 +126,33 @@ fi
 
 # Компиляция для Switch
 echo "Building for Switch..."
-# ПРОВЕРЯЕМ НАЛИЧИЕ switch.cmake
-if [ ! -f "$DEVKITPRO/switch.cmake" ]; then
-    echo "Ошибка: $DEVKITPRO/switch.cmake не найден!"
-    echo "Ищем альтернативные расположения..."
+SWITCH_CMAKE="$DEVKITPRO/switch.cmake"
+# ========== Исправление CMake флагов ==========
+echo "Исправление CMake флагов для Switch..."
+if [ -f "$DEVKITPRO/cmake/Switch.cmake" ]; then
+    # Создаем backup оригинального файла
+    cp "$DEVKITPRO/cmake/Switch.cmake" "$DEVKITPRO/cmake/Switch.cmake.backup"
     
-    # Проверяем другие возможные расположения
-    if [ -f "$DEVKITPRO/cmake/Switch.cmake" ]; then
-        SWITCH_CMAKE="$DEVKITPRO/cmake/Switch.cmake"
-        echo "Найден: $SWITCH_CMAKE"
-    elif [ -f "$DEVKITPRO/libnx/switch.cmake" ]; then
-        SWITCH_CMAKE="$DEVKITPRO/libnx/switch.cmake"
-        echo "Найден: $SWITCH_CMAKE"
-    else
-        echo "Пытаемся найти в системе..."
-        find $DEVKITPRO -name "*switch*.cmake" -type f | head -5
-        exit 1
-    fi
+    # Исправляем флаги линковки
+    sed -i 's/set(CMAKE_EXE_LINKER_FLAGS_INIT "/set(CMAKE_EXE_LINKER_FLAGS_INIT "-fPIC /g' "$DEVKITPRO/cmake/Switch.cmake"
+    
+    # Добавляем поддержку статических библиотек Python
+    echo "" >> "$DEVKITPRO/cmake/Switch.cmake"
+    echo "# Python поддержка" >> "$DEVKITPRO/cmake/Switch.cmake"
+    echo 'set(Python3_LIBRARIES ${PORTLIBS}/lib/libpython3.9.a)' >> "$DEVKITPRO/cmake/Switch.cmake"
+    echo 'set(Python3_INCLUDE_DIRS ${PORTLIBS}/include/python3.9)' >> "$DEVKITPRO/cmake/Switch.cmake"
+    echo 'set(PYTHON_LIBRARY ${PORTLIBS}/lib/libpython3.9.a)' >> "$DEVKITPRO/cmake/Switch.cmake"
+    echo 'set(PYTHON_INCLUDE_DIR ${PORTLIBS}/include/python3.9)' >> "$DEVKITPRO/cmake/Switch.cmake"
+    
+    echo "Файл switch.cmake обновлен"
 else
-    SWITCH_CMAKE="$DEVKITPRO/switch.cmake"
+    echo "Файл switch.cmake не найден!"
 fi
 
+
+
+export LD_LIBRARY_PATH=$DEVKITPRO/portlibs/switch/lib:$LD_LIBRARY_PATH
+export PYTHONPATH=$DEVKITPRO/portlibs/switch/lib/python3.9:$PYTHONPATH
 export C_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$C_INCLUDE_PATH
 export CPLUS_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$CPLUS_INCLUDE_PATH
 

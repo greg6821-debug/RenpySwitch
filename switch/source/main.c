@@ -159,6 +159,9 @@ PyMODINIT_FUNC PyInit_renpy_uguu_uguu(void);
 PyMODINIT_FUNC PyInit_renpy_lexersupport(void);
 PyMODINIT_FUNC PyInit_renpy_display_quaternion(void);
 
+
+static void register_builtin_modules(void)
+{
 // Python 3.9 builtin modules array
 PyImport_AppendInittab("_otrhlibnx", PyInit__otrhlibnx);
     
@@ -226,7 +229,7 @@ PyImport_AppendInittab("renpy.uguu.uguu", PyInit_renpy_uguu_uguu);
     
 PyImport_AppendInittab("renpy.lexersupport", PyInit_renpy_lexersupport);
 PyImport_AppendInittab("renpy.display.quaternion", PyInit_renpy_display_quaternion);
-
+}
 
 // Override the heap initialization function
 void __libnx_initheap(void)
@@ -406,29 +409,45 @@ int main(int argc, char* argv[])
 
     fclose(sysconfigdata_file);
 
-    // Python 3.9 initialization
-    PyStatus status;
-    PyConfig config;
-    PyConfig_InitPythonConfig(&config);
-    config.isolated = 1;
-    config.use_environment = 0;
-    config.site_import = 0;
-    config.write_bytecode = 0;
-    config.optimization_level = 2;
-    
-    // Set Python home and program name
-    config.home = Py_DecodeLocale("romfs:/Contents/lib.zip", NULL);
-    config.program_name = Py_DecodeLocale("renpy-switch", NULL);
-    
-    // Add builtin modules
-    status = PyConfig_SetBytesArgv(&config, argc, argv);
-    if (PyStatus_Exception(status)) {
-        show_error("Failed to set Python argv", 1);
-    }
 
-    // Initialize Python
-    status = Py_InitializeFromConfig(&config);
-    PyConfig_Clear(&config);
+    register_builtin_modules();
+    
+    
+    
+    // ===== Python legacy initialization =====
+ 
+    // Эквиваленты PyConfig
+    Py_IsolatedFlag = 1;
+    Py_IgnoreEnvironmentFlag = 1;
+    Py_NoSiteFlag = 1;
+    Py_DontWriteBytecodeFlag = 1;
+    Py_OptimizeFlag = 2;
+
+    // Program name
+    wchar_t *program_name = Py_DecodeLocale("renpy-switch", NULL);
+    Py_SetProgramName(program_name);
+
+    // Python home (lib.zip!)
+    wchar_t *python_home = Py_DecodeLocale("romfs:/Contents/lib.zip", NULL);
+    Py_SetPythonHome(python_home);
+
+    // Python sys.path
+    wchar_t *python_path = Py_DecodeLocale(
+        "romfs:/Contents/lib.zip:"
+        "romfs:/Contents",
+        NULL
+    );
+    Py_SetPath(python_path);
+
+    // Init Python
+    Py_Initialize();
+
+    // argv
+    wchar_t *argv_w[1];
+    argv_w[0] = program_name;
+    PySys_SetArgv(1, argv_w);
+    
+    
     
     if (PyStatus_Exception(status)) {
         show_error("Failed to initialize Python", 1);
@@ -447,5 +466,8 @@ int main(int argc, char* argv[])
     PyRun_SimpleFileEx(f, "renpy.py", 1);
 
     Py_Finalize();
+    PyMem_RawFree(program_name);
+    PyMem_RawFree(python_home);
+    PyMem_RawFree(python_path);
     return 0;
 }

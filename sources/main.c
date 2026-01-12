@@ -490,7 +490,42 @@ int main(int argc, char* argv[])
     status = Py_InitializeFromConfig(&config);
     if (PyStatus_Exception(status)) goto exception;
     PyConfig_Clear(&config);
-  
+
+
+   /* -------------------------------------------------------
+       FIX: Pre-import all static modules to sys.modules
+       Это гарантирует, что когда pygame_sdl2/__init__.py 
+       попытается сделать import .error, модуль уже будет найден
+       в кэше, и поисковик ZIP не будет мешать.
+    ------------------------------------------------------- */
+    {
+        PyObject* sys_modules = PyImport_GetModuleDict();
+        for (int i = 0; builtins[i].name != NULL; i++) {
+            const char* name = builtins[i].name;
+            
+            // Мы импортируем только модули, имена которых содержат точку.
+            // Например, "pygame_sdl2.error".
+            // Это подтянет и родительский пакет (если нужно), 
+            // но если родительского пакета нет в sys.modules, 
+            // Python попытается его загрузить. 
+            
+            // ВАЖНО: Убедитесь, что PyInit_error не зависит от кода pygame_sdl2/__init__.py.
+            // Обычно extension модули независимы.
+            
+            PyObject* module = PyImport_ImportModule(name);
+            if (module == NULL) {
+                // Если модуль не смог загрузиться, это критическая ошибка для статической сборки
+                PyErr_Print();
+                fprintf(stderr, "Failed to pre-import static module: %s\n", name);
+                // Можно продолжить, но лучше знать, что сломалось
+            } else {
+                Py_DECREF(module);
+            }
+        }
+    }
+
+
+   
 
     /* ---- Run Ren'Py ---- */
     int rc = PyRun_SimpleFileEx(

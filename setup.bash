@@ -43,12 +43,20 @@ apt-get -y install libsdl2-dev libsdl2-image-dev libjpeg-dev \
 
 python3 --version
 
+
 #curl -LOC - https://github.com/knautilus/Utils/releases/download/v1.0/devkitpro-pkgbuild-helpers-2.2.4-2-any.pkg.tar.xz
 curl -LOC - https://github.com/knautilus/Utils/releases/download/v1.0/python39-switch.zip
 curl -LOC - https://github.com/knautilus/Utils/releases/download/v1.0/switch-libfribidi-1.0.12-1-any.pkg.tar.xz
 #dkp-pacman -U --noconfirm devkitpro-pkgbuild-helpers-2.2.4-2-any.pkg.tar.xz
 dkp-pacman -U --noconfirm switch-libfribidi-1.0.12-1-any.pkg.tar.xz
 unzip -qq python39-switch.zip -d $DEVKITPRO/portlibs/switch
+
+
+export LD_LIBRARY_PATH=$DEVKITPRO/portlibs/switch/lib:$LD_LIBRARY_PATH
+export PYTHONPATH=$DEVKITPRO/portlibs/switch/lib/python3.9:$PYTHONPATH
+export C_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$C_INCLUDE_PATH
+export CPLUS_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$CPLUS_INCLUDE_PATH
+
 
 #rm devkitpro-pkgbuild-helpers-2.2.4-2-any.pkg.tar.xz
 rm switch-libfribidi-1.0.12-1-any.pkg.tar.xz
@@ -73,13 +81,13 @@ tar -xf renpy-$RENPY_VER-source.tar.bz2
 mv renpy-$RENPY_VER-source renpy-source
 rm renpy-$RENPY_VER-source.tar.bz2
 
-rm -rf renpy-$RENPY_VER-sdk renpy_sdk
+№rm -rf renpy-$RENPY_VER-sdk renpy_sdk
 unzip -qq renpy-$RENPY_VER-sdk.zip -d renpy_sdk
 rm renpy-$RENPY_VER-sdk.zip
 
-rm renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
-mkdir renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
-cp -rf $DEVKITPRO/portlibs/switch/lib/python3.9 renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
+#rm renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
+#mkdir renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
+#cp -rf $DEVKITPRO/portlibs/switch/lib/python3.9 renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
 
 cp -rf subprocess.pyo renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
 

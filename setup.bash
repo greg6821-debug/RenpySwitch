@@ -81,7 +81,7 @@ tar -xf renpy-$RENPY_VER-source.tar.bz2
 mv renpy-$RENPY_VER-source renpy-source
 rm renpy-$RENPY_VER-source.tar.bz2
 
-№rm -rf renpy-$RENPY_VER-sdk renpy_sdk
+rm -rf renpy-$RENPY_VER-sdk renpy_sdk
 unzip -qq renpy-$RENPY_VER-sdk.zip -d renpy_sdk
 rm renpy-$RENPY_VER-sdk.zip
 

@@ -101,62 +101,6 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
     return PyModule_Create(&otrh_module);
 }
 
-
-
-// PyMODINIT_FUNC PyInit_pygame_sdl2(void) {
-//     PyObject *module;
-    
-//     // Создаем модуль pygame_sdl2
-//     static struct PyModuleDef moduledef = {
-//         PyModuleDef_HEAD_INIT,
-//         "pygame_sdl2",
-//         NULL,
-//         -1,
-//         NULL,
-//         NULL,
-//         NULL,
-//         NULL,
-//         NULL
-//     };
-    
-//     module = PyModule_Create(&moduledef);
-//     if (module == NULL) return NULL;
-    
-//     // ЗАГРУЖАЕМ И ВЫПОЛНЯЕМ __init__.py ВРУЧНУЮ
-//     // Это ключевой момент!
-//     PyObject *builtins = PyEval_GetBuiltins();
-//     PyObject *import_func = PyDict_GetItemString(builtins, "__import__");
-    
-//     if (import_func) {
-//         // Импортируем pygame_sdl2.__init__ как модуль
-//         PyObject *init_module = PyObject_CallFunction(
-//             import_func, 
-//             "s", 
-//             "pygame_sdl2.__init__"
-//         );
-        
-//         if (init_module) {
-//             // Копируем атрибуты из __init__ в основной модуль
-//             PyObject *dict = PyModule_GetDict(init_module);
-//             PyObject *main_dict = PyModule_GetDict(module);
-            
-//             if (dict && main_dict) {
-//                 PyDict_Update(main_dict, dict);
-//             }
-//             Py_DECREF(init_module);
-//         }
-//     }
-    
-//     // Регистрируем подмодуль surface
-//     PyObject *surface_module = PyInit_surface();
-//     if (surface_module == NULL) return NULL;
-    
-//     Py_INCREF(surface_module);
-//     PyModule_AddObject(module, "surface", surface_module);
-    
-//     return module;
-// }
-
 PyMODINIT_FUNC PyInit_color(void);
 PyMODINIT_FUNC PyInit_controller(void);
 PyMODINIT_FUNC PyInit_display(void);

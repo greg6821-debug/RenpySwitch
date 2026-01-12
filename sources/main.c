@@ -331,6 +331,22 @@ int main(int argc, char* argv[])
 
     PyConfig_InitPythonConfig(&config);
 
+    /* ---- Указываем Python'у его местоположение ---- */
+    /* Это устранит ошибку "Could not find platform independent libraries" */
+    PyStatus status;
+    
+    status = PyConfig_SetString(&config, &config.home, L"romfs:/Contents");
+    if (PyStatus_Exception(status)) goto exception;
+
+    status = PyConfig_SetString(&config, &config.prefix, L"romfs:/Contents");
+    if (PyStatus_Exception(status)) goto exception;
+    
+    status = PyConfig_SetString(&config, &config.exec_prefix, L"romfs:/Contents");
+    if (PyStatus_Exception(status)) goto exception;
+   
+    /* Добавляем путь к корневой папке Contents, если lib.zip там не найдется сразу */
+    PyWideStringList_Append(&config.module_search_paths, L"romfs:/Contents");
+   
     /* ---- Critical for Python 3.9 embedded ---- */
     config.isolated = 0;
     config.use_environment = 0;

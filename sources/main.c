@@ -475,58 +475,7 @@ int main(int argc, char* argv[])
     status = Py_InitializeFromConfig(&config);
     if (PyStatus_Exception(status)) goto exception;
     PyConfig_Clear(&config);
-
-
-    /* ---- Force load C-modules before pygame_sdl2 import ---- */
-    PyRun_SimpleString(
-        "import sys\n"
-        "import pygame_sdl2.error\n"
-        "import pygame_sdl2.color\n"
-        "import pygame_sdl2.controller\n"
-        "import pygame_sdl2.display\n"
-        "import pygame_sdl2.draw\n"
-        "import pygame_sdl2.event\n"
-        "import pygame_sdl2.gfxdraw\n"
-        "import pygame_sdl2.image\n"
-        "import pygame_sdl2.joystick\n"
-        "import pygame_sdl2.key\n"
-        "import pygame_sdl2.locals\n"
-        "import pygame_sdl2.mouse\n"
-        "import pygame_sdl2.power\n"
-        "import pygame_sdl2.pygame_time\n"
-        "import pygame_sdl2.rect\n"
-        "import pygame_sdl2.rwobject\n"
-        "import pygame_sdl2.scrap\n"
-        "import pygame_sdl2.surface\n"
-        "import pygame_sdl2.transform\n"
-        "import pygame_sdl2.render\n"
-        "import pygame_sdl2.mixer\n"
-        "import pygame_sdl2.mixer_music\n"
-    );
-   
-
-    int python_result;
-    python_result = PyRun_SimpleString(
-    "import sys\n"
-    "sys.path[:] = ['romfs:/Contents/lib.zip']\n"
-    );
-    if (python_result == -1)
-    {
-        show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.");
-    }
-   #define x(lib) \
-    { \
-        if (PyRun_SimpleString("import " lib) == -1) \
-        { \
-            show_error("Could not import python library " lib ".\n\nPlease ensure that you have extracted the files correctly so that the \"lib\" folder is in the same directory as the nsp file, and that the \"lib\" folder contains the folder \"python3.9\". \nInside that folder, the file \"" lib ".py\" or folder \"" lib "\" needs to exist."); \
-        } \
-    }
-
-    x("os");
-    x("pygame_sdl2");
-    x("encodings");
-
-    #undef x
+  
 
     /* ---- Run Ren'Py ---- */
     int rc = PyRun_SimpleFileEx(

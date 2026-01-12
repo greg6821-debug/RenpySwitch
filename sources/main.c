@@ -492,12 +492,15 @@ int main(int argc, char* argv[])
     PyConfig_Clear(&config);
 
 
-  /* -------------------------------------------------------
+      /* -------------------------------------------------------
        FIX: Manual Injection of Static Modules + pygame_sdl2 Fix
        
        1. Создаем и внедряем все C-модули (pygame_sdl2.error и т.д.).
        2. Создаем и внедряем родительский пакет pygame_sdl2.
        3. Выполняем __init__.py для pygame_sdl2 вручную.
+       
+       ВАЖНО: Путь к __init__.py должен соответствовать структуре вашего ZIP-архива.
+       Судя по предыдущим логам, путь внутри zip: lib/python3.9/pygame_sdl2/__init__.py
     ------------------------------------------------------- */
     {
         PyObject* sys_modules = PyImport_GetModuleDict();
@@ -507,24 +510,17 @@ int main(int argc, char* argv[])
             const char* fullname = builtins[i].name;
             PyObject* (*initfunc)(void) = builtins[i].initfunc;
 
-            // Пропускаем, если функции инициализации нет
             if (!initfunc) continue;
+            if (PyDict_GetItemString(sys_modules, fullname)) continue;
 
-            // Пропускаем, если уже загружен
-            if (PyDict_GetItemString(sys_modules, fullname)) {
-                continue;
-            }
-
-            // Создаем модуль через C-функцию
             PyObject* module = initfunc();
 
             if (module == NULL) {
-                fprintf(stderr, "CRITICAL: Failed to initialize static module: %s\n", fullname);
+                fprintf(stderr, "CRITICAL: Failed to init module: %s\n", fullname);
                 PyErr_Print();
             } else {
-                // Вставляем в sys.modules
                 if (PyDict_SetItemString(sys_modules, fullname, module) < 0) {
-                    fprintf(stderr, "Failed to inject %s into sys.modules\n", fullname);
+                    fprintf(stderr, "Failed to inject %s\n", fullname);
                     PyErr_Print();
                 }
                 Py_DECREF(module);
@@ -532,44 +528,53 @@ int main(int argc, char* argv[])
         }
 
         // --- 2. Специальная обработка пакета pygame_sdl2 ---
-        // Мы создаем его вручную, чтобы zipimporter не перехватил управление.
-        
         const char* pkg_name = "pygame_sdl2";
         
-        // Проверяем, вдруг он уже есть (не должно быть)
         if (PyDict_GetItemString(sys_modules, pkg_name) == NULL) {
             PyObject* pkg_module = PyModule_New(pkg_name);
             if (pkg_module) {
-                // Устанавливаем __path__, чтобы Python знал, что это пакет
-                if (PyModule_AddStringConstant(pkg_module, "__path__", "romfs:/Contents/lib.zip/pygame_sdl2") < 0) {
+                // Устанавливаем __path__ и __file__ (важно для корректной работы пакета)
+                if (PyModule_AddStringConstant(pkg_module, "__path__", "romfs:/Contents/lib.zip/lib/python3.9/pygame_sdl2") < 0) {
                     fprintf(stderr, "Failed to set __path__ for %s\n", pkg_name);
                     PyErr_Print();
                     Py_DECREF(pkg_module);
                     pkg_module = NULL;
+                } else if (PyModule_AddStringConstant(pkg_module, "__file__", "romfs:/Contents/lib.zip/lib/python3.9/pygame_sdl2/__init__.py") < 0) {
+                     fprintf(stderr, "Failed to set __file__ for %s\n", pkg_name);
+                     PyErr_Print();
+                     Py_DECREF(pkg_module);
+                     pkg_module = NULL;
                 } else {
-                    // Добавляем модуль в sys.modules
                     if (PyDict_SetItemString(sys_modules, pkg_name, pkg_module) < 0) {
-                        fprintf(stderr, "Failed to inject %s into sys.modules\n", pkg_name);
+                        fprintf(stderr, "Failed to inject %s\n", pkg_name);
                         PyErr_Print();
                         Py_DECREF(pkg_module);
                         pkg_module = NULL;
                     } else {
                         // --- 3. Выполняем __init__.py из ZIP ---
-                        // Мы используем Python-код для удобства работы с zipfile
                         const char* init_script = 
-                            "import zipfile, sys\n"
+                            "import zipfile, sys, os\n"
                             "zip_path = 'romfs:/Contents/lib.zip'\n"
+                            "# ВНИМАНИЕ: Путь внутри ZIP должен быть полным, как он там лежит\n"
+                            "init_filename = 'lib/python3.9/pygame_sdl2/__init__.py'\n"
                             "pkg_name = 'pygame_sdl2'\n"
                             "try:\n"
-                            "    # Читаем файл __init__.py из архива\n"
                             "    with zipfile.ZipFile(zip_path, 'r') as zf:\n"
-                            "        source = zf.read('pygame_sdl2/__init__.py').decode('utf-8')\n"
-                            "    # Выполняем его в контексте уже созданного модуля pygame_sdl2\n"
+                            "        source = zf.read(init_filename).decode('utf-8')\n"
+                            "    print(f'[PYGAME_SDL2] Loaded init from: {init_filename}')\n"
                             "    exec(source, sys.modules[pkg_name].__dict__)\n"
+                            "    print(f'[PYGAME_SDL2] __init__.py executed successfully.')\n"
+                            "except KeyError:\n"
+                            "    print(f'[PYGAME_SDL2] ERROR: File not found in zip: {init_filename}')\n"
+                            "    print('[PYGAME_SDL2] Listing contents of zip for debug:')\n"
+                            "    with zipfile.ZipFile(zip_path, 'r') as zf:\n"
+                            "        for n in zf.namelist():\n"
+                            "            if 'pygame_sdl2' in n: print(' ', n)\n"
+                            "    raise\n"
                             "except Exception as e:\n"
                             "    import traceback\n"
                             "    traceback.print_exc()\n"
-                            "    # Ошибка здесь критическая, pygame_sdl2 не заработает\n"
+                            "    raise\n"
                         ;
 
                         PyObject* globals = PyModule_GetDict(pkg_module);
@@ -578,10 +583,8 @@ int main(int argc, char* argv[])
                         if (result == NULL) {
                             fprintf(stderr, "Failed to execute pygame_sdl2/__init__.py\n");
                             PyErr_Print();
-                            // Модуль остается в sys.modules, но может быть сломан
                         } else {
                             Py_DECREF(result);
-                            printf("pygame_sdl2 package manually initialized successfully.\n");
                         }
                     }
                 }

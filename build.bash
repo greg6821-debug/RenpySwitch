@@ -147,6 +147,8 @@ else
     SWITCH_CMAKE="$DEVKITPRO/switch.cmake"
 fi
 
+export C_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$C_INCLUDE_PATH
+export CPLUS_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$CPLUS_INCLUDE_PATH
 
 export PREFIXARCHIVE=$(realpath renpy-switch-modules.tar.gz)
 rm -rf build-switch

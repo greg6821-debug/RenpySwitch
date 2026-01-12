@@ -76,6 +76,11 @@ rm renpy-$RENPY_VER-source.tar.bz2
 rm -rf renpy-$RENPY_VER-sdk renpy_sdk
 unzip -qq renpy-$RENPY_VER-sdk.zip -d renpy_sdk
 rm renpy-$RENPY_VER-sdk.zip
+
+rm renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
+mkdir renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
+cp -rf $DEVKITPRO/portlibs/switch/lib/python3.9 renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
+
 cp -rf subprocess.pyo renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
 
 #dkp-pacman --noconfirm -S switch-libfribidi

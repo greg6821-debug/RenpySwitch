@@ -158,19 +158,32 @@ export CPLUS_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$CPLUS_INCLUDE_PATH
 
 export PREFIXARCHIVE=$(realpath renpy-switch-modules.tar.gz)
 
-echo "Find pyfree 1"
-find renpy-source -name pyfreetype.h
-echo "End find 1"
+
+# Копируем .c файлы из pygame_sdl2-source
+rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
+# Копируем .c файлы из renpy-source/module
+rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module
+# Перемещаем все файлы из поддиректорий в source/module, не перезаписывая существующие
+find source/module -mindepth 2 -type f -exec mv -n -t source/module {} +
+# Удаляем пустые директории
+find source/module -type d -empty -delete
+# Копируем .h файлы из pygame_sdl2-source
+rsync -avm --include='*/' --include='*.h' --exclude='*' pygame_sdl2-source/ include/module/pygame_sdl2
+# Перемещаем все .h файлы из поддиректорий, не перезаписывая существующие
+find include/module/pygame_sdl2 -mindepth 2 -type f -exec mv -n -t include/module/pygame_sdl2 {} +
+# Перемещаем surface.h
+mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src
+# Копируем .h файлы из renpy-source/module
+rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ include/module
+# Перемещаем hydrogen.c
+mv source/module/hydrogen.c include/module/libhydrogen
+
 
 rm -rf build-switch
 mkdir build-switch
 pushd build-switch
 mkdir local_prefix
 export LOCAL_PREFIX=$(realpath local_prefix)
-
-echo "Find pyfree 2"
-find renpy-source -name pyfreetype.h
-echo "End find 2"
 
 # ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЙ CMAKE С TOOLCHAIN
 echo "Запуск CMake с toolchain: $SWITCH_CMAKE"

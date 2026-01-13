@@ -391,28 +391,23 @@ int main(int argc, char* argv[])
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
 
-    // Python 3.9 initialization flags
-    
-
-    FILE* sysconfigdata_file = fopen("romfs:/Contents/lib.zip", "rb");
-    FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
-
-    if (sysconfigdata_file == NULL)
+    // === 1. Проверка наличия файлов (Sanity Check) ===
+    // Используем другое имя переменной (check_file), чтобы избежать конфликта имен
+    FILE* check_file = fopen("romfs:/Contents/lib.zip", "rb");
+    if (check_file == NULL)
     {
         show_error("Could not find lib.zip.\n\nPlease ensure that you have extracted the files correctly so that the \"lib.zip\" file is in the same directory as the nsp file.", 1);
     }
+    fclose(check_file); // Закрываем файл сразу после проверки
 
-    if (renpy_file == NULL)
+    check_file = fopen("romfs:/Contents/renpy.py", "rb");
+    if (check_file == NULL)
     {
         show_error("Could not find renpy.py.\n\nPlease ensure that you have extracted the files correctly so that the \"renpy.py\" file is in the same directory as the nsp file.", 1);
     }
-
-    fclose(sysconfigdata_file);
-
+    fclose(check_file); // Закрываем файл после проверки
 
     register_builtin_modules();
-    
-    
     
     // ===== Python 3.9 legacy embedding (CORRECT) =====
 
@@ -448,59 +443,23 @@ int main(int argc, char* argv[])
     };
     PySys_SetArgv(3, argv_w);
 
-
-
-    FILE* renpy_file = fopen((const char*)python_script_buffer, "rb");
+    // === 2. Запуск Python скрипта ===
+    
+    // Теперь объявляем renpy_file, так как check_file уже закрыт и вышел из области видимости
+    // Используем правильный путь, вместо несуществующей python_script_buffer
+    FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
+    
     if (renpy_file == NULL)
     {
-        show_error_and_exit("Could not open renpy.py after Python initialization.\n\nThis is an internal error and should not occur during normal usage.");
+        // Используем существующую функцию show_error с флагом выхода 1
+        show_error("Could not open renpy.py after Python initialization.\n\nThis is an internal error and should not occur during normal usage.", 1);
     }
     else
     {
         /* This is where the fun begins */
         PyRun_SimpleFile(renpy_file, "renpy.py");
+        fclose(renpy_file); // Хорошей практикой считается закрыть файл после использования
     }
-    
-    
-
-    // FILE* f = fopen("romfs:/Contents/renpy.py", "r");
-    // if (!f) {
-    //     show_error("Could not open renpy.py", 1);
-    // }
-
-    // // Получаем длину файла
-    // fseek(f, 0, SEEK_END);
-    // long fsize = ftell(f);
-    // fseek(f, 0, SEEK_SET);
-
-    // // Выделяем буфер
-    // char *source = malloc(fsize + 1);
-    // fread(source, 1, fsize, f);
-    // source[fsize] = '\0';
-    // fclose(f);
-
-    // // Компилируем код
-    // PyObject *compiled = Py_CompileString(source, "renpy.py", Py_file_input);
-    // free(source);
-
-    // if (!compiled) {
-    //     PyErr_Print();
-    //     show_error("Failed to compile renpy.py", 1);
-    // }
-
-    // // Выполняем в __main__ модуле
-    // PyObject *main_module = PyImport_AddModule("__main__");
-    // PyObject *main_dict = PyModule_GetDict(main_module);
-
-    // PyObject *result = PyEval_EvalCode(compiled, main_dict, main_dict);
-    // Py_XDECREF(compiled);
-
-    // if (!result) {
-    //     PyErr_Print();
-    //     show_error("Failed to execute renpy.py", 1);
-    // }
-    // Py_XDECREF(result);
-
 
     Py_Finalize();
     PyMem_Free(program_name);

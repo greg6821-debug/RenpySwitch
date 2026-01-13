@@ -197,12 +197,12 @@ if [ -f "../generate_private.py" ]; then
     echo "Папка switch скопирована"
 fi
 
-echo "pygame_sdl2_py3.patch..."
-cp ../pygame_sdl2_py3.patch .
-pushd pygame_sdl2-source
-patch -p1 < ../pygame_sdl2_py3.patch
-popd
-echo "pygame_sdl2_py3.patch...end"
+#echo "pygame_sdl2_py3.patch..."
+#cp ../pygame_sdl2_py3.patch .
+#pushd pygame_sdl2-source
+#patch -p1 < ../pygame_sdl2_py3.patch
+#popd
+#echo "pygame_sdl2_py3.patch...end"
 
 echo "renpy.patch...renpy_py3.patch"
 cp ../renpy.patch .

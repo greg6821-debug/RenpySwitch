@@ -196,7 +196,7 @@ if ! command -v make &> /dev/null; then
     apt-get install -y make
 fi
 
-cmake -DCMAKE_BUILD_TYPE=Release ..
+#cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build . -j$(nproc)
 mkdir -p $LOCAL_PREFIX/lib
 cp librenpy-switch-modules.a $LOCAL_PREFIX/lib/librenpy-switch-modules.a

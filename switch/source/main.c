@@ -437,9 +437,8 @@ int main(int argc, char* argv[])
     };
     PySys_SetArgv(3, argv_w);
 
-    // === 2. Чтение и выполнение скрипта (без PyRun_SimpleFile) ===
+    // === 2. Запуск скрипта через Low-Level API (Py_CompileString) ===
     
-    // Открываем файл для чтения текста
     FILE* renpy_script = fopen("romfs:/Contents/renpy.py", "r");
     if (renpy_script == NULL)
     {
@@ -447,42 +446,53 @@ int main(int argc, char* argv[])
     }
     else
     {
-        // Определяем размер файла
+        // Читаем файл в буфер
         fseek(renpy_script, 0, SEEK_END);
         long fsize = ftell(renpy_script);
         fseek(renpy_script, 0, SEEK_SET);
 
-        // Выделяем буфер (+1 для нуль-терминатора)
         char *script_buffer = (char *)malloc(fsize + 1);
         if (script_buffer) {
             fread(script_buffer, 1, fsize, renpy_script);
-            script_buffer[fsize] = 0; // Обязательно завершаем строку нулем
+            script_buffer[fsize] = 0; // Null-terminate
         }
         fclose(renpy_script);
 
         if (script_buffer) {
-            // Получаем словарь глобальных переменных модуля __main__
-            PyObject *main_module = PyImport_AddModule("__main__");
-            PyObject *main_dict = PyModule_GetDict(main_module);
+            // --- Шаг А: Компиляция ---
+            // Используем Py_CompileString вместо PyRun_SimpleString
+            PyObject *code = Py_CompileString(script_buffer, "romfs:/Contents/renpy.py", Py_file_input);
+            
+            if (code == NULL) {
+                // Ошибка компиляции
+                PyErr_Print();
+                show_error("Python compilation failed (syntax error in renpy.py?).", 1);
+            } else {
+                // --- Шаг Б: Выполнение ---
+                PyObject *main_module = PyImport_AddModule("__main__");
+                PyObject *main_dict = PyModule_GetDict(main_module);
 
-            // Устанавливаем __file__, чтобы Ren'Py знал, где он находится
-            PyObject* file_path = PyUnicode_FromString("romfs:/Contents/renpy.py");
-            PyDict_SetItemString(main_dict, "__file__", file_path);
-            Py_DECREF(file_path);
+                // Устанавливаем __file__ (важно для путей Ren'Py)
+                PyObject* file_path = PyUnicode_FromString("romfs:/Contents/renpy.py");
+                PyDict_SetItemString(main_dict, "__file__", file_path);
+                Py_DECREF(file_path);
 
-            // Выполняем скрипт из буфера
-            // Используем PyRun_SimpleString вместо PyRun_SimpleFile
-            int result = PyRun_SimpleString(script_buffer);
+                // Выполняем скомпилированный код
+                PyObject *result = PyEval_EvalCode(code, main_dict, main_dict);
+                
+                Py_DECREF(code); // Освобождаем объект кода
 
-            // Освобождаем буфер
-            free(script_buffer);
-
-            if (result != 0) {
-                // Если была ошибка выполнения, PyRun_SimpleString уже вывел её в stderr,
-                // но можно добавить логику обработки при необходимости
+                if (result == NULL) {
+                    // Ошибка времени выполнения
+                    PyErr_Print();
+                    show_error("Python runtime error occurred.", 1);
+                } else {
+                    Py_DECREF(result); // Успешное выполнение
+                }
             }
+            free(script_buffer);
         } else {
-            show_error("Memory allocation failed for renpy.py", 1);
+            show_error("Memory allocation failed.", 1);
         }
     }
 

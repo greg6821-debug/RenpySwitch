@@ -217,9 +217,11 @@ echo "Creating symbolic links..."
 mkdir -p include/module
 mkdir -p source/module
 
+echo "pygame_sdl2_py3.patch..."
 pushd pygame_sdl2-source
 patch -p1 < ../pygame_sdl2_py3.patch
 popd
+echo "pygame_sdl2_py3.patch...end"
 
 # Копируем файлы pygame_sdl2
 if [ -d "pygame_sdl2-source" ]; then
@@ -233,10 +235,12 @@ if [ -d "pygame_sdl2-source" ]; then
     fi
 fi
 
+echo "renpy.patch...renpy_py3.patch"
 pushd renpy-source
 patch -p1 < ../renpy.patch
 patch -p1 < ../renpy_py3.patch
 popd
+echo "renpy.patch...renpy_py3.patch...end"
 
 # Копируем файлы renpy-source/module
 if [ -d "renpy-source/module" ]; then

@@ -218,6 +218,7 @@ mkdir -p include/module
 mkdir -p source/module
 
 echo "pygame_sdl2_py3.patch..."
+cp ../pygame_sdl2_py3.patch .
 pushd pygame_sdl2-source
 patch -p1 < ../pygame_sdl2_py3.patch
 popd
@@ -236,6 +237,8 @@ if [ -d "pygame_sdl2-source" ]; then
 fi
 
 echo "renpy.patch...renpy_py3.patch"
+cp ../renpy.patch .
+cp ../renpy_py3.patch .
 pushd renpy-source
 patch -p1 < ../renpy.patch
 patch -p1 < ../renpy_py3.patch

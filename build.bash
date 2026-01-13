@@ -202,6 +202,11 @@ mkdir -p $LOCAL_PREFIX/lib
 cp librenpy-switch-modules.a $LOCAL_PREFIX/lib/librenpy-switch-modules.a
 popd
 
+aarch64-none-elf-nm \
+  --defined-only \
+  $DEVKITPRO/portlibs/switch/lib/librenpy-switch-modules.a \
+  | grep ' PyInit_'
+
 # Установка в devkitpro
 echo "Installing to devkitpro..."
 tar -czvf $PREFIXARCHIVE -C $LOCAL_PREFIX .

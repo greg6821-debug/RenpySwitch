@@ -204,7 +204,7 @@ popd
 
 aarch64-none-elf-nm \
   --defined-only \
-  $DEVKITPRO/portlibs/switch/lib/librenpy-switch-modules.a \
+  $LOCAL_PREFIX/lib/librenpy-switch-modules.a \
   | grep ' PyInit_'
 
 # Установка в devkitpro

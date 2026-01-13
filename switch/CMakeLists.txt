@@ -120,9 +120,23 @@ target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:RELEASE>:${OPTIMIZATION
 target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:RELWITHDEBINFO>:${OPTIMIZATION_FLAGS}>)
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
-add_custom_target(${PROJECT_NAME}.nso ALL
+#add_custom_target(${PROJECT_NAME}.nso ALL
+#    COMMAND ${DEVKITPRO}/tools/bin/elf2nso
+#        ${PROJECT_NAME}
+#        ${PROJECT_NAME}.nso
+#    DEPENDS ${PROJECT_NAME}
+#)
+
+
+add_custom_command(
+    OUTPUT ${PROJECT_NAME}.nso
     COMMAND ${DEVKITPRO}/tools/bin/elf2nso
-        ${PROJECT_NAME}
+        $<TARGET_FILE:${PROJECT_NAME}>
         ${PROJECT_NAME}.nso
     DEPENDS ${PROJECT_NAME}
+    COMMENT "Converting ELF to NSO"
+)
+
+add_custom_target(${PROJECT_NAME}_nso ALL
+    DEPENDS ${PROJECT_NAME}.nso
 )

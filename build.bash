@@ -334,4 +334,6 @@ rm -rf ./renpy_clear/game
 echo "Creating final archive..."
 7z a -tzip raw.zip ./raw/*
 
+mv raw.zip ..
+
 echo "Build completed successfully!"

@@ -179,6 +179,11 @@ rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ inc
 mv source/module/hydrogen.c include/module/libhydrogen
 
 
+echo "=== Applying renpy.patch ==="
+#pushd renpy-build
+patch -p1 < ../renpy.patch
+#popd
+
 rm -rf build-switch
 mkdir build-switch
 pushd build-switch

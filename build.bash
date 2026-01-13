@@ -160,12 +160,6 @@ export PREFIXARCHIVE=$(realpath renpy-switch-modules.tar.gz)
 
 
 
-echo "=== Applying renpy.patch ==="
-pushd renpy-source
-patch -p1 < ../renpy.patch
-popd
-
-
 # Копируем .c файлы из pygame_sdl2-source
 rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
 # Копируем .c файлы из renpy-source/module

@@ -144,7 +144,7 @@ PyMODINIT_FUNC PyInit_renpy_text_ftfont(void);
 PyMODINIT_FUNC PyInit_renpy_text_textsupport(void);
 PyMODINIT_FUNC PyInit_renpy_text_texwrap(void);
 
-PyMODINIT_FUNC PyInit_renpy_compat_dictviews(void);
+//PyMODINIT_FUNC PyInit_renpy_compat_dictviews(void);
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2draw(void);
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2mesh(void);
 PyMODINIT_FUNC PyInit_renpy_gl2_gl2mesh2(void);
@@ -215,7 +215,7 @@ PyImport_AppendInittab("renpy.text.ftfont", PyInit_renpy_text_ftfont);
 PyImport_AppendInittab("renpy.text.textsupport", PyInit_renpy_text_textsupport);
 PyImport_AppendInittab("renpy.text.texwrap", PyInit_renpy_text_texwrap);
 
-PyImport_AppendInittab("renpy.compat.dictviews", PyInit_renpy_compat_dictviews);
+//PyImport_AppendInittab("renpy.compat.dictviews", PyInit_renpy_compat_dictviews);
 PyImport_AppendInittab("renpy.gl2.gl2draw", PyInit_renpy_gl2_gl2draw);
 PyImport_AppendInittab("renpy.gl2.gl2mesh", PyInit_renpy_gl2_gl2mesh);
 PyImport_AppendInittab("renpy.gl2.gl2mesh2", PyInit_renpy_gl2_gl2mesh2);

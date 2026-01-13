@@ -330,7 +330,6 @@ fi
 # Очистка
 rm -rf ./renpy_clear/game
 
-cp -r renpy-build ./raw/switch/romfs
 
 # Создание финального архива
 echo "Creating final archive..."

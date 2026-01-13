@@ -159,6 +159,13 @@ export CPLUS_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$CPLUS_INCLUDE_PATH
 export PREFIXARCHIVE=$(realpath renpy-switch-modules.tar.gz)
 
 
+
+echo "=== Applying renpy.patch ==="
+pushd renpy-source
+patch -p1 < ../renpy.patch
+popd
+
+
 # Копируем .c файлы из pygame_sdl2-source
 rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
 # Копируем .c файлы из renpy-source/module
@@ -179,10 +186,6 @@ rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ inc
 mv source/module/hydrogen.c include/module/libhydrogen
 
 
-echo "=== Applying renpy.patch ==="
-#pushd renpy-build
-patch -p1 < ../renpy.patch
-#popd
 
 rm -rf build-switch
 mkdir build-switch

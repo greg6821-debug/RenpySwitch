@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <switch.h>
 #include <string.h>
+#include <stdlib.h>
 
 u64 cur_progid = 0;
 AccountUid userID = {0};
@@ -391,40 +392,35 @@ int main(int argc, char* argv[])
     appletLockExit();
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
 
-    // === 1. Проверка наличия файлов (Sanity Check) ===
-    // Используем другое имя переменной (check_file), чтобы избежать конфликта имен
+    // === 1. Проверка наличия файлов ===
     FILE* check_file = fopen("romfs:/Contents/lib.zip", "rb");
     if (check_file == NULL)
     {
-        show_error("Could not find lib.zip.\n\nPlease ensure that you have extracted the files correctly so that the \"lib.zip\" file is in the same directory as the nsp file.", 1);
+        show_error("Could not find lib.zip.\n\nPlease ensure that you have extracted the files correctly.", 1);
     }
-    fclose(check_file); // Закрываем файл сразу после проверки
+    fclose(check_file);
 
     check_file = fopen("romfs:/Contents/renpy.py", "rb");
     if (check_file == NULL)
     {
-        show_error("Could not find renpy.py.\n\nPlease ensure that you have extracted the files correctly so that the \"renpy.py\" file is in the same directory as the nsp file.", 1);
+        show_error("Could not find renpy.py.\n\nPlease ensure that you have extracted the files correctly.", 1);
     }
-    fclose(check_file); // Закрываем файл после проверки
+    fclose(check_file);
 
     register_builtin_modules();
     
-    // ===== Python 3.9 legacy embedding (CORRECT) =====
+    // ===== Python Initialization =====
 
-    // 1. Environment isolation
     setenv("PYTHONNOUSERSITE", "1", 1);
     setenv("PYTHONDONTWRITEBYTECODE", "1", 1);
     setenv("PYTHONOPTIMIZE", "2", 1);
 
-    // 2. Program name
     wchar_t *program_name = Py_DecodeLocale("renpy-switch", NULL);
     Py_SetProgramName(program_name);
 
-    // 3. Python home (lib.zip)
     wchar_t *python_home = Py_DecodeLocale("romfs:/Contents/lib.zip", NULL);
     Py_SetPythonHome(python_home);
 
-    // 4. sys.path (CRITICAL)
     wchar_t *python_path = Py_DecodeLocale(
         "romfs:/Contents/lib.zip:"
         "romfs:/Contents",
@@ -432,10 +428,8 @@ int main(int argc, char* argv[])
     );
     Py_SetPath(python_path);
 
-    // 5. Initialize Python
     Py_Initialize();
 
-    // 6. sys.argv with flags (-S -OO)
     wchar_t *argv_w[] = {
         program_name,
         L"-S",
@@ -443,22 +437,53 @@ int main(int argc, char* argv[])
     };
     PySys_SetArgv(3, argv_w);
 
-    // === 2. Запуск Python скрипта ===
+    // === 2. Чтение и выполнение скрипта (без PyRun_SimpleFile) ===
     
-    // Теперь объявляем renpy_file, так как check_file уже закрыт и вышел из области видимости
-    // Используем правильный путь, вместо несуществующей python_script_buffer
-    FILE* renpy_file = fopen("romfs:/Contents/renpy.py", "rb");
-    
-    if (renpy_file == NULL)
+    // Открываем файл для чтения текста
+    FILE* renpy_script = fopen("romfs:/Contents/renpy.py", "r");
+    if (renpy_script == NULL)
     {
-        // Используем существующую функцию show_error с флагом выхода 1
-        show_error("Could not open renpy.py after Python initialization.\n\nThis is an internal error and should not occur during normal usage.", 1);
+        show_error("Could not open renpy.py after Python initialization.\n\nThis is an internal error.", 1);
     }
     else
     {
-        /* This is where the fun begins */
-        PyRun_SimpleFile(renpy_file, "renpy.py");
-        fclose(renpy_file); // Хорошей практикой считается закрыть файл после использования
+        // Определяем размер файла
+        fseek(renpy_script, 0, SEEK_END);
+        long fsize = ftell(renpy_script);
+        fseek(renpy_script, 0, SEEK_SET);
+
+        // Выделяем буфер (+1 для нуль-терминатора)
+        char *script_buffer = (char *)malloc(fsize + 1);
+        if (script_buffer) {
+            fread(script_buffer, 1, fsize, renpy_script);
+            script_buffer[fsize] = 0; // Обязательно завершаем строку нулем
+        }
+        fclose(renpy_script);
+
+        if (script_buffer) {
+            // Получаем словарь глобальных переменных модуля __main__
+            PyObject *main_module = PyImport_AddModule("__main__");
+            PyObject *main_dict = PyModule_GetDict(main_module);
+
+            // Устанавливаем __file__, чтобы Ren'Py знал, где он находится
+            PyObject* file_path = PyUnicode_FromString("romfs:/Contents/renpy.py");
+            PyDict_SetItemString(main_dict, "__file__", file_path);
+            Py_DECREF(file_path);
+
+            // Выполняем скрипт из буфера
+            // Используем PyRun_SimpleString вместо PyRun_SimpleFile
+            int result = PyRun_SimpleString(script_buffer);
+
+            // Освобождаем буфер
+            free(script_buffer);
+
+            if (result != 0) {
+                // Если была ошибка выполнения, PyRun_SimpleString уже вывел её в stderr,
+                // но можно добавить логику обработки при необходимости
+            }
+        } else {
+            show_error("Memory allocation failed for renpy.py", 1);
+        }
     }
 
     Py_Finalize();

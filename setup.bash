@@ -197,6 +197,24 @@ if [ -f "../generate_private.py" ]; then
     echo "Папка switch скопирована"
 fi
 
+echo "pygame_sdl2_py3.patch..."
+cp ../pygame_sdl2_py3.patch .
+pushd pygame_sdl2-source
+patch -p1 < ../pygame_sdl2_py3.patch
+popd
+echo "pygame_sdl2_py3.patch...end"
+
+echo "renpy.patch...renpy_py3.patch"
+cp ../renpy.patch .
+cp ../renpy_py3.patch .
+pushd renpy-source
+patch -p1 < ../renpy.patch
+patch -p1 < ../renpy_py3.patch
+popd
+echo "renpy.patch...renpy_py3.patch...end"
+
+
+
 # Копируем link_sources.bash, если он существует в родительской директории
 if [ -f "../link_sources.bash" ]; then
     cp ../link_sources.bash .
@@ -217,13 +235,6 @@ echo "Creating symbolic links..."
 mkdir -p include/module
 mkdir -p source/module
 
-echo "pygame_sdl2_py3.patch..."
-cp ../pygame_sdl2_py3.patch .
-pushd pygame_sdl2-source
-patch -p1 < ../pygame_sdl2_py3.patch
-popd
-echo "pygame_sdl2_py3.patch...end"
-
 # Копируем файлы pygame_sdl2
 if [ -d "pygame_sdl2-source" ]; then
     echo "Copying pygame_sdl2 files..."
@@ -235,15 +246,6 @@ if [ -d "pygame_sdl2-source" ]; then
         cp -r pygame_sdl2-source/gen3/*.h include/module/ 2>/dev/null || true
     fi
 fi
-
-echo "renpy.patch...renpy_py3.patch"
-cp ../renpy.patch .
-cp ../renpy_py3.patch .
-pushd renpy-source
-patch -p1 < ../renpy.patch
-patch -p1 < ../renpy_py3.patch
-popd
-echo "renpy.patch...renpy_py3.patch...end"
 
 # Копируем файлы renpy-source/module
 if [ -d "renpy-source/module" ]; then

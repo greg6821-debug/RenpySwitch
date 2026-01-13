@@ -27,8 +27,14 @@ jobs:
         - name: build
           run: sudo bash build.bash
 
+        - name: Debug files
+          run: |
+            pwd
+            ls -lah
+            ls -lah renpy-build || true
+
         - name: upload raw
           uses: actions/upload-artifact@master
           with:
             name: RenToSwitch${{ github.ref_name }}
-            path: raw
+            path: raw.zip

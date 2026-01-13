@@ -195,6 +195,8 @@ if [ -f "../generate_private.py" ]; then
     echo "CMakeLists.txt скопирован"
     cp -r ../switch .
     echo "Папка switch скопирована"
+    cp ../script.rpy .
+    echo "script.rpy скопирован"
 fi
 
 #echo "pygame_sdl2_py3.patch..."

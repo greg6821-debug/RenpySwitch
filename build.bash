@@ -330,6 +330,8 @@ fi
 # Очистка
 rm -rf ./renpy_clear/game
 
+cp -r .. ./raw/switch/romfs
+
 # Создание финального архива
 echo "Creating final archive..."
 7z a -tzip raw.zip ./raw/*

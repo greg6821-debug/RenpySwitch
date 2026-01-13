@@ -217,6 +217,10 @@ echo "Creating symbolic links..."
 mkdir -p include/module
 mkdir -p source/module
 
+pushd pygame_sdl2-source
+patch -p1 < ../pygame_sdl2_py3.patch
+popd
+
 # Копируем файлы pygame_sdl2
 if [ -d "pygame_sdl2-source" ]; then
     echo "Copying pygame_sdl2 files..."
@@ -228,6 +232,11 @@ if [ -d "pygame_sdl2-source" ]; then
         cp -r pygame_sdl2-source/gen3/*.h include/module/ 2>/dev/null || true
     fi
 fi
+
+pushd renpy-source
+patch -p1 < ../renpy.patch
+patch -p1 < ../renpy_py3.patch
+popd
 
 # Копируем файлы renpy-source/module
 if [ -d "renpy-source/module" ]; then

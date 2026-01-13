@@ -206,10 +206,10 @@ fi
 
 echo "renpy.patch...renpy_py3.patch"
 cp ../renpy.patch .
-cp ../renpy_py3.patch .
+#cp ../renpy_py3.patch .
 pushd renpy-source
 patch -p1 < ../renpy.patch
-patch -p1 < ../renpy_py3.patch
+#patch -p1 < ../renpy_py3.patch
 popd
 echo "renpy.patch...renpy_py3.patch...end"
 

@@ -447,45 +447,59 @@ int main(int argc, char* argv[])
         L"-OO",
     };
     PySys_SetArgv(3, argv_w);
+
+
+
+    FILE* renpy_file = fopen((const char*)python_script_buffer, "rb");
+    if (renpy_file == NULL)
+    {
+        show_error_and_exit("Could not open renpy.py after Python initialization.\n\nThis is an internal error and should not occur during normal usage.");
+    }
+    else
+    {
+        /* This is where the fun begins */
+        PyRun_SimpleFile(renpy_file, "renpy.py");
+    }
+    
     
 
-    FILE* f = fopen("romfs:/Contents/renpy.py", "r");
-    if (!f) {
-        show_error("Could not open renpy.py", 1);
-    }
+    // FILE* f = fopen("romfs:/Contents/renpy.py", "r");
+    // if (!f) {
+    //     show_error("Could not open renpy.py", 1);
+    // }
 
-    // Получаем длину файла
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    // // Получаем длину файла
+    // fseek(f, 0, SEEK_END);
+    // long fsize = ftell(f);
+    // fseek(f, 0, SEEK_SET);
 
-    // Выделяем буфер
-    char *source = malloc(fsize + 1);
-    fread(source, 1, fsize, f);
-    source[fsize] = '\0';
-    fclose(f);
+    // // Выделяем буфер
+    // char *source = malloc(fsize + 1);
+    // fread(source, 1, fsize, f);
+    // source[fsize] = '\0';
+    // fclose(f);
 
-    // Компилируем код
-    PyObject *compiled = Py_CompileString(source, "renpy.py", Py_file_input);
-    free(source);
+    // // Компилируем код
+    // PyObject *compiled = Py_CompileString(source, "renpy.py", Py_file_input);
+    // free(source);
 
-    if (!compiled) {
-        PyErr_Print();
-        show_error("Failed to compile renpy.py", 1);
-    }
+    // if (!compiled) {
+    //     PyErr_Print();
+    //     show_error("Failed to compile renpy.py", 1);
+    // }
 
-    // Выполняем в __main__ модуле
-    PyObject *main_module = PyImport_AddModule("__main__");
-    PyObject *main_dict = PyModule_GetDict(main_module);
+    // // Выполняем в __main__ модуле
+    // PyObject *main_module = PyImport_AddModule("__main__");
+    // PyObject *main_dict = PyModule_GetDict(main_module);
 
-    PyObject *result = PyEval_EvalCode(compiled, main_dict, main_dict);
-    Py_XDECREF(compiled);
+    // PyObject *result = PyEval_EvalCode(compiled, main_dict, main_dict);
+    // Py_XDECREF(compiled);
 
-    if (!result) {
-        PyErr_Print();
-        show_error("Failed to execute renpy.py", 1);
-    }
-    Py_XDECREF(result);
+    // if (!result) {
+    //     PyErr_Print();
+    //     show_error("Failed to execute renpy.py", 1);
+    // }
+    // Py_XDECREF(result);
 
 
     Py_Finalize();

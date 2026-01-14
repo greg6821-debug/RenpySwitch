@@ -12,7 +12,7 @@ RENPY_STATIC=1 python3.9 setup.py install_headers
 popd
 
 pushd pygame_sdl2-source
-PYGAME_SDL2_STATIC=1 python3.9 setup.py
+PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace || true
 rm -rf gen
 popd
 
@@ -25,7 +25,7 @@ mkdir -p renpy/uguu
 mkdir -p renpy/gl
 mkdir -p renpy/gl2
 mkdir -p renpy/text
-RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py || true
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
 rm -rf gen
 popd
 

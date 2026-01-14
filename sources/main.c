@@ -364,12 +364,6 @@ static void on_applet_hook(AppletHookType hook, void *param)
    Main
 ------------------------------------------------------- */
 
- // static void register_builtin_modules(void)
- //    {
- //       /* ROOT PACKAGE */
- //    PyImport_AppendInittab("pygame_sdl2.error", PyInit_error);
- //    PyImport_AppendInittab("pygame_sdl2.surface", PyInit_surface);
- //    }
 int main(int argc, char* argv[])
 {
     chdir("romfs:/Contents");
@@ -524,8 +518,7 @@ int main(int argc, char* argv[])
         show_error("Could not find renpy.py");
     }   
 
-    
-    register_builtin_modules();
+    PyImport_ExtendInittab(builtins);
    
     /* ---- Initialize Python ---- */
     status = Py_InitializeFromConfig(&config);

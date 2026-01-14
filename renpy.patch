@@ -215,7 +215,7 @@ diff -Naur b/renpy/bootstrap.py a/renpy/bootstrap.py
  
                  if not os.path.exists(renpy.config.logdir):
                      os.makedirs(renpy.config.logdir, 0o777)
-+                log = renpy.log.open("log", developer=False, append=False)
++                log = renpy.log.open("log")
  
                  renpy.main.main()
  

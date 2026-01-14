@@ -102,61 +102,6 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
 }
 
 
-
-// PyMODINIT_FUNC PyInit_pygame_sdl2(void) {
-//     PyObject *module;
-    
-//     // Создаем модуль pygame_sdl2
-//     static struct PyModuleDef moduledef = {
-//         PyModuleDef_HEAD_INIT,
-//         "pygame_sdl2",
-//         NULL,
-//         -1,
-//         NULL,
-//         NULL,
-//         NULL,
-//         NULL,
-//         NULL
-//     };
-    
-//     module = PyModule_Create(&moduledef);
-//     if (module == NULL) return NULL;
-    
-//     // ЗАГРУЖАЕМ И ВЫПОЛНЯЕМ __init__.py ВРУЧНУЮ
-//     // Это ключевой момент!
-//     PyObject *builtins = PyEval_GetBuiltins();
-//     PyObject *import_func = PyDict_GetItemString(builtins, "__import__");
-    
-//     if (import_func) {
-//         // Импортируем pygame_sdl2.__init__ как модуль
-//         PyObject *init_module = PyObject_CallFunction(
-//             import_func, 
-//             "s", 
-//             "pygame_sdl2.__init__"
-//         );
-        
-//         if (init_module) {
-//             // Копируем атрибуты из __init__ в основной модуль
-//             PyObject *dict = PyModule_GetDict(init_module);
-//             PyObject *main_dict = PyModule_GetDict(module);
-            
-//             if (dict && main_dict) {
-//                 PyDict_Update(main_dict, dict);
-//             }
-//             Py_DECREF(init_module);
-//         }
-//     }
-    
-//     // Регистрируем подмодуль surface
-//     PyObject *surface_module = PyInit_surface();
-//     if (surface_module == NULL) return NULL;
-    
-//     Py_INCREF(surface_module);
-//     PyModule_AddObject(module, "surface", surface_module);
-    
-//     return module;
-// }
-
 PyMODINIT_FUNC PyInit_color(void);
 PyMODINIT_FUNC PyInit_controller(void);
 PyMODINIT_FUNC PyInit_display(void);
@@ -375,12 +320,27 @@ int main(int argc, char* argv[])
 
     Py_NoSiteFlag = 1;
     Py_OptimizeFlag = 2;
-   
-    PyStatus status;
+
     PyConfig config;
 
     PyConfig_InitPythonConfig(&config);
 
+     /* ---- Указываем Python'у его местоположение ---- */
+    /* Это устранит ошибку "Could not find platform independent libraries" */
+    PyStatus status;
+    
+    status = PyConfig_SetString(&config, &config.home, L"romfs:/Contents");
+    if (PyStatus_Exception(status)) goto exception;
+
+    status = PyConfig_SetString(&config, &config.prefix, L"romfs:/Contents");
+    if (PyStatus_Exception(status)) goto exception;
+    
+    status = PyConfig_SetString(&config, &config.exec_prefix, L"romfs:/Contents");
+    if (PyStatus_Exception(status)) goto exception;
+   
+    /* Добавляем путь к корневой папке Contents, если lib.zip там не найдется сразу */
+    PyWideStringList_Append(&config.module_search_paths, L"romfs:/Contents");
+   
     /* ---- Critical for Python 3.9 embedded ---- */
     config.isolated = 0;
     config.use_environment = 0;

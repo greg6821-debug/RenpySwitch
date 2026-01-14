@@ -101,6 +101,62 @@ PyMODINIT_FUNC PyInit__otrhlibnx(void)
     return PyModule_Create(&otrh_module);
 }
 
+
+
+// PyMODINIT_FUNC PyInit_pygame_sdl2(void) {
+//     PyObject *module;
+    
+//     // Создаем модуль pygame_sdl2
+//     static struct PyModuleDef moduledef = {
+//         PyModuleDef_HEAD_INIT,
+//         "pygame_sdl2",
+//         NULL,
+//         -1,
+//         NULL,
+//         NULL,
+//         NULL,
+//         NULL,
+//         NULL
+//     };
+    
+//     module = PyModule_Create(&moduledef);
+//     if (module == NULL) return NULL;
+    
+//     // ЗАГРУЖАЕМ И ВЫПОЛНЯЕМ __init__.py ВРУЧНУЮ
+//     // Это ключевой момент!
+//     PyObject *builtins = PyEval_GetBuiltins();
+//     PyObject *import_func = PyDict_GetItemString(builtins, "__import__");
+    
+//     if (import_func) {
+//         // Импортируем pygame_sdl2.__init__ как модуль
+//         PyObject *init_module = PyObject_CallFunction(
+//             import_func, 
+//             "s", 
+//             "pygame_sdl2.__init__"
+//         );
+        
+//         if (init_module) {
+//             // Копируем атрибуты из __init__ в основной модуль
+//             PyObject *dict = PyModule_GetDict(init_module);
+//             PyObject *main_dict = PyModule_GetDict(module);
+            
+//             if (dict && main_dict) {
+//                 PyDict_Update(main_dict, dict);
+//             }
+//             Py_DECREF(init_module);
+//         }
+//     }
+    
+//     // Регистрируем подмодуль surface
+//     PyObject *surface_module = PyInit_surface();
+//     if (surface_module == NULL) return NULL;
+    
+//     Py_INCREF(surface_module);
+//     PyModule_AddObject(module, "surface", surface_module);
+    
+//     return module;
+// }
+
 PyMODINIT_FUNC PyInit_color(void);
 PyMODINIT_FUNC PyInit_controller(void);
 PyMODINIT_FUNC PyInit_display(void);
@@ -331,20 +387,6 @@ int main(int argc, char* argv[])
 
     PyConfig_InitPythonConfig(&config);
 
-    /* ---- Указываем Python'у его местоположение ---- */
-    /* Это устранит ошибку "Could not find platform independent libraries" */ 
-    status = PyConfig_SetString(&config, &config.home, L"romfs:/Contents");
-    if (PyStatus_Exception(status)) goto exception;
-
-    status = PyConfig_SetString(&config, &config.prefix, L"romfs:/Contents");
-    if (PyStatus_Exception(status)) goto exception;
-    
-    status = PyConfig_SetString(&config, &config.exec_prefix, L"romfs:/Contents");
-    if (PyStatus_Exception(status)) goto exception;
-   
-    /* Добавляем путь к корневой папке Contents, если lib.zip там не найдется сразу */
-    //PyWideStringList_Append(&config.module_search_paths, L"romfs:/Contents");
-   
     /* ---- Critical for Python 3.9 embedded ---- */
     config.isolated = 0;
     config.use_environment = 0;
@@ -368,9 +410,8 @@ int main(int argc, char* argv[])
     /* ---- stdlib: ONLY lib.zip ---- */
     config.module_search_paths_set = 1;
 
-    status = PyWideStringList_Insert(
-        &config.module_search_paths, 
-        0, // Вставляем в НАЧАЛО списка (индекс 0)
+    status = PyWideStringList_Append(
+        &config.module_search_paths,
         L"romfs:/Contents/lib.zip"
     );
     if (PyStatus_Exception(status)) goto exception;
@@ -484,7 +525,7 @@ int main(int argc, char* argv[])
     }   
 
     
-    //register_builtin_modules();
+    register_builtin_modules();
    
     /* ---- Initialize Python ---- */
     status = Py_InitializeFromConfig(&config);
@@ -492,114 +533,31 @@ int main(int argc, char* argv[])
     PyConfig_Clear(&config);
 
 
-     /* -------------------------------------------------------
-       FIX: Corrected Initialization
-       
-       1. Создаем пакет pygame_sdl2 с правильным __path__ (Списком!).
-       2. Инициализируем все C-подмодули.
-       3. Пытаемся добавить __all__ только если объект действительно является модулем.
-    ------------------------------------------------------- */
+    PyRun_SimpleString("import pygame_sdl2");
+   
+
+    int python_result;
+    python_result = PyRun_SimpleString(
+    "import sys\n"
+    "sys.path[:] = ['romfs:/Contents/lib.zip']\n"
+    );
+    if (python_result == -1)
     {
-        PyObject* sys_modules = PyImport_GetModuleDict();
-        
-        // --- 1. Создаем пакет pygame_sdl2 ---
-        const char* pkg_name = "pygame_sdl2";
-        PyObject* pkg_module = PyModule_New(pkg_name);
-        
-        if (pkg_module) {
-            // ФИКС: __path__ должен быть списком, а не строкой!
-            PyObject* path_list = PyList_New(1);
-            if (path_list) {
-                PyList_SetItem(path_list, 0, PyUnicode_FromString("romfs:/Contents/lib.zip/pygame_sdl2"));
-                PyModule_AddObject(pkg_module, "__path__", path_list);
-            }
-            PyModule_AddStringConstant(pkg_module, "__file__", "romfs:/Contents/lib.zip/pygame_sdl2/__init__.py");
-            
-            // Внедряем пакет
-            if (PyDict_SetItemString(sys_modules, pkg_name, pkg_module) < 0) {
-                fprintf(stderr, "Failed to inject %s into sys.modules\n", pkg_name);
-                PyErr_Print();
-            }
-            Py_DECREF(pkg_module);
-        } else {
-            fprintf(stderr, "Failed to create package %s\n", pkg_name);
-            PyErr_Print();
-        }
-
-        // --- 2. Внедряем подмодули ---
-        for (int i = 0; builtins[i].name != NULL; i++) {
-            const char* fullname = builtins[i].name;
-            PyObject* (*initfunc)(void) = builtins[i].initfunc;
-
-            if (!initfunc) continue;
-
-            // Пропускаем сам корневой пакет (pygame_sdl2), если он есть в списке
-            if (strcmp(fullname, pkg_name) == 0) continue;
-
-            // Если уже загружен
-            if (PyDict_GetItemString(sys_modules, fullname)) continue;
-
-            PyObject* module = initfunc();
-
-            if (module == NULL) {
-                fprintf(stderr, "CRITICAL: Failed to initialize static module: %s\n", fullname);
-                PyErr_Print();
-            } else {
-                // --- 3. Добавляем __all__ (Safety Check) ---
-                // Проверяем, что initfunc вернул именно модуль
-                if (PyModule_Check(module)) {
-                    // Если нет __all__, создаем пустой список
-                    if (!PyObject_HasAttrString(module, "__all__")) {
-                        PyObject* all_list = PyList_New(0);
-                        if (all_list) {
-                            // PyModule_AddObject крадет ссылку (DECREF для all_list не нужен при успехе)
-                            PyModule_AddObject(module, "__all__", all_list);
-                        }
-                    }
-                } else {
-                    fprintf(stderr, "WARNING: Module %s returned by initfunc is not a PyModule object!\n", fullname);
-                }
-
-                // Внедряем модуль
-                if (PyDict_SetItemString(sys_modules, fullname, module) < 0) {
-                    fprintf(stderr, "Failed to inject %s into sys.modules\n", fullname);
-                    PyErr_Print();
-                }
-                Py_DECREF(module);
-            }
-        }
-
-        // --- 4. Выполняем __init__.py ---
-        // Мы не скрываем ошибки, чтобы видеть, что именно ломается
-        if (pkg_module) {
-            const char* init_script = 
-                "import zipfile\n"
-                "zip_path = 'romfs:/Contents/lib.zip'\n"
-                "pkg_name = 'pygame_sdl2'\n"
-                "\n"
-                "# Читаем и выполняем\n"
-                "with zipfile.ZipFile(zip_path, 'r') as zf:\n"
-                "    source = zf.read('pygame_sdl2/__init__.py').decode('utf-8')\n"
-                "\n"
-                "exec(source, sys.modules[pkg_name].__dict__)\n"
-            ;
-
-            PyObject* globals = PyModule_GetDict(pkg_module);
-            PyObject* result = PyRun_String(init_script, Py_file_input, globals, globals);
-            
-            if (result == NULL) {
-                fprintf(stderr, "!!! FATAL ERROR: Failed to execute pygame_sdl2/__init__.py !!!\n");
-                PyErr_Print();
-                // Важно: не выходим тут, чтобы Ren'Py мог показать свое сообщение об ошибке
-            } else {
-                Py_DECREF(result);
-                printf("pygame_sdl2 initialized successfully.\n");
-            }
-        }
+        show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.");
+    }
+   #define x(lib) \
+    { \
+        if (PyRun_SimpleString("import " lib) == -1) \
+        { \
+            show_error("Could not import python library " lib ".\n\nPlease ensure that you have extracted the files correctly so that the \"lib\" folder is in the same directory as the nsp file, and that the \"lib\" folder contains the folder \"python3.9\". \nInside that folder, the file \"" lib ".py\" or folder \"" lib "\" needs to exist."); \
+        } \
     }
 
+    x("os");
+    x("pygame_sdl2");
+    x("encodings");
 
-   
+    #undef x
 
     /* ---- Run Ren'Py ---- */
     int rc = PyRun_SimpleFileEx(
@@ -623,7 +581,3 @@ exception:
     show_error(status.err_msg);
     Py_ExitStatusException(status);
 }
-
-
-
-

@@ -1,6 +1,6 @@
-diff --git a/random.h b/random_patched.h
+diff -Naur a/random.h b/random.h
 --- a/random.h
-+++ b/random_patched.h
++++ b/random.h
 @@ -28,7 +28,9 @@
  #elif defined(STM32F4)
  # include "random/stm32.h"

@@ -311,6 +311,33 @@ static void on_applet_hook(AppletHookType hook, void *param)
 
 int main(int argc, char* argv[])
 {
+    SDL_Init(SDL_INIT_VIDEO);
+
+    SDL_Window* win = SDL_CreateWindow(
+        "Splash",
+        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED,
+        1280, 720,
+        SDL_WINDOW_SHOWN
+    );
+
+    SDL_Renderer* r = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+
+    // Загрузить текстуру (из romfs)
+    SDL_Surface* s = IMG_Load("logo:/nintendologo.png");
+    SDL_Texture* t = SDL_CreateTextureFromSurface(r, s);
+    SDL_FreeSurface(s);
+
+    SDL_RenderClear(r);
+    SDL_RenderCopy(r, t, NULL, NULL);
+    SDL_RenderPresent(r);
+
+    svcSleepThread(2000000000ULL); // 2 секунды
+
+
+   
+
+   
     chdir("romfs:/Contents");
     setlocale(LC_ALL, "C");
     setenv("MESA_NO_ERROR", "1", 1);

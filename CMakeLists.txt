@@ -63,6 +63,7 @@ set(INCLUDES
     ${DEVKITPRO}/portlibs/switch/include/fribidi
     include
     include/module
+	include/module/libhydrogen/impl
     include/module/src
     include/module/pygame_sdl2
     include/module/pygame_sdl2/src

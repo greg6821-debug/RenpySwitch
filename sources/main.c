@@ -335,7 +335,12 @@ int main(int argc, char* argv[])
     SDL_RenderPresent(r);
 
     svcSleepThread(2000000000ULL); // 2 секунды
+    
+    SDL_DestroyTexture(t);
+    SDL_DestroyRenderer(r);
+    SDL_DestroyWindow(win);
     IMG_Quit();
+    SDL_Quit();
 
    
 
@@ -494,8 +499,6 @@ int main(int argc, char* argv[])
 
         {NULL, NULL}
     };
-
-    PyImport_ExtendInittab(builtins);
 
     /* ---- Sanity check ---- */
     FILE* libzip = fopen("romfs:/Contents/lib.zip", "rb");

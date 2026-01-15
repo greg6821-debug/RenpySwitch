@@ -325,7 +325,7 @@ int main(int argc, char* argv[])
     SDL_Renderer* r = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 
     // Загрузить текстуру (из romfs)
-    SDL_Surface* s = IMG_Load("logo:/nintendologo.png");
+    SDL_Surface* s = IMG_Load("romfs:/nintendologo.png");
     SDL_Texture* t = SDL_CreateTextureFromSurface(r, s);
     SDL_FreeSurface(s);
 

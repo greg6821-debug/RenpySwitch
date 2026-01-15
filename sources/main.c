@@ -308,7 +308,7 @@ static void on_applet_hook(AppletHookType hook, void *param)
 }
 
 
-void Logo_SW(const char* path, int img_w, int img_h, double display_seconds) {
+void Logo_SW(const char* path, double display_seconds) {
     // Инициализация SDL
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         printf("SDL_Init Error: %s\n", SDL_GetError());
@@ -373,10 +373,9 @@ void Logo_SW(const char* path, int img_w, int img_h, double display_seconds) {
 
     // Центрирование
     SDL_Rect dst;
-    dst.w = img_w;
-    dst.h = img_h;
-    dst.x = (win_w - img_w) / 2;
-    dst.y = (win_h - img_h) / 2;
+    SDL_QueryTexture(t, NULL, NULL, &dst.w, &dst.h);
+    dst.x = (win_w - dst.w) / 2;
+    dst.y = (win_h - dst.h) / 2;
 
     // Отрисовка
     SDL_RenderClear(r);
@@ -403,7 +402,7 @@ void Logo_SW(const char* path, int img_w, int img_h, double display_seconds) {
 
 int main(int argc, char* argv[])
 {
-    Logo_SW("romfs:/logo/nintendologo.png", 160, 40, 2.0); 
+    Logo_SW("romfs:/nintendologo.png", 2.0); 
    
     chdir("romfs:/Contents");
     setlocale(LC_ALL, "C");

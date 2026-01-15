@@ -82,14 +82,14 @@ cp -rf encryption.patch renpy_sdk/renpy-$RENPY_VER-sdk/module/libhydrogen/impl
 #unzip -qq rawproject.zip -d raw
 #rm rawproject.zip
 
+pushd renpy_sdk/renpy-$RENPY_VER-sdk/module/libhydrogen/impl
+patch -p1 < encryption.patch
+popd
 
 pushd renpy-source
 patch -p1 < ../renpy.patch
 pushd module
 rm -rf gen3 gen3-static
-pushd libhydrogen/impl
-patch -p1 < encryption.patch
-popd
 popd
 popd
 pushd pygame_sdl2-source

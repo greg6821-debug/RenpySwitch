@@ -57,7 +57,7 @@ mv include/module/pygame_sdl2/surface.h include/module/pygame_sdl2/src
 rsync -avm --include='*/' --include='*.h' --exclude='*' renpy-source/module/ include/module
 
 # Copy switch.h
-cp switch_enc.h include/module/libhydrogen/impl
+cp switch_enc.h include/module/libhydrogen/impl/random
 
 # Перемещаем hydrogen.c
 mv source/module/hydrogen.c include/module/libhydrogen

@@ -307,43 +307,103 @@ static void on_applet_hook(AppletHookType hook, void *param)
    }
 }
 
+
+void Logo_SW(const char* path, int img_w, int img_h, double display_seconds) {
+    // Инициализация SDL
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        printf("SDL_Init Error: %s\n", SDL_GetError());
+        return;
+    }
+
+    int win_w = 1280;
+    int win_h = 720;
+
+    SDL_Window* win = SDL_CreateWindow(
+        "Splash",
+        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED,
+        win_w,
+        win_h,
+        SDL_WINDOW_SHOWN
+    );
+    if (!win) {
+        printf("SDL_CreateWindow Error: %s\n", SDL_GetError());
+        SDL_Quit();
+        return;
+    }
+
+    SDL_Renderer* r = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (!r) {
+        printf("SDL_CreateRenderer Error: %s\n", SDL_GetError());
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+        return;
+    }
+
+    // Инициализация SDL_image
+    if (!(IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG) & (IMG_INIT_PNG | IMG_INIT_JPG))) {
+        printf("IMG_Init Error: %s\n", IMG_GetError());
+        SDL_DestroyRenderer(r);
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+        return;
+    }
+
+    // Загрузка изображения
+    SDL_Surface* s = IMG_Load(path);
+    if (!s) {
+        printf("IMG_Load Error: %s\n", IMG_GetError());
+        IMG_Quit();
+        SDL_DestroyRenderer(r);
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+        return;
+    }
+
+    SDL_Texture* t = SDL_CreateTextureFromSurface(r, s);
+    SDL_FreeSurface(s);
+    if (!t) {
+        printf("SDL_CreateTextureFromSurface Error: %s\n", SDL_GetError());
+        IMG_Quit();
+        SDL_DestroyRenderer(r);
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+        return;
+    }
+
+    // Центрирование
+    SDL_Rect dst;
+    dst.w = img_w;
+    dst.h = img_h;
+    dst.x = (win_w - img_w) / 2;
+    dst.y = (win_h - img_h) / 2;
+
+    // Отрисовка
+    SDL_RenderClear(r);
+    SDL_RenderCopy(r, t, NULL, &dst);
+    SDL_RenderPresent(r);
+
+    // Задержка
+    uint64_t ns = (uint64_t)(display_seconds * 1000000000ULL);
+    svcSleepThread(ns);
+
+    // Очистка
+    SDL_DestroyTexture(t);
+    SDL_DestroyRenderer(r);
+    SDL_DestroyWindow(win);
+    IMG_Quit();
+    SDL_Quit();
+}
+
+
+
 /* -------------------------------------------------------
    Main
 ------------------------------------------------------- */
 
 int main(int argc, char* argv[])
 {
-    SDL_Init(SDL_INIT_VIDEO);
-    IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG );
-    SDL_Window* win = SDL_CreateWindow(
-        "Splash",
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        1280, 720,
-        SDL_WINDOW_SHOWN
-    );
-
-    SDL_Renderer* r = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-
-    // Загрузить текстуру (из romfs)
-    SDL_Surface* s = IMG_Load("romfs:/nintendologo.png");
-    SDL_Texture* t = SDL_CreateTextureFromSurface(r, s);
-    SDL_FreeSurface(s);
-
-    SDL_RenderClear(r);
-    SDL_RenderCopy(r, t, NULL, NULL);
-    SDL_RenderPresent(r);
-
-    svcSleepThread(2000000000ULL); // 2 секунды
-    
-    SDL_DestroyTexture(t);
-    SDL_DestroyRenderer(r);
-    SDL_DestroyWindow(win);
-    IMG_Quit();
-    SDL_Quit();
-
-   
-
+    Logo_SW("romfs:/logo/nintendologo.png", 160, 40, 2.0); 
    
     chdir("romfs:/Contents");
     setlocale(LC_ALL, "C");

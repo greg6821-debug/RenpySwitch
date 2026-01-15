@@ -34,6 +34,9 @@ rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ sour
 
 # Копируем .c файлы из renpy-source/module
 rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module
+#debug
+echo "MY DEBUG!"
+ls -R source/module
 
 # Перемещаем все файлы из поддиректорий в source/module, не перезаписывая существующие
 find source/module -mindepth 2 -type f -exec mv -n -t source/module {} +

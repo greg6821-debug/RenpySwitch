@@ -432,8 +432,11 @@ int main(int argc, char* argv[])
     status = PyConfig_SetString(&config, &config.exec_prefix, L"romfs:/Contents");
     if (PyStatus_Exception(status)) goto exception;
    
-    /* Добавляем путь к корневой папке Contents, если lib.zip там не найдется сразу */
-    PyWideStringList_Append(&config.module_search_paths, L"romfs:/Contents");
+    /* Добавляем путь к корневой папке renpy/common */
+    PyWideStringList_Append(
+    &config.module_search_paths,
+    L"romfs:/Contents/renpy/common"
+    );
    
     /* ---- Critical for Python 3.9 embedded ---- */
     config.isolated = 0;
@@ -491,6 +494,7 @@ int main(int argc, char* argv[])
         {"pygame_sdl2.draw", PyInit_draw},
         {"pygame_sdl2.error", PyInit_error},
         {"pygame_sdl2.event", PyInit_event},
+        {"pygame_sdl2.font", PyInit_font},
         {"pygame_sdl2.gfxdraw", PyInit_gfxdraw},
         {"pygame_sdl2.image", PyInit_image},
         {"pygame_sdl2.joystick", PyInit_joystick},
@@ -519,7 +523,7 @@ int main(int argc, char* argv[])
         {"renpy.display.quaternion", PyInit_renpy_display_quaternion},
         {"renpy.display.render", PyInit_renpy_display_render},
         {"renpy.encryption", PyInit_renpy_encryption},
-   
+
         {"renpy.text.ftfont", PyInit_renpy_text_ftfont},
         {"renpy.text.textsupport", PyInit_renpy_text_textsupport},
         {"renpy.text.texwrap", PyInit_renpy_text_texwrap},
@@ -586,8 +590,9 @@ int main(int argc, char* argv[])
     int python_result;
     python_result = PyRun_SimpleString(
     "import sys\n"
-    "sys.path[:] = ['romfs:/Contents/lib.zip']\n"
+    "sys.path.insert(0, 'romfs:/Contents/lib.zip')\n"
     );
+    
     if (python_result == -1)
     {
         show_error("Could not set the Python path.\n\nThis is an internal error and should not occur during normal usage.");

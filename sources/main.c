@@ -131,8 +131,9 @@ PyMODINIT_FUNC PyInit_mixer_music(void);
 PyMODINIT_FUNC PyInit__renpy(void);
 PyMODINIT_FUNC PyInit__renpybidi(void);
 
-//PyMODINIT_FUNC PyInit_renpy_audio_filter(void);
+PyMODINIT_FUNC PyInit_renpy_audio_filter(void);
 PyMODINIT_FUNC PyInit_renpy_audio_renpysound(void);
+PyMODINIT_FUNC PyInit_renpy_encryption(void);
 
 PyMODINIT_FUNC PyInit_renpy_display_accelerator(void);
 PyMODINIT_FUNC PyInit_renpy_display_matrix(void);
@@ -445,12 +446,14 @@ int main(int argc, char* argv[])
         {"_renpy", PyInit__renpy},
         {"_renpybidi", PyInit__renpybidi},
 
-        //{"renpy.audio.filter", PyInit_renpy_audio_filter},
+        {"renpy.audio.filter", PyInit_renpy_audio_filter},
         {"renpy.audio.renpysound", PyInit_renpy_audio_renpysound},
         {"renpy.display.accelerator", PyInit_renpy_display_accelerator},
         {"renpy.display.matrix", PyInit_renpy_display_matrix},
         {"renpy.display.quaternion", PyInit_renpy_display_quaternion},
         {"renpy.display.render", PyInit_renpy_display_render},
+        {"renpy.encryption", PyInit_renpy_encryption},
+   
         {"renpy.text.ftfont", PyInit_renpy_text_ftfont},
         {"renpy.text.textsupport", PyInit_renpy_text_textsupport},
         {"renpy.text.texwrap", PyInit_renpy_text_texwrap},

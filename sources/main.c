@@ -314,7 +314,7 @@ static void on_applet_hook(AppletHookType hook, void *param)
 int main(int argc, char* argv[])
 {
     SDL_Init(SDL_INIT_VIDEO);
-    IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_GIF);
+    IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG );
     SDL_Window* win = SDL_CreateWindow(
         "Splash",
         SDL_WINDOWPOS_CENTERED,

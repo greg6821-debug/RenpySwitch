@@ -113,9 +113,11 @@ set(SOURCES
     source/module/pygame_sdl2.surface.c
     source/module/pygame_sdl2.transform.c
     source/module/renpy.audio.renpysound.c
+	source/module/renpy.audio.filter.c
     source/module/renpy.display.accelerator.c
     source/module/renpy.display.matrix.c
     source/module/renpy.display.render.c
+	source/module/renpy.encryption.c
     source/module/renpy.gl.gldraw.c
     source/module/renpy.gl.glenviron_shader.c
     source/module/renpy.gl.glrtt_copy.c

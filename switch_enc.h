@@ -4,26 +4,20 @@
 #include <switch.h>
 #include <string.h>
 #include <stdint.h>
+#include <time.h>
 
-/*
- * Реализация randomGetBytes для Switch,
- * использует системный RNG из Horizon OS
- */
+
 static void randomGetBytes(void *buf, size_t len) {
     uint8_t *p = (uint8_t *)buf;
-
-    /* Используем svcGetSystemRandomSeed (доступно на всех версиях) */
-    while (len > 0) {
-        uint64_t seed;
-        svcGetSystemRandomSeed(&seed);
-        size_t copy = len < sizeof(seed) ? len : sizeof(seed);
-        memcpy(p, &seed, copy);
-        p += copy;
-        len -= copy;
+    uint64_t counter = (uint64_t)time(NULL); // простой seed
+    for (size_t i = 0; i < len; ++i) {
+        counter ^= (counter << 13);
+        counter ^= (counter >> 7);
+        counter ^= (counter << 17);
+        p[i] = (uint8_t)counter;
     }
 }
 
-/* Seed DRBG state from system RNG */
 static int hydro_random_init(void)
 {
     randomGetBytes(hydro_random_context.state,

@@ -10,18 +10,10 @@ apt-get -y upgrade
 apt -y install build-essential checkinstall
 apt -y install libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev
 
-#apt -y install python3 python3-dev python3-pip
-
-
 apt -y install python3.9 python3.9-dev python3.9-distutils python3-pip curl wget unzip p7zip-full
 # Установка pip для Python 3.9
 curl -sS https://bootstrap.pypa.io/get-pip.py | python3.9
 python3.9 -m pip --version
-
-
-#apt-get -y install p7zip-full libsdl2-dev libsdl2-image-dev libjpeg-dev libpng-dev libsdl2-ttf-dev libsdl2-mixer-dev libavformat-dev libfreetype6-dev libswscale-dev libglew-dev libfribidi-dev libavcodec-dev  libswresample-dev libsdl2-gfx-dev libgl1-mesa-glx
-#pip3 uninstall distribute
-#pip3 install future six typing requests ecdsa pefile Cython==3.0.12 setuptools
 
 
 # Установка Cython 0.29.x (обязательно, а не 3.0+)
@@ -44,10 +36,8 @@ apt-get -y install libsdl2-dev libsdl2-image-dev libjpeg-dev \
 python3 --version
 
 
-#curl -LOC - https://github.com/knautilus/Utils/releases/download/v1.0/devkitpro-pkgbuild-helpers-2.2.4-2-any.pkg.tar.xz
 curl -LOC - https://github.com/greg6821-debug/scripts/releases/download/test/python39-switch.zip
 curl -LOC - https://github.com/knautilus/Utils/releases/download/v1.0/switch-libfribidi-1.0.12-1-any.pkg.tar.xz
-#dkp-pacman -U --noconfirm devkitpro-pkgbuild-helpers-2.2.4-2-any.pkg.tar.xz
 dkp-pacman -U --noconfirm switch-libfribidi-1.0.12-1-any.pkg.tar.xz
 unzip -qq python39-switch.zip -d $DEVKITPRO/portlibs/switch
 
@@ -58,7 +48,6 @@ export C_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$C_INCLUDE_PATH
 export CPLUS_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$CPLUS_INCLUDE_PATH
 
 
-#rm devkitpro-pkgbuild-helpers-2.2.4-2-any.pkg.tar.xz
 rm switch-libfribidi-1.0.12-1-any.pkg.tar.xz
 rm python39-switch.zip
 
@@ -68,7 +57,6 @@ rm python39-switch.zip
 curl -LOC - https://www.renpy.org/dl/$RENPY_VER/pygame_sdl2-$PYGAME_SDL2_VER+renpy$RENPY_VER.tar.gz
 curl -LOC - https://www.renpy.org/dl/$RENPY_VER/renpy-$RENPY_VER-sdk.zip
 curl -LOC - https://www.renpy.org/dl/$RENPY_VER/renpy-$RENPY_VER-source.tar.bz2
-#curl -LOC - https://www.renpy.org/dl/$RENPY_VER/android-native-symbols.zip
 #curl -LOC - https://dl.otorh.in/github/rawproject.zip
 
 rm -rf pygame_sdl2-$PYGAME_SDL2_VER+renpy$RENPY_VER pygame_sdl2-source
@@ -100,7 +88,7 @@ patch -p1 < ../renpy.patch
 pushd module
 rm -rf gen3 gen3-static
 pushd libhydrogen/impl
-patch -p1 < ../encryption.patch
+patch -p1 < encryption.patch
 popd
 popd
 popd

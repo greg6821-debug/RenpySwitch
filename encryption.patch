@@ -1,0 +1,13 @@
+diff --git a/random.h b/random_patched.h
+--- a/random.h
++++ b/random_patched.h
+@@ -28,7 +28,9 @@
+ #elif defined(STM32F4)
+ # include "random/stm32.h"
+ #elif defined(__RTTHREAD__)
+ # include "random/rtthread.h"
++#elif defined(__SWITCH__)
++# include "random/switch.h"
+ #else
+ # error Unsupported platform
+ #endif

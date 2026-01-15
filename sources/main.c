@@ -5,6 +5,7 @@
 #include <wchar.h>
 #include <locale.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 
 /* -------------------------------------------------------
    Globals
@@ -313,7 +314,7 @@ static void on_applet_hook(AppletHookType hook, void *param)
 int main(int argc, char* argv[])
 {
     SDL_Init(SDL_INIT_VIDEO);
-
+    IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_GIF);
     SDL_Window* win = SDL_CreateWindow(
         "Splash",
         SDL_WINDOWPOS_CENTERED,
@@ -334,7 +335,7 @@ int main(int argc, char* argv[])
     SDL_RenderPresent(r);
 
     svcSleepThread(2000000000ULL); // 2 секунды
-
+    IMG_Quit();
 
    
 

@@ -85,27 +85,23 @@ rm -rf renpy-$RENPY_VER-sdk renpy_sdk
 unzip -qq renpy-$RENPY_VER-sdk.zip -d renpy_sdk
 rm renpy-$RENPY_VER-sdk.zip
 
-#rm renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
-#mkdir renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
-#cp -rf $DEVKITPRO/portlibs/switch/lib/python3.9 renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
 
-cp -rf subprocess.pyo renpy_sdk/renpy-$RENPY_VER-sdk/lib/python3.9
+cp -rf switch.h renpy_sdk/renpy-$RENPY_VER-sdk/module/libhydrogen/impl
+cp -rf encryption.patch renpy_sdk/renpy-$RENPY_VER-sdk/module/libhydrogen/impl
 
-#dkp-pacman --noconfirm -S switch-libfribidi
 
 #rm -rf raw
 #unzip -qq rawproject.zip -d raw
 #rm rawproject.zip
 
-#rm -rf android-native-symbols renpy_androidlib ./raw/android/lib
-#unzip -qq android-native-symbols.zip -d ./raw/android/lib
-#rm -rf ./raw/android/lib/x86_64/
-#rm android-native-symbols.zip
 
 pushd renpy-source
 patch -p1 < ../renpy.patch
 pushd module
 rm -rf gen3 gen3-static
+pushd libhydrogen/impl
+patch -p1 < ../encryption.patch
+popd
 popd
 popd
 pushd pygame_sdl2-source

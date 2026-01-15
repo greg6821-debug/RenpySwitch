@@ -74,7 +74,7 @@ unzip -qq renpy-$RENPY_VER-sdk.zip -d renpy_sdk
 rm renpy-$RENPY_VER-sdk.zip
 
 
-cp -rf switch.h renpy-source/module/libhydrogen/impl
+cp -rf switch_enc.h renpy-source/module/libhydrogen/impl
 cp -rf encryption.patch renpy-source/module/libhydrogen/impl
 
 

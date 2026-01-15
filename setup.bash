@@ -74,15 +74,15 @@ unzip -qq renpy-$RENPY_VER-sdk.zip -d renpy_sdk
 rm renpy-$RENPY_VER-sdk.zip
 
 
-cp -rf switch.h renpy_sdk/renpy-$RENPY_VER-sdk/module/libhydrogen/impl
-cp -rf encryption.patch renpy_sdk/renpy-$RENPY_VER-sdk/module/libhydrogen/impl
+cp -rf switch.h renpy-source/module/libhydrogen/impl
+cp -rf encryption.patch renpy-source/module/libhydrogen/impl
 
 
 #rm -rf raw
 #unzip -qq rawproject.zip -d raw
 #rm rawproject.zip
 
-pushd renpy_sdk/renpy-$RENPY_VER-sdk/module/libhydrogen/impl
+pushd renpy-source/module/libhydrogen/impl
 patch -p1 < encryption.patch
 popd
 

@@ -309,47 +309,19 @@ static void on_applet_hook(AppletHookType hook, void *param)
 
 
 void Logo_SW(const char* path, double display_seconds) {
-    // Инициализация SDL
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        printf("SDL_Init Error: %s\n", SDL_GetError());
-        return;
-    }
-
-    int win_w = 1280;
-    int win_h = 720;
+    
+    SDL_Init(SDL_INIT_VIDEO);
 
     SDL_Window* win = SDL_CreateWindow(
         "Splash",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
-        win_w,
-        win_h,
+        1280, 720,
         SDL_WINDOW_SHOWN
     );
-    if (!win) {
-        printf("SDL_CreateWindow Error: %s\n", SDL_GetError());
-        SDL_Quit();
-        return;
-    }
 
-    SDL_Renderer* r = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (!r) {
-        printf("SDL_CreateRenderer Error: %s\n", SDL_GetError());
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        return;
-    }
+    SDL_Renderer* r = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 
-    // Инициализация SDL_image
-    if (!(IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG) & (IMG_INIT_PNG | IMG_INIT_JPG))) {
-        printf("IMG_Init Error: %s\n", IMG_GetError());
-        SDL_DestroyRenderer(r);
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        return;
-    }
-
-    // Загрузка изображения
     SDL_Surface* s = IMG_Load(path);
     if (!s) {
         printf("IMG_Load Error: %s\n", IMG_GetError());
@@ -359,37 +331,17 @@ void Logo_SW(const char* path, double display_seconds) {
         SDL_Quit();
         return;
     }
-
     SDL_Texture* t = SDL_CreateTextureFromSurface(r, s);
     SDL_FreeSurface(s);
-    if (!t) {
-        printf("SDL_CreateTextureFromSurface Error: %s\n", SDL_GetError());
-        IMG_Quit();
-        SDL_DestroyRenderer(r);
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        return;
-    }
 
-    // Центрирование
-    SDL_Rect dst;
-    SDL_QueryTexture(t, NULL, NULL, &dst.w, &dst.h);
-    dst.x = (win_w - dst.w) / 2;
-    dst.y = (win_h - dst.h) / 2;
-
-    // Отрисовка
     SDL_RenderClear(r);
-    SDL_RenderCopy(r, t, NULL, &dst);
+    SDL_RenderCopy(r, t, NULL, NULL);
     SDL_RenderPresent(r);
 
-    // Задержка
     uint64_t ns = (uint64_t)(display_seconds * 1000000000ULL);
     svcSleepThread(ns);
 
     // Очистка
-    SDL_DestroyTexture(t);
-    SDL_DestroyRenderer(r);
-    SDL_DestroyWindow(win);
     IMG_Quit();
     SDL_Quit();
 }

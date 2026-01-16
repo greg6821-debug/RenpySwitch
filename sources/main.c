@@ -359,6 +359,26 @@ cleanup:
     SDL_Quit();
 }
 
+static int copy_file_to_sd(const char *src, const char *dst)
+{
+    FILE *in = fopen(src, "rb");
+    FILE *out = fopen(dst, "wb");
+    if (!in || !out) {
+        if (in) fclose(in);
+        if (out) fclose(out);
+        return -1;
+    }
+
+    char buf[4096];
+    size_t r;
+    while ((r = fread(buf, 1, sizeof(buf), in)) > 0)
+        fwrite(buf, 1, r, out);
+
+    fclose(in);
+    fclose(out);
+    return 0;
+}
+
 static void show_gif_splash(const char *romfs_path, float display_time_sec)
 {
     if (strncmp(romfs_path, "romfs:/", 7) != 0)
@@ -494,11 +514,18 @@ static void show_gif_splash(const char *romfs_path, float display_time_sec)
 
             while (SDL_PollEvent(&e)) {}
 
-            int64_t delay_us = frm->pkt_duration;
-            if (delay_us <= 0)
-                delay_us = 10000;
+            AVRational tb = fmt->streams[vstream]->time_base;
 
-            svcSleepThread(delay_us * 1000);
+            int64_t delay_ns = av_rescale_q(
+                frm->duration,
+                tb,
+                (AVRational){1, 1000000000}
+            );
+
+            if (delay_ns <= 0)
+                delay_ns = 10000000; // 10 ms
+
+            svcSleepThread(delay_ns);
 
             if (armGetSystemTick() - start_time >= max_ticks)
                 goto cleanup;

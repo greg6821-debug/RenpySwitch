@@ -394,8 +394,6 @@ static void show_gif_splash(const char *path, float fps)
 
     SDL_Renderer *ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 
-    av_register_all();
-
     AVFormatContext *fmt = NULL;
     avformat_open_input(&fmt, sd_path, NULL, NULL);
     avformat_find_stream_info(fmt, NULL);

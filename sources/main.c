@@ -346,6 +346,69 @@ void Logo_SW(const char* path, double display_seconds) {
     SDL_Quit();
 }
 
+void Logo_SW2(const char* path, double display_seconds) {
+    
+    SDL_Init(SDL_INIT_VIDEO);
+
+    SDL_Window* win = SDL_CreateWindow(
+        "Splash",
+        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED,
+        1280, 720,
+        SDL_WINDOW_SHOWN
+    );
+
+    SDL_Renderer* r = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+
+    // Загружаем изображение
+    SDL_Surface* s = IMG_Load(path);
+    if (!s) {
+        printf("IMG_Load Error: %s\n", IMG_GetError());
+        IMG_Quit();
+        SDL_DestroyRenderer(r);
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+        return;
+    }
+    
+    // Получаем размеры изображения из загруженной поверхности
+    int img_width = s->w;
+    int img_height = s->h;
+    
+    // Создаем текстуру из поверхности
+    SDL_Texture* t = SDL_CreateTextureFromSurface(r, s);
+    
+    // Рассчитываем координаты для центрирования
+    SDL_Rect dest_rect;
+    dest_rect.w = img_width;    // ширина изображения
+    dest_rect.h = img_height;   // высота изображения
+    dest_rect.x = (1280 - dest_rect.w) / 2;  // центрируем по горизонтали
+    dest_rect.y = (720 - dest_rect.h) / 2;   // центрируем по вертикали
+
+    SDL_FreeSurface(s);
+
+    // Устанавливаем цвет очистки на черный
+    SDL_SetRenderDrawColor(r, 0, 0, 0, 255);
+    
+    // Очищаем экран черным цветом
+    SDL_RenderClear(r);
+    
+    // Копируем текстуру в рассчитанный прямоугольник
+    SDL_RenderCopy(r, t, NULL, &dest_rect);
+    SDL_RenderPresent(r);
+
+    uint64_t ns = (uint64_t)(display_seconds * 1000000000ULL);
+    svcSleepThread(ns);
+
+    // Очистка
+    SDL_DestroyTexture(t);
+    SDL_DestroyRenderer(r);
+    SDL_DestroyWindow(win);
+    IMG_Quit();
+    SDL_Quit();
+}
+
+
 
 
 /* -------------------------------------------------------
@@ -354,7 +417,7 @@ void Logo_SW(const char* path, double display_seconds) {
 
 int main(int argc, char* argv[])
 {
-    Logo_SW("romfs:/nintendologo.png", 2.0); 
+    Logo_SW2("romfs:/nintendologo.png", 2.0); 
    
     chdir("romfs:/Contents");
     setlocale(LC_ALL, "C");

@@ -11,6 +11,7 @@
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
+#include <libavutil/imgutils.h>
 
 /* -------------------------------------------------------
    Globals
@@ -351,11 +352,15 @@ void Logo_SW(const char* path, double display_seconds) {
     SDL_Quit();
 }
 
-static int copy_logo_to_sd(void)
+static int copy_file_to_sd(const char *src, const char *dst)
 {
-    FILE *in = fopen("romfs:/Contents/logo.gif", "rb");
-    FILE *out = fopen("sdmc:/logo.gif", "wb");
-    if (!in || !out) return -1;
+    FILE *in = fopen(src, "rb");
+    FILE *out = fopen(dst, "wb");
+    if (!in || !out) {
+        if (in) fclose(in);
+        if (out) fclose(out);
+        return -1;
+    }
 
     char buf[4096];
     size_t r;
@@ -400,7 +405,7 @@ static void show_gif_splash(const char *path, float fps)
         if (fmt->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
             vstream = i;
 
-    AVCodec *codec = avcodec_find_decoder(fmt->streams[vstream]->codecpar->codec_id);
+    const AVCodec *codec = avcodec_find_decoder(fmt->streams[vstream]->codecpar->codec_id);
 
     AVCodecContext *ctx = avcodec_alloc_context3(codec);
     avcodec_parameters_to_context(ctx, fmt->streams[vstream]->codecpar);

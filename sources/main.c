@@ -7,6 +7,11 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 
+
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libswscale/swscale.h>
+
 /* -------------------------------------------------------
    Globals
 ------------------------------------------------------- */
@@ -346,68 +351,133 @@ void Logo_SW(const char* path, double display_seconds) {
     SDL_Quit();
 }
 
-void Logo_SW2(const char* path, double display_seconds) {
-    
-    SDL_Init(SDL_INIT_VIDEO);
+static int copy_logo_to_sd(void)
+{
+    FILE *in = fopen("romfs:/Contents/logo.gif", "rb");
+    FILE *out = fopen("sdmc:/logo.gif", "wb");
+    if (!in || !out) return -1;
 
-    SDL_Window* win = SDL_CreateWindow(
-        "Splash",
+    char buf[4096];
+    size_t r;
+    while ((r = fread(buf, 1, sizeof(buf), in)) > 0)
+        fwrite(buf, 1, r, out);
+
+    fclose(in);
+    fclose(out);
+    return 0;
+}
+
+static void show_gif_splash(const char *path, float fps)
+{
+    char sd_path[256];
+    snprintf(sd_path, sizeof(sd_path), "sdmc:/%s", path + 8); // убираем "romfs:/"
+
+    // Копируем GIF на SD, чтобы FFmpeg мог открыть
+    if (copy_file_to_sd(path, sd_path) != 0)
+        return;
+
+    SDL_Init(SDL_INIT_VIDEO);
+    IMG_Init(IMG_INIT_PNG);
+
+    SDL_Window *win = SDL_CreateWindow(
+        "",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         1280, 720,
-        SDL_WINDOW_SHOWN
+        SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS
     );
 
-    SDL_Renderer* r = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    SDL_Renderer *ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 
-    // Загружаем изображение
-    SDL_Surface* s = IMG_Load(path);
-    if (!s) {
-        printf("IMG_Load Error: %s\n", IMG_GetError());
-        IMG_Quit();
-        SDL_DestroyRenderer(r);
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        return;
+    av_register_all();
+
+    AVFormatContext *fmt = NULL;
+    avformat_open_input(&fmt, sd_path, NULL, NULL);
+    avformat_find_stream_info(fmt, NULL);
+
+    int vstream = -1;
+    for (int i = 0; i < fmt->nb_streams; i++)
+        if (fmt->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
+            vstream = i;
+
+    AVCodec *codec = avcodec_find_decoder(fmt->streams[vstream]->codecpar->codec_id);
+
+    AVCodecContext *ctx = avcodec_alloc_context3(codec);
+    avcodec_parameters_to_context(ctx, fmt->streams[vstream]->codecpar);
+    avcodec_open2(ctx, codec, NULL);
+
+    struct SwsContext *sws = sws_getContext(
+        ctx->width, ctx->height, ctx->pix_fmt,
+        ctx->width, ctx->height, AV_PIX_FMT_RGBA,
+        SWS_BILINEAR, NULL, NULL, NULL
+    );
+
+    AVPacket pkt;
+    AVFrame *frm = av_frame_alloc();
+    AVFrame *rgba = av_frame_alloc();
+
+    int bufsize = av_image_get_buffer_size(
+        AV_PIX_FMT_RGBA, ctx->width, ctx->height, 1
+    );
+
+    uint8_t *buffer = av_malloc(bufsize);
+    av_image_fill_arrays(rgba->data, rgba->linesize, buffer, AV_PIX_FMT_RGBA,
+                         ctx->width, ctx->height, 1);
+
+    SDL_Texture *tex = SDL_CreateTexture(
+        ren,
+        SDL_PIXELFORMAT_RGBA32,
+        SDL_TEXTUREACCESS_STREAMING,
+        ctx->width, ctx->height
+    );
+
+    uint64_t frame_delay_ns = (uint64_t)((1.0 / fps) * 1000000000ULL);
+
+    while (av_read_frame(fmt, &pkt) >= 0)
+    {
+        if (pkt.stream_index != vstream) {
+            av_packet_unref(&pkt);
+            continue;
+        }
+
+        avcodec_send_packet(ctx, &pkt);
+        while (avcodec_receive_frame(ctx, frm) == 0)
+        {
+            sws_scale(
+                sws,
+                (const uint8_t * const *)frm->data,
+                frm->linesize,
+                0,
+                ctx->height,
+                rgba->data,
+                rgba->linesize
+            );
+
+            SDL_UpdateTexture(tex, NULL, rgba->data[0], rgba->linesize[0]);
+
+            SDL_RenderClear(ren);
+            SDL_RenderCopy(ren, tex, NULL, NULL);
+            SDL_RenderPresent(ren);
+
+            svcSleepThread(frame_delay_ns);
+        }
+
+        av_packet_unref(&pkt);
     }
-    
-    // Получаем размеры изображения из загруженной поверхности
-    int img_width = s->w;
-    int img_height = s->h;
-    
-    // Создаем текстуру из поверхности
-    SDL_Texture* t = SDL_CreateTextureFromSurface(r, s);
-    
-    // Рассчитываем координаты для центрирования
-    SDL_Rect dest_rect;
-    dest_rect.w = img_width;    // ширина изображения
-    dest_rect.h = img_height;   // высота изображения
-    dest_rect.x = (1280 - dest_rect.w) / 2;  // центрируем по горизонтали
-    dest_rect.y = (720 - dest_rect.h) / 2;   // центрируем по вертикали
 
-    SDL_FreeSurface(s);
+    SDL_DestroyTexture(tex);
+    av_free(buffer);
+    av_frame_free(&frm);
+    av_frame_free(&rgba);
+    sws_freeContext(sws);
+    avcodec_free_context(&ctx);
+    avformat_close_input(&fmt);
 
-    // Устанавливаем цвет очистки на черный
-    SDL_SetRenderDrawColor(r, 0, 0, 0, 255);
-    
-    // Очищаем экран черным цветом
-    SDL_RenderClear(r);
-    
-    // Копируем текстуру в рассчитанный прямоугольник
-    SDL_RenderCopy(r, t, NULL, &dest_rect);
-    SDL_RenderPresent(r);
-
-    uint64_t ns = (uint64_t)(display_seconds * 1000000000ULL);
-    svcSleepThread(ns);
-
-    // Очистка
-    SDL_DestroyTexture(t);
-    SDL_DestroyRenderer(r);
+    SDL_DestroyRenderer(ren);
     SDL_DestroyWindow(win);
     IMG_Quit();
     SDL_Quit();
 }
-
 
 
 
@@ -417,7 +487,9 @@ void Logo_SW2(const char* path, double display_seconds) {
 
 int main(int argc, char* argv[])
 {
-    Logo_SW2("romfs:/nintendologo.png", 2.0); 
+    Logo_SW("romfs:/nintendologo.png", 1.0); 
+    // Показываем GIF из romfs:/Contents/logo.gif, 30 fps
+    show_gif_splash("romfs:/Contents/logo.gif", 30.0f);
    
     chdir("romfs:/Contents");
     setlocale(LC_ALL, "C");

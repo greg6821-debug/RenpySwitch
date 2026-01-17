@@ -59,8 +59,6 @@ git clone https://github.com/greg6821-debug/FFmpegSW.git ffmpeg-nvtegra
 cd ffmpeg-nvtegra
 git checkout nvtegra
 
-mkdir build-switch
-cd build-switch
 
 # Флаги для кросс-компиляции
 export PKG_CONFIG=pkg-config
@@ -106,7 +104,7 @@ export LDFLAGS="--sysroot=$SYSROOT"
 
 make -j$(nproc)
 make install
-cd ../..
+cd ..
 rm -rf ffmpeg-nvtegra
 echo "=== NVTEGRA FFmpeg build complete ==="
 # -------------------------------

@@ -60,23 +60,30 @@ cd ffmpeg-nvtegra
 git checkout nvtegra
 
 # Настройка кросс-компиляции под Switch
-./configure \
+../configure \
+    --prefix=/opt/devkitpro/portlibs/switch \
     --enable-cross-compile \
-    --cross-prefix=aarch64-none-linux-gnu- \
+    --cross-prefix=aarch64-none-elf- \
     --target-os=linux \
     --arch=aarch64 \
-    --sysroot=$SYSROOT \
-    --prefix=$SYSROOT \
-    --disable-ffmpeg \
-    --disable-ffplay \
-    --disable-ffprobe \
-    --enable-nvtegra \
     --enable-static \
     --disable-shared \
-    --disable-programs \
     --disable-doc \
     --disable-debug \
-    --disable-runtime-cpudetect
+    --disable-programs \
+    --disable-avdevice \
+    --disable-postproc \
+    --disable-avfilter \
+    --disable-network \
+    --disable-everything \
+    --enable-decoder=h264,mpeg4,mpeg2video,mp3,aac,opus,vorbis \
+    --enable-demuxer=mov,matroska,mp3,ogg \
+    --enable-muxer=mp4,matroska \
+    --enable-parser=h264,mpeg4,mpegvideo,aac,opus,vorbis \
+    --enable-protocol=file \
+    --enable-swscale \
+    --enable-swresample \
+    --enable-nvtegra
 
 make -j$(nproc)
 make install

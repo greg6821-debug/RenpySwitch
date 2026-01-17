@@ -51,6 +51,9 @@ export CPLUS_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$CPLUS_INCLUDE_PATH
 # -------------------------------
 # Шаг A: Сборка NVTEGRA FFmpeg
 # -------------------------------
+export DEVKITPRO=/opt/devkitpro
+export DEVKITARM=$DEVKITPRO/devkitA64
+export SYSROOT=$DEVKITPRO/portlibs/switch
 echo "=== Building NVTEGRA FFmpeg ==="
 git clone https://github.com/averne/FFmpeg.git ffmpeg-nvtegra
 cd ffmpeg-nvtegra
@@ -61,14 +64,16 @@ git checkout nvtegra
   --arch=aarch64 \
   --target-os=linux \
   --enable-cross-compile \
-  --cross-prefix=aarch64-none-elf- \
+  --cross-prefix=aarch64-none-linux-gnu- \
+  --sysroot=$SYSROOT \
   --enable-static \
   --disable-shared \
-  --enable-libv4l2 \
+  --disable-doc \
+  --disable-debug \
   --enable-hwaccels \
-  --prefix=$DEVKITPRO/portlibs/switch \
-  --extra-cflags="-I$DEVKITPRO/portlibs/switch/include" \
-  --extra-ldflags="-L$DEVKITPRO/portlibs/switch/lib"
+  --prefix=$SYSROOT \
+  --extra-cflags="-I$SYSROOT/include" \
+  --extra-ldflags="-L$SYSROOT/lib"
 
 make -j$(nproc)
 make install

@@ -363,22 +363,21 @@ static void on_applet_hook(AppletHookType hook, void *param)
 
 void Logo_NX(const char* romfs_path, double display_seconds)
 {
-    // Монтируем romfs
     romfsInit();
 
-    // Загружаем PNG из romfs
     FILE* f = fopen(romfs_path, "rb");
     if (!f) {
         printf("Cannot open %s\n", romfs_path);
+        romfsExit();
         return;
     }
 
-    // Чтение PNG через libpng
     png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     png_infop info_ptr = png_create_info_struct(png_ptr);
     if (setjmp(png_jmpbuf(png_ptr))) {
         fclose(f);
         png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+        romfsExit();
         return;
     }
 
@@ -404,29 +403,30 @@ void Logo_NX(const char* romfs_path, double display_seconds)
 
     png_read_image(png_ptr, row_pointers);
     fclose(f);
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
-    // Получаем framebuffer
+    // Создаём framebuffer
     Framebuffer fb;
-    framebufferCreate(&fb, 1280, 720, PIXEL_FORMAT_RGBA_8888, 2);
+    framebufferCreate(&fb, NULL, 1280, 720, PIXEL_FORMAT_RGBA_8888, 2);
     framebufferMakeLinear(&fb);
-    framebufferBind(&fb);
 
-    u32* pixels = (u32*)fb.framebuffers[fb.currentFramebuffer].data;
+    void* ptr;
+    size_t stride;
+    framebufferBegin(&fb, &ptr, &stride);
+    u32* pixels = (u32*)ptr;
 
-    // Пропорционально растягиваем PNG на весь экран
+    // Пропорциональное растягивание на весь экран
     for (int y = 0; y < 720; y++) {
         for (int x = 0; x < 1280; x++) {
             int src_x = x * img_width / 1280;
             int src_y = y * img_height / 720;
             png_bytep px = &(row_pointers[src_y][src_x * 4]);
-            pixels[y * 1280 + x] = (px[0] << 24) | (px[1] << 16) | (px[2] << 8) | px[3]; // RGBA
+            pixels[y * stride + x] = (px[0] << 24) | (px[1] << 16) | (px[2] << 8) | px[3];
         }
     }
 
-    framebufferFlush(&fb);
-    framebufferSwap(&fb);
+    framebufferEnd(&fb);
 
-    // Ждём display_seconds
     svcSleepThread((uint64_t)(display_seconds * 1000000000ULL));
 
     framebufferClose(&fb);
@@ -437,23 +437,12 @@ void Logo_NX(const char* romfs_path, double display_seconds)
     romfsExit();
 }
 
-static void show_mp4_splash(const char* romfs_path, float display_time_sec)
+
+void show_mp4_splash(const char *path, float display_seconds)
 {
-    if (!romfs_path || strncmp(romfs_path, "romfs:/", 7) != 0)
-        return;
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+    IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
 
-    char sd_path[256];
-    snprintf(sd_path, sizeof(sd_path), "sdmc:/%s", romfs_path + 7);
-
-    // Копируем файл в SD (или можно читать напрямую из romfs)
-    FILE *f_in = fopen(romfs_path, "rb");
-    FILE *f_out = fopen(sd_path, "wb");
-    if (!f_in || !f_out) return;
-    char buf[4096]; size_t r;
-    while ((r = fread(buf, 1, sizeof(buf), f_in)) > 0) fwrite(buf, 1, r, f_out);
-    fclose(f_in); fclose(f_out);
-
-    SDL_Init(SDL_INIT_VIDEO);
     SDL_Window* win = SDL_CreateWindow(
         "",
         SDL_WINDOWPOS_CENTERED,
@@ -466,35 +455,36 @@ static void show_mp4_splash(const char* romfs_path, float display_time_sec)
         win, -1,
         SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
     );
+
     SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
 
     avformat_network_init();
 
     AVFormatContext* fmt_ctx = NULL;
-    if (avformat_open_input(&fmt_ctx, sd_path, NULL, NULL) < 0) goto cleanup;
-    if (avformat_find_stream_info(fmt_ctx, NULL) < 0) goto cleanup;
+    if (avformat_open_input(&fmt_ctx, path, NULL, NULL) < 0) return;
+    if (avformat_find_stream_info(fmt_ctx, NULL) < 0) return;
 
     int vstream = -1;
-    for (unsigned i = 0; i < fmt_ctx->nb_streams; i++)
+    for (unsigned i = 0; i < fmt_ctx->nb_streams; i++) {
         if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             vstream = i;
             break;
         }
-    if (vstream < 0) goto cleanup;
+    }
+    if (vstream < 0) return;
 
-    AVCodec* codec = avcodec_find_decoder(fmt_ctx->streams[vstream]->codecpar->codec_id);
-    if (!codec) goto cleanup;
+    const AVCodec* codec = avcodec_find_decoder(fmt_ctx->streams[vstream]->codecpar->codec_id);
+    if (!codec) return;
 
     AVCodecContext* ctx = avcodec_alloc_context3(codec);
     avcodec_parameters_to_context(ctx, fmt_ctx->streams[vstream]->codecpar);
-    if (avcodec_open2(ctx, codec, NULL) < 0) goto cleanup;
+    if (avcodec_open2(ctx, codec, NULL) < 0) return;
 
-    struct SwsContext* sws_ctx = sws_getContext(
+    struct SwsContext* sws = sws_getContext(
         ctx->width, ctx->height, ctx->pix_fmt,
         ctx->width, ctx->height, AV_PIX_FMT_RGBA,
         SWS_BILINEAR, NULL, NULL, NULL
     );
-    if (!sws_ctx) goto cleanup;
 
     AVFrame* frame = av_frame_alloc();
     AVFrame* rgba  = av_frame_alloc();
@@ -502,73 +492,63 @@ static void show_mp4_splash(const char* romfs_path, float display_time_sec)
     uint8_t* buffer = av_malloc(bufsize);
     av_image_fill_arrays(rgba->data, rgba->linesize, buffer, AV_PIX_FMT_RGBA, ctx->width, ctx->height, 1);
 
-    SDL_Texture* tex = SDL_CreateTexture(
-        ren, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING,
-        ctx->width, ctx->height
-    );
+    SDL_Texture* tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, ctx->width, ctx->height);
 
     AVPacket pkt;
-    SDL_Event e;
-    uint64_t start_ticks = armGetSystemTick();
-    uint64_t max_ticks = (display_time_sec > 0) ? (uint64_t)(display_time_sec * armGetSystemTickFreq()) : UINT64_MAX;
+    uint64_t start_time = armGetSystemTick();
+    uint64_t max_ticks = (uint64_t)(display_seconds * armGetSystemTickFreq());
 
-    while (av_read_frame(fmt_ctx, &pkt) >= 0) {
+    while (av_read_frame(fmt_ctx, &pkt) >= 0)
+    {
         if (pkt.stream_index != vstream) { av_packet_unref(&pkt); continue; }
         if (avcodec_send_packet(ctx, &pkt) < 0) { av_packet_unref(&pkt); continue; }
 
-        while (avcodec_receive_frame(ctx, frame) == 0) {
-            sws_scale(sws_ctx, (const uint8_t* const*)frame->data, frame->linesize, 0, ctx->height,
-                      rgba->data, rgba->linesize);
-
+        while (avcodec_receive_frame(ctx, frame) == 0)
+        {
+            sws_scale(sws, (const uint8_t* const*)frame->data, frame->linesize, 0, ctx->height, rgba->data, rgba->linesize);
             SDL_UpdateTexture(tex, NULL, rgba->data[0], rgba->linesize[0]);
-
             SDL_RenderClear(ren);
 
-            // Расчёт dst с сохранением пропорций на 1280x720
+            // масштабируем на весь экран
             SDL_Rect dst;
             float img_ratio = (float)ctx->width / ctx->height;
             float screen_ratio = 1280.0f / 720.0f;
-
             if (img_ratio > screen_ratio) {
                 dst.w = 1280;
                 dst.h = (int)(1280 / img_ratio);
                 dst.x = 0;
-                dst.y = (720 - dst.h) / 2;
+                dst.y = (720 - dst.h)/2;
             } else {
                 dst.h = 720;
                 dst.w = (int)(720 * img_ratio);
                 dst.y = 0;
-                dst.x = (1280 - dst.w) / 2;
+                dst.x = (1280 - dst.w)/2;
             }
 
             SDL_RenderCopy(ren, tex, NULL, &dst);
             SDL_RenderPresent(ren);
 
-            while (SDL_PollEvent(&e)) {}
+            // фиксированный fps ~60
+            svcSleepThread(16666666ULL);
 
-            AVRational tb = fmt_ctx->streams[vstream]->time_base;
-            int64_t delay_ns = av_rescale_q(frame->pkt_duration, tb, (AVRational){1, 1000000000});
-            if (delay_ns <= 0) delay_ns = 16666666; // ~60 FPS
-            svcSleepThread(delay_ns);
-
-            if (armGetSystemTick() - start_ticks >= max_ticks) goto cleanup;
+            if (armGetSystemTick() - start_time >= max_ticks) break;
         }
         av_packet_unref(&pkt);
+        if (armGetSystemTick() - start_time >= max_ticks) break;
     }
 
-cleanup:
     SDL_DestroyTexture(tex);
     av_free(buffer);
     av_frame_free(&frame);
     av_frame_free(&rgba);
-    sws_freeContext(sws_ctx);
+    sws_freeContext(sws);
     avcodec_free_context(&ctx);
     avformat_close_input(&fmt_ctx);
+
     SDL_DestroyRenderer(ren);
     SDL_DestroyWindow(win);
     SDL_Quit();
 }
-
 
 
 

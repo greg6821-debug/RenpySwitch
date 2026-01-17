@@ -54,6 +54,9 @@ export CPLUS_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$CPLUS_INCLUDE_PATH
 export DEVKITPRO=/opt/devkitpro
 export DEVKITARM=$DEVKITPRO/devkitA64
 export SYSROOT=$DEVKITPRO/portlibs/switch
+export SYSROOT=$DEVKITPRO/portlibs/switch
+export CFLAGS="--sysroot=$SYSROOT"
+export LDFLAGS="--sysroot=$SYSROOT"
 echo "=== Building NVTEGRA FFmpeg ==="
 git clone https://github.com/greg6821-debug/FFmpegSW.git ffmpeg-nvtegra
 cd ffmpeg-nvtegra
@@ -61,7 +64,6 @@ git checkout nvtegra
 
 
 # Флаги для кросс-компиляции
-export PKG_CONFIG=pkg-config
 export CC=aarch64-none-elf-gcc
 export CXX=aarch64-none-elf-g++
 export AR=aarch64-none-elf-ar
@@ -70,8 +72,6 @@ export LD=aarch64-none-elf-ld
 export NM=aarch64-none-elf-nm
 export RANLIB=aarch64-none-elf-ranlib
 export STRIP=aarch64-none-elf-strip
-export CFLAGS="--sysroot=$SYSROOT"
-export LDFLAGS="--sysroot=$SYSROOT"
 
 # Конфигурация для кросс-компиляции без тестов исполняемых файлов
 ./configure \

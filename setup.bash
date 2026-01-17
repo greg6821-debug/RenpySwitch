@@ -61,33 +61,18 @@ git checkout nvtegra
 
 # Настройка кросс-компиляции под Switch
 ./configure \
-  --arch=aarch64 \
-  --target-os=linux \
-  --enable-cross-compile \
-  --cross-prefix=aarch64-none-linux-gnu- \
-  --sysroot=$DEVKITPRO/portlibs/switch \
-  --prefix=$DEVKITPRO/portlibs/switch \
-  --disable-programs \
-  --disable-doc \
-  --disable-debug \
-  --enable-static \
-  --disable-shared \
-  --disable-ffmpeg \
-  --disable-ffplay \
-  --disable-ffprobe \
-  --disable-avdevice \
-  --disable-postproc \
-  --disable-network \
-  --disable-swresample \
-  --disable-swscale \
-  --disable-avfilter \
-  --disable-everything \
-  --enable-libavcodec \
-  --enable-libavformat \
-  --enable-libavutil \
-  --enable-nvtegra \
-  --extra-cflags="-I$DEVKITPRO/portlibs/switch/include" \
-  --extra-ldflags="-L$DEVKITPRO/portlibs/switch/lib"
+    --enable-cross-compile \
+    --cross-prefix=aarch64-none-linux-gnu- \
+    --target-os=linux \
+    --arch=aarch64 \
+    --sysroot=$DEVKITPRO/portlibs/switch \
+    --prefix=$DEVKITPRO/portlibs/switch \
+    --disable-ffmpeg \
+    --disable-ffplay \
+    --disable-ffprobe \
+    --enable-nvtegra \
+    --enable-static \
+    --disable-shared
 
 make -j$(nproc)
 make install

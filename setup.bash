@@ -62,9 +62,22 @@ git checkout nvtegra
 mkdir build-switch
 cd build-switch
 
-# Настройка кросс-компиляции под Switch
-../configure \
-    --prefix=/opt/devkitpro/portlibs/switch \
+# Флаги для кросс-компиляции
+export PKG_CONFIG=pkg-config
+export CC=aarch64-none-elf-gcc
+export CXX=aarch64-none-elf-g++
+export AR=aarch64-none-elf-ar
+export AS=aarch64-none-elf-as
+export LD=aarch64-none-elf-ld
+export NM=aarch64-none-elf-nm
+export RANLIB=aarch64-none-elf-ranlib
+export STRIP=aarch64-none-elf-strip
+export CFLAGS="--sysroot=$SYSROOT"
+export LDFLAGS="--sysroot=$SYSROOT"
+
+# Конфигурация для кросс-компиляции без тестов исполняемых файлов
+./configure \
+    --prefix=$SYSROOT \
     --enable-cross-compile \
     --cross-prefix=aarch64-none-elf- \
     --target-os=linux \
@@ -86,7 +99,10 @@ cd build-switch
     --enable-protocol=file \
     --enable-swscale \
     --enable-swresample \
-    --enable-nvtegra
+    --enable-nvtegra \
+    --disable-everything \
+    --disable-runtime-cpudetect \
+    --disable-asm
 
 make -j$(nproc)
 make install

@@ -63,8 +63,54 @@ PyMODINIT_FUNC PyInit__nx(void)
 
 static PyObject* commitsave(PyObject* self, PyObject* args)
 {
-    if (fsdevGetDeviceFileSystem("save"))
-        fsdevCommitDevice("save");
+    u64 total_size = 0;
+    u64 free_size = 0;
+    FsFileSystem* FsSave = fsdevGetDeviceFileSystem("save");
+
+    if (!FsSave)
+        Py_RETURN_NONE;
+
+    FsSaveDataInfoReader reader;
+    FsSaveDataInfo info;
+    s64 total_entries = 0;
+    Result rc = 0;
+
+    fsdevCommitDevice("save");
+
+    fsFsGetTotalSpace(FsSave, "/", &total_size);
+    fsFsGetFreeSpace(FsSave, "/", &free_size);
+
+    if (free_size < 0x800000)
+    {
+        u64 new_size = total_size + 0x800000;
+
+        fsdevUnmountDevice("save");
+        fsOpenSaveDataInfoReader(&reader, FsSaveDataSpaceId_User);
+
+        while (1)
+        {
+            rc = fsSaveDataInfoReaderRead(&reader, &info, 1, &total_entries);
+            if (R_FAILED(rc) || total_entries == 0)
+                break;
+
+            if (info.save_data_type == FsSaveDataType_Account &&
+                userID.uid[0] == info.uid.uid[0] &&
+                userID.uid[1] == info.uid.uid[1] &&
+                info.application_id == cur_progid)
+            {
+                fsExtendSaveDataFileSystem(
+                    info.save_data_space_id,
+                    info.save_data_id,
+                    new_size,
+                    0x400000
+                );
+                break;
+            }
+        }
+
+        fsSaveDataInfoReaderClose(&reader);
+        fsdevMountSaveData("save", cur_progid, userID);
+    }
 
     Py_RETURN_NONE;
 }
@@ -204,7 +250,7 @@ void __libnx_initheap(void)
         size = (mem_available - mem_used - 0x200000) & ~0x1FFFFF;
 
     if (size == 0)
-        size = 0x2000000 * 8; // 256 MB fallback
+        size = 0x2000000*16; // 256 MB fallback
 
     Result rc = svcSetHeapSize(&addr, size);
     if (R_FAILED(rc) || addr == NULL)
@@ -581,6 +627,9 @@ int main(int argc, char* argv[])
     appletHook(&applet_hook_cookie, on_applet_hook, NULL);
 
     Py_NoSiteFlag = 1;
+    Py_IgnoreEnvironmentFlag = 1;
+    Py_NoUserSiteDirectory = 1;
+    Py_DontWriteBytecodeFlag = 1;
     Py_OptimizeFlag = 2;
 
     PyConfig config;

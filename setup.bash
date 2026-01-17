@@ -73,11 +73,11 @@ export NM=aarch64-none-elf-nm
 export RANLIB=aarch64-none-elf-ranlib
 export STRIP=aarch64-none-elf-strip
 
-# Конфигурация для кросс-компиляции без тестов исполняемых файлов
+
 ./configure \
     --prefix=$SYSROOT \
     --enable-cross-compile \
-    --cross-prefix=aarch64-none-elf- \
+    --cross-prefix=$DEVKITARM/bin/aarch64-none-elf- \
     --target-os=linux \
     --arch=aarch64 \
     --enable-static \
@@ -89,6 +89,7 @@ export STRIP=aarch64-none-elf-strip
     --disable-postproc \
     --disable-avfilter \
     --disable-network \
+    --disable-runtime-cpudetect \
     --disable-everything \
     --enable-decoder=h264,mpeg4,mpeg2video,mp3,aac,opus,vorbis \
     --enable-demuxer=mov,matroska,mp3,ogg \
@@ -98,9 +99,8 @@ export STRIP=aarch64-none-elf-strip
     --enable-swscale \
     --enable-swresample \
     --enable-nvtegra \
-    --disable-everything \
-    --disable-runtime-cpudetect \
-    --disable-asm
+    --extra-cflags="--sysroot=$SYSROOT" \
+    --extra-ldflags="--sysroot=$SYSROOT"
 
 make -j$(nproc)
 make install

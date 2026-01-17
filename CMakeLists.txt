@@ -74,6 +74,13 @@ set(INCLUDES
     # Путь к сгенерированным заголовочным файлам pygame_sdl2
     ${CMAKE_CURRENT_SOURCE_DIR}/pygame_sdl2-source/build/lib.linux-x86_64-3.9/pygame_sdl2
     ${CMAKE_CURRENT_SOURCE_DIR}/pygame_sdl2-source/src
+	# Пути к заголовкам NVTEGRA FFmpeg
+	${DEVKITPRO}/portlibs/switch/include
+	${DEVKITPRO}/portlibs/switch/include/libavcodec
+	${DEVKITPRO}/portlibs/switch/include/libavformat
+	${DEVKITPRO}/portlibs/switch/include/libavutil
+	${DEVKITPRO}/portlibs/switch/include/libswscale
+	${DEVKITPRO}/portlibs/switch/include/libswresample
 )
 
 # ------------------------------------------------------------------------------
@@ -228,13 +235,13 @@ pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
 pkg_check_modules(FREETYPE2 REQUIRED IMPORTED_TARGET freetype2)
 pkg_check_modules(GLAPI REQUIRED IMPORTED_TARGET glapi)
 pkg_check_modules(GLESV2 REQUIRED IMPORTED_TARGET glesv2)
-pkg_check_modules(LIBAVCODEC REQUIRED IMPORTED_TARGET libavcodec)
-pkg_check_modules(LIBAVFILTER REQUIRED IMPORTED_TARGET libavfilter)
-pkg_check_modules(LIBAVFORMAT REQUIRED IMPORTED_TARGET libavformat)
-pkg_check_modules(LIBAVUTIL REQUIRED IMPORTED_TARGET libavutil)
+#pkg_check_modules(LIBAVCODEC REQUIRED IMPORTED_TARGET libavcodec)
+#pkg_check_modules(LIBAVFILTER REQUIRED IMPORTED_TARGET libavfilter)
+#pkg_check_modules(LIBAVFORMAT REQUIRED IMPORTED_TARGET libavformat)
+#pkg_check_modules(LIBAVUTIL REQUIRED IMPORTED_TARGET libavutil)
 pkg_check_modules(LIBDRM_NOUVEAU REQUIRED IMPORTED_TARGET libdrm_nouveau)
-pkg_check_modules(LIBSWRESAMPLE REQUIRED IMPORTED_TARGET libswresample)
-pkg_check_modules(LIBSWSCALE REQUIRED IMPORTED_TARGET libswscale)
+#pkg_check_modules(LIBSWRESAMPLE REQUIRED IMPORTED_TARGET libswresample)
+#pkg_check_modules(LIBSWSCALE REQUIRED IMPORTED_TARGET libswscale)
 pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
 pkg_check_modules(SDL2_GFX REQUIRED IMPORTED_TARGET SDL2_gfx)
 pkg_check_modules(SDL2_IMAGE REQUIRED IMPORTED_TARGET SDL2_image)
@@ -283,6 +290,12 @@ target_compile_options(renpy-switch PRIVATE
 target_link_libraries(renpy-switch
     ${DEVKITPRO}/portlibs/switch/lib/libpython3.9.a
     ${DEVKITPRO}/portlibs/switch/lib/libfribidi.a
+	# FFmpeg
+    ${DEVKITPRO}/portlibs/switch/lib/libavcodec.a
+    ${DEVKITPRO}/portlibs/switch/lib/libavformat.a
+    ${DEVKITPRO}/portlibs/switch/lib/libavutil.a
+    ${DEVKITPRO}/portlibs/switch/lib/libswscale.a
+    ${DEVKITPRO}/portlibs/switch/lib/libswresample.a
     m
     z
     PkgConfig::EGL

@@ -6,6 +6,7 @@
 #include <locale.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <png.h>
 
 
 #include <libavformat/avformat.h>
@@ -360,85 +361,100 @@ static void on_applet_hook(AppletHookType hook, void *param)
 }
 
 
-void Logo_SW(const char* path, double display_seconds)
+void Logo_NX(const char* romfs_path, double display_seconds)
 {
-    SDL_Init(SDL_INIT_VIDEO);
-    IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
+    // Монтируем romfs
+    romfsInit();
 
-    SDL_Window* win = SDL_CreateWindow(
-        "Splash",
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        1280, 720,
-        SDL_WINDOW_SHOWN
-    );
-
-    SDL_Renderer* r = SDL_CreateRenderer(
-        win, -1,
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
-    );
-
-    // ❗ ВАЖНО ДЛЯ SWITCH
-    SDL_RenderSetLogicalSize(r, 1280, 720);
-    SDL_RenderSetIntegerScale(r, SDL_TRUE);
-
-    SDL_Surface* s = IMG_Load(path);
-    if (!s) {
-        printf("IMG_Load Error: %s\n", IMG_GetError());
-        goto cleanup;
+    // Загружаем PNG из romfs
+    FILE* f = fopen(romfs_path, "rb");
+    if (!f) {
+        printf("Cannot open %s\n", romfs_path);
+        return;
     }
 
-    SDL_Texture* t = SDL_CreateTextureFromSurface(r, s);
-    SDL_FreeSurface(s);
+    // Чтение PNG через libpng
+    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    png_infop info_ptr = png_create_info_struct(png_ptr);
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        fclose(f);
+        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+        return;
+    }
 
-    SDL_RenderClear(r);
-    SDL_RenderCopy(r, t, NULL, NULL);
-    SDL_RenderPresent(r);
+    png_init_io(png_ptr, f);
+    png_read_info(png_ptr, info_ptr);
 
+    int img_width  = png_get_image_width(png_ptr, info_ptr);
+    int img_height = png_get_image_height(png_ptr, info_ptr);
+    png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+    png_byte bit_depth  = png_get_bit_depth(png_ptr, info_ptr);
+
+    if (bit_depth == 16) png_set_strip_16(png_ptr);
+    if (color_type == PNG_COLOR_TYPE_PALETTE) png_set_palette_to_rgb(png_ptr);
+    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) png_set_expand_gray_1_2_4_to_8(png_ptr);
+    if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) png_set_tRNS_to_alpha(png_ptr);
+    if (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY) png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
+
+    png_read_update_info(png_ptr, info_ptr);
+
+    png_bytep* row_pointers = (png_bytep*)malloc(sizeof(png_bytep) * img_height);
+    for (int y = 0; y < img_height; y++)
+        row_pointers[y] = (png_byte*)malloc(png_get_rowbytes(png_ptr, info_ptr));
+
+    png_read_image(png_ptr, row_pointers);
+    fclose(f);
+
+    // Получаем framebuffer
+    Framebuffer fb;
+    framebufferCreate(&fb, 1280, 720, PIXEL_FORMAT_RGBA_8888, 2);
+    framebufferMakeLinear(&fb);
+    framebufferBind(&fb);
+
+    u32* pixels = (u32*)fb.framebuffers[fb.currentFramebuffer].data;
+
+    // Пропорционально растягиваем PNG на весь экран
+    for (int y = 0; y < 720; y++) {
+        for (int x = 0; x < 1280; x++) {
+            int src_x = x * img_width / 1280;
+            int src_y = y * img_height / 720;
+            png_bytep px = &(row_pointers[src_y][src_x * 4]);
+            pixels[y * 1280 + x] = (px[0] << 24) | (px[1] << 16) | (px[2] << 8) | px[3]; // RGBA
+        }
+    }
+
+    framebufferFlush(&fb);
+    framebufferSwap(&fb);
+
+    // Ждём display_seconds
     svcSleepThread((uint64_t)(display_seconds * 1000000000ULL));
 
-cleanup:
-    SDL_DestroyTexture(t);
-    SDL_DestroyRenderer(r);
-    SDL_DestroyWindow(win);
-    IMG_Quit();
-    SDL_Quit();
+    framebufferClose(&fb);
+
+    for (int y = 0; y < img_height; y++) free(row_pointers[y]);
+    free(row_pointers);
+
+    romfsExit();
 }
 
-static int copy_file_to_sd(const char *src, const char *dst)
+static void show_mp4_splash(const char* romfs_path, float display_time_sec)
 {
-    FILE *in = fopen(src, "rb");
-    FILE *out = fopen(dst, "wb");
-    if (!in || !out) {
-        if (in) fclose(in);
-        if (out) fclose(out);
-        return -1;
-    }
-
-    char buf[4096];
-    size_t r;
-    while ((r = fread(buf, 1, sizeof(buf), in)) > 0)
-        fwrite(buf, 1, r, out);
-
-    fclose(in);
-    fclose(out);
-    return 0;
-}
-
-static void show_gif_splash(const char *romfs_path, float display_time_sec)
-{
-    if (strncmp(romfs_path, "romfs:/", 7) != 0)
+    if (!romfs_path || strncmp(romfs_path, "romfs:/", 7) != 0)
         return;
 
     char sd_path[256];
     snprintf(sd_path, sizeof(sd_path), "sdmc:/%s", romfs_path + 7);
 
-    if (copy_file_to_sd(romfs_path, sd_path) != 0)
-        return;
+    // Копируем файл в SD (или можно читать напрямую из romfs)
+    FILE *f_in = fopen(romfs_path, "rb");
+    FILE *f_out = fopen(sd_path, "wb");
+    if (!f_in || !f_out) return;
+    char buf[4096]; size_t r;
+    while ((r = fread(buf, 1, sizeof(buf), f_in)) > 0) fwrite(buf, 1, r, f_out);
+    fclose(f_in); fclose(f_out);
 
     SDL_Init(SDL_INIT_VIDEO);
-
-    SDL_Window *win = SDL_CreateWindow(
+    SDL_Window* win = SDL_CreateWindow(
         "",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
@@ -446,161 +462,108 @@ static void show_gif_splash(const char *romfs_path, float display_time_sec)
         SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS
     );
 
-    SDL_Renderer *ren = SDL_CreateRenderer(
+    SDL_Renderer* ren = SDL_CreateRenderer(
         win, -1,
         SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
     );
-
     SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
 
-    AVFormatContext *fmt = NULL;
-    if (avformat_open_input(&fmt, sd_path, NULL, NULL) < 0)
-        goto cleanup;
+    avformat_network_init();
 
-    if (avformat_find_stream_info(fmt, NULL) < 0)
-        goto cleanup;
+    AVFormatContext* fmt_ctx = NULL;
+    if (avformat_open_input(&fmt_ctx, sd_path, NULL, NULL) < 0) goto cleanup;
+    if (avformat_find_stream_info(fmt_ctx, NULL) < 0) goto cleanup;
 
     int vstream = -1;
-    for (unsigned i = 0; i < fmt->nb_streams; i++) {
-        if (fmt->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+    for (unsigned i = 0; i < fmt_ctx->nb_streams; i++)
+        if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             vstream = i;
             break;
         }
-    }
-    if (vstream < 0)
-        goto cleanup;
+    if (vstream < 0) goto cleanup;
 
-    const AVCodec *codec =
-        avcodec_find_decoder(fmt->streams[vstream]->codecpar->codec_id);
-    if (!codec)
-        goto cleanup;
+    AVCodec* codec = avcodec_find_decoder(fmt_ctx->streams[vstream]->codecpar->codec_id);
+    if (!codec) goto cleanup;
 
-    AVCodecContext *ctx = avcodec_alloc_context3(codec);
-    avcodec_parameters_to_context(ctx, fmt->streams[vstream]->codecpar);
-    if (avcodec_open2(ctx, codec, NULL) < 0)
-        goto cleanup;
+    AVCodecContext* ctx = avcodec_alloc_context3(codec);
+    avcodec_parameters_to_context(ctx, fmt_ctx->streams[vstream]->codecpar);
+    if (avcodec_open2(ctx, codec, NULL) < 0) goto cleanup;
 
-    struct SwsContext *sws = sws_getContext(
+    struct SwsContext* sws_ctx = sws_getContext(
         ctx->width, ctx->height, ctx->pix_fmt,
-        ctx->width, ctx->height, AV_PIX_FMT_BGRA,
+        ctx->width, ctx->height, AV_PIX_FMT_RGBA,
         SWS_BILINEAR, NULL, NULL, NULL
     );
-    if (!sws)
-        goto cleanup;
+    if (!sws_ctx) goto cleanup;
 
-    AVFrame *frm  = av_frame_alloc();
-    AVFrame *rgba = av_frame_alloc();
+    AVFrame* frame = av_frame_alloc();
+    AVFrame* rgba  = av_frame_alloc();
+    int bufsize = av_image_get_buffer_size(AV_PIX_FMT_RGBA, ctx->width, ctx->height, 1);
+    uint8_t* buffer = av_malloc(bufsize);
+    av_image_fill_arrays(rgba->data, rgba->linesize, buffer, AV_PIX_FMT_RGBA, ctx->width, ctx->height, 1);
 
-    int bufsize = av_image_get_buffer_size(
-        AV_PIX_FMT_BGRA, ctx->width, ctx->height, 1
-    );
-    uint8_t *buffer = av_malloc(bufsize);
-
-    av_image_fill_arrays(
-        rgba->data, rgba->linesize,
-        buffer, AV_PIX_FMT_BGRA,
-        ctx->width, ctx->height, 1
-    );
-
-    SDL_Texture *tex = SDL_CreateTexture(
-        ren,
-        SDL_PIXELFORMAT_BGRA32,
-        SDL_TEXTUREACCESS_STREAMING,
+    SDL_Texture* tex = SDL_CreateTexture(
+        ren, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING,
         ctx->width, ctx->height
     );
 
-    uint64_t start_time = armGetSystemTick();
-    uint64_t max_ticks = (display_time_sec > 0)
-        ? (uint64_t)(display_time_sec * armGetSystemTickFreq())
-        : UINT64_MAX;
-
-    bool first_frame = true;
-    bool animation = false;
-
     AVPacket pkt;
     SDL_Event e;
+    uint64_t start_ticks = armGetSystemTick();
+    uint64_t max_ticks = (display_time_sec > 0) ? (uint64_t)(display_time_sec * armGetSystemTickFreq()) : UINT64_MAX;
 
-    // ---- Читаем GIF ровно ОДИН раз ----
-    while (av_read_frame(fmt, &pkt) >= 0)
-    {
-        if (pkt.stream_index != vstream) {
-            av_packet_unref(&pkt);
-            continue;
-        }
+    while (av_read_frame(fmt_ctx, &pkt) >= 0) {
+        if (pkt.stream_index != vstream) { av_packet_unref(&pkt); continue; }
+        if (avcodec_send_packet(ctx, &pkt) < 0) { av_packet_unref(&pkt); continue; }
 
-        if (avcodec_send_packet(ctx, &pkt) < 0) {
-            av_packet_unref(&pkt);
-            continue;
-        }
+        while (avcodec_receive_frame(ctx, frame) == 0) {
+            sws_scale(sws_ctx, (const uint8_t* const*)frame->data, frame->linesize, 0, ctx->height,
+                      rgba->data, rgba->linesize);
 
-        while (avcodec_receive_frame(ctx, frm) == 0)
-        {
-            if (!first_frame)
-                animation = true;
-            first_frame = false;
-
-            sws_scale(
-                sws,
-                (const uint8_t * const *)frm->data,
-                frm->linesize,
-                0, ctx->height,
-                rgba->data,
-                rgba->linesize
-            );
-
-            SDL_UpdateTexture(
-                tex, NULL,
-                rgba->data[0],
-                rgba->linesize[0]
-            );
+            SDL_UpdateTexture(tex, NULL, rgba->data[0], rgba->linesize[0]);
 
             SDL_RenderClear(ren);
-            SDL_RenderCopy(ren, tex, NULL, NULL);
+
+            // Расчёт dst с сохранением пропорций на 1280x720
+            SDL_Rect dst;
+            float img_ratio = (float)ctx->width / ctx->height;
+            float screen_ratio = 1280.0f / 720.0f;
+
+            if (img_ratio > screen_ratio) {
+                dst.w = 1280;
+                dst.h = (int)(1280 / img_ratio);
+                dst.x = 0;
+                dst.y = (720 - dst.h) / 2;
+            } else {
+                dst.h = 720;
+                dst.w = (int)(720 * img_ratio);
+                dst.y = 0;
+                dst.x = (1280 - dst.w) / 2;
+            }
+
+            SDL_RenderCopy(ren, tex, NULL, &dst);
             SDL_RenderPresent(ren);
 
             while (SDL_PollEvent(&e)) {}
 
-            AVRational tb = fmt->streams[vstream]->time_base;
-
-            int64_t delay_ns = av_rescale_q(
-                frm->duration,
-                tb,
-                (AVRational){1, 1000000000}
-            );
-
-            if (delay_ns <= 0)
-                delay_ns = 10000000; // 10 ms
-
+            AVRational tb = fmt_ctx->streams[vstream]->time_base;
+            int64_t delay_ns = av_rescale_q(frame->pkt_duration, tb, (AVRational){1, 1000000000});
+            if (delay_ns <= 0) delay_ns = 16666666; // ~60 FPS
             svcSleepThread(delay_ns);
 
-            if (armGetSystemTick() - start_time >= max_ticks)
-                goto cleanup;
+            if (armGetSystemTick() - start_ticks >= max_ticks) goto cleanup;
         }
-
         av_packet_unref(&pkt);
-    }
-
-    // ---- Если GIF из 1 кадра — держим на экране ----
-    if (!animation && display_time_sec > 0)
-    {
-        while (armGetSystemTick() - start_time < max_ticks) {
-            SDL_RenderClear(ren);
-            SDL_RenderCopy(ren, tex, NULL, NULL);
-            SDL_RenderPresent(ren);
-            while (SDL_PollEvent(&e)) {}
-            svcSleepThread(16000000); // ~16 ms
-        }
     }
 
 cleanup:
     SDL_DestroyTexture(tex);
     av_free(buffer);
-    av_frame_free(&frm);
+    av_frame_free(&frame);
     av_frame_free(&rgba);
-    sws_freeContext(sws);
+    sws_freeContext(sws_ctx);
     avcodec_free_context(&ctx);
-    avformat_close_input(&fmt);
-
+    avformat_close_input(&fmt_ctx);
     SDL_DestroyRenderer(ren);
     SDL_DestroyWindow(win);
     SDL_Quit();
@@ -615,9 +578,9 @@ cleanup:
 
 int main(int argc, char* argv[])
 {
-    Logo_SW("romfs:/nintendologo.png", 1.0); 
+    Logo_NX("romfs:/nintendologo.png", 1.0); 
     // Показываем GIF из romfs:/Contents/logo.gif, 30 fps
-    show_gif_splash("romfs:/logo.gif", 5);
+    show_mp4_splash("romfs:/logo.mp4", 5.0f);
    
     chdir("romfs:/Contents");
     setlocale(LC_ALL, "C");

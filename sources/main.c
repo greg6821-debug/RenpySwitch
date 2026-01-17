@@ -374,6 +374,7 @@ void Logo_NX(const char* romfs_path, double display_seconds)
 
     png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     png_infop info_ptr = png_create_info_struct(png_ptr);
+
     if (setjmp(png_jmpbuf(png_ptr))) {
         fclose(f);
         png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
@@ -384,55 +385,57 @@ void Logo_NX(const char* romfs_path, double display_seconds)
     png_init_io(png_ptr, f);
     png_read_info(png_ptr, info_ptr);
 
-    int img_width  = png_get_image_width(png_ptr, info_ptr);
-    int img_height = png_get_image_height(png_ptr, info_ptr);
+    int img_w = png_get_image_width(png_ptr, info_ptr);
+    int img_h = png_get_image_height(png_ptr, info_ptr);
     png_byte color_type = png_get_color_type(png_ptr, info_ptr);
     png_byte bit_depth  = png_get_bit_depth(png_ptr, info_ptr);
 
     if (bit_depth == 16) png_set_strip_16(png_ptr);
     if (color_type == PNG_COLOR_TYPE_PALETTE) png_set_palette_to_rgb(png_ptr);
-    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) png_set_expand_gray_1_2_4_to_8(png_ptr);
-    if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) png_set_tRNS_to_alpha(png_ptr);
-    if (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY) png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
+    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+        png_set_expand_gray_1_2_4_to_8(png_ptr);
+    if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
+        png_set_tRNS_to_alpha(png_ptr);
+    if (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY)
+        png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
 
     png_read_update_info(png_ptr, info_ptr);
 
-    png_bytep* row_pointers = (png_bytep*)malloc(sizeof(png_bytep) * img_height);
-    for (int y = 0; y < img_height; y++)
-        row_pointers[y] = (png_byte*)malloc(png_get_rowbytes(png_ptr, info_ptr));
+    png_bytep* rows = malloc(sizeof(png_bytep) * img_h);
+    for (int y = 0; y < img_h; y++)
+        rows[y] = malloc(png_get_rowbytes(png_ptr, info_ptr));
 
-    png_read_image(png_ptr, row_pointers);
+    png_read_image(png_ptr, rows);
     fclose(f);
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
-    // Создаём framebuffer
+    // ---- Framebuffer ----
     Framebuffer fb;
     framebufferCreate(&fb, NULL, 1280, 720, PIXEL_FORMAT_RGBA_8888, 2);
     framebufferMakeLinear(&fb);
 
-    void* ptr;
-    size_t stride;
-    framebufferBegin(&fb, &ptr, &stride);
-    u32* pixels = (u32*)ptr;
+    u32 stride;
+    u32* pixels = (u32*)framebufferBegin(&fb, &stride);
 
-    // Пропорциональное растягивание на весь экран
+    // stride В ПИКСЕЛЯХ (не в байтах!)
     for (int y = 0; y < 720; y++) {
+        int sy = y * img_h / 720;
         for (int x = 0; x < 1280; x++) {
-            int src_x = x * img_width / 1280;
-            int src_y = y * img_height / 720;
-            png_bytep px = &(row_pointers[src_y][src_x * 4]);
-            pixels[y * stride + x] = (px[0] << 24) | (px[1] << 16) | (px[2] << 8) | px[3];
+            int sx = x * img_w / 1280;
+            png_bytep p = &rows[sy][sx * 4];
+            pixels[y * stride + x] =
+                (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
         }
     }
 
     framebufferEnd(&fb);
 
-    svcSleepThread((uint64_t)(display_seconds * 1000000000ULL));
+    svcSleepThread((u64)(display_seconds * 1000000000ULL));
 
     framebufferClose(&fb);
 
-    for (int y = 0; y < img_height; y++) free(row_pointers[y]);
-    free(row_pointers);
+    for (int y = 0; y < img_h; y++) free(rows[y]);
+    free(rows);
 
     romfsExit();
 }

@@ -76,6 +76,11 @@ python3.9 setup.py install
 popd
 
 pushd renpy-source/module
+
+# Указываем FFmpeg include и lib
+export CFLAGS="-I$DEVKITPRO/portlibs/switch/include $CFLAGS"
+export LDFLAGS="-L$DEVKITPRO/portlibs/switch/lib -lavcodec -lavformat -lavutil -lswscale -lswresample $LDFLAGS"
+
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py build
 RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py install
 popd

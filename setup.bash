@@ -48,6 +48,35 @@ export C_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$C_INCLUDE_PATH
 export CPLUS_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$CPLUS_INCLUDE_PATH
 
 
+# -------------------------------
+# Шаг A: Сборка NVTEGRA FFmpeg
+# -------------------------------
+echo "=== Building NVTEGRA FFmpeg ==="
+git clone https://github.com/averne/FFmpeg.git ffmpeg-nvtegra
+cd ffmpeg-nvtegra
+git checkout nvtegra
+
+# Настройка кросс-компиляции под Switch
+./configure \
+  --arch=aarch64 \
+  --target-os=linux \
+  --enable-cross-compile \
+  --cross-prefix=aarch64-none-elf- \
+  --enable-static \
+  --disable-shared \
+  --enable-libv4l2 \
+  --enable-hwaccels \
+  --prefix=$DEVKITPRO/portlibs/switch \
+  --extra-cflags="-I$DEVKITPRO/portlibs/switch/include" \
+  --extra-ldflags="-L$DEVKITPRO/portlibs/switch/lib"
+
+make -j$(nproc)
+make install
+cd ..
+rm -rf ffmpeg-nvtegra
+echo "=== NVTEGRA FFmpeg build complete ==="
+# -------------------------------
+
 rm switch-libfribidi-1.0.12-1-any.pkg.tar.xz
 rm python39-switch.zip
 

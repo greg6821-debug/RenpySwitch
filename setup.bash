@@ -55,7 +55,7 @@ export DEVKITPRO=/opt/devkitpro
 export DEVKITARM=$DEVKITPRO/devkitA64
 export SYSROOT=$DEVKITPRO/portlibs/switch
 echo "=== Building NVTEGRA FFmpeg ==="
-git clone https://github.com/averne/FFmpeg.git ffmpeg-nvtegra
+git clone https://github.com/greg6821-debug/FFmpegSW.git ffmpeg-nvtegra
 cd ffmpeg-nvtegra
 git checkout nvtegra
 
@@ -65,14 +65,18 @@ git checkout nvtegra
     --cross-prefix=aarch64-none-linux-gnu- \
     --target-os=linux \
     --arch=aarch64 \
-    --sysroot=$DEVKITPRO/portlibs/switch \
-    --prefix=$DEVKITPRO/portlibs/switch \
+    --sysroot=$SYSROOT \
+    --prefix=$SYSROOT \
     --disable-ffmpeg \
     --disable-ffplay \
     --disable-ffprobe \
     --enable-nvtegra \
     --enable-static \
-    --disable-shared
+    --disable-shared \
+    --disable-programs \
+    --disable-doc \
+    --disable-debug \
+    --disable-runtime-cpudetect
 
 make -j$(nproc)
 make install

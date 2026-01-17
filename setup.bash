@@ -65,15 +65,29 @@ git checkout nvtegra
   --target-os=linux \
   --enable-cross-compile \
   --cross-prefix=aarch64-none-linux-gnu- \
-  --sysroot=$SYSROOT \
-  --enable-static \
-  --disable-shared \
+  --sysroot=$DEVKITPRO/portlibs/switch \
+  --prefix=$DEVKITPRO/portlibs/switch \
+  --disable-programs \
   --disable-doc \
   --disable-debug \
-  --enable-hwaccels \
-  --prefix=$SYSROOT \
-  --extra-cflags="-I$SYSROOT/include" \
-  --extra-ldflags="-L$SYSROOT/lib"
+  --enable-static \
+  --disable-shared \
+  --disable-ffmpeg \
+  --disable-ffplay \
+  --disable-ffprobe \
+  --disable-avdevice \
+  --disable-postproc \
+  --disable-network \
+  --disable-swresample \
+  --disable-swscale \
+  --disable-avfilter \
+  --disable-everything \
+  --enable-libavcodec \
+  --enable-libavformat \
+  --enable-libavutil \
+  --enable-nvtegra \
+  --extra-cflags="-I$DEVKITPRO/portlibs/switch/include" \
+  --extra-ldflags="-L$DEVKITPRO/portlibs/switch/lib"
 
 make -j$(nproc)
 make install

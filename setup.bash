@@ -50,7 +50,7 @@ curl -LO https://github.com/greg6821-debug/scripts/releases/download/test/ffmpeg
 unzip -qq ffmpeg-6.0.zip -d .
 # Скачиваем исходники FFmpeg
 #curl -LO https://ffmpeg.org/releases/ffmpeg-7.1.tar.xz
-curl -LO https://ffmpeg.org/releases/ffmpeg-4.3.1.tar.xz
+curl -LO https://ffmpeg.org/releases/ffmpeg-6.0.tar.xz
 # Распаковываем исходники
 #tar -xf ffmpeg-7.1.tar.xz
 tar -xf ffmpeg-6.0.tar.xz

@@ -41,7 +41,7 @@ dkp-pacman -U --noconfirm switch-libfribidi-1.0.12-1-any.pkg.tar.xz
 unzip -qq python39-switch.zip -d $DEVKITPRO/portlibs/switch
 
 
-mkdir -p ~/switch-ffmpeg
+mkdir -p switch-ffmpeg
 pushd switch-ffmpeg
 curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/PKGBUILD
 curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/ffmpeg-7.1.patch
@@ -85,7 +85,7 @@ make -j$(nproc)
 make install
 popd
 # Очистка временных файлов
-rm -rf ~/switch-ffmpeg/build
+rm -rf switch-ffmpeg/build
 popd
 
 export LD_LIBRARY_PATH=$DEVKITPRO/portlibs/switch/lib:$LD_LIBRARY_PATH

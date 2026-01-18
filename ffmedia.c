@@ -72,14 +72,7 @@ static int rwops_read(void *opaque, uint8_t *buf, int buf_size) {
 
 }
 
-// Определяем макрос для проверки версии FFmpeg
-#if LIBAVUTIL_VERSION_MAJOR >= 57
-// FFmpeg 5.0+ использует const для write_packet
 static int rwops_write(void *opaque, const uint8_t *buf, int buf_size) {
-#else
-// Более старые версии FFmpeg
-static int rwops_write(void *opaque, uint8_t *buf, int buf_size) {
-#endif
     printf("Writing to an SDL_rwops is a really bad idea.\n");
     return -1;
 }
@@ -698,47 +691,29 @@ static void decode_audio(MediaState *ms) {
 			}
 
             converted_frame->sample_rate = audio_sample_rate;
+            av_channel_layout_from_mask(&converted_frame->ch_layout, AV_CH_LAYOUT_STEREO);
             converted_frame->format = AV_SAMPLE_FMT_S16;
-            
-            // Для совместимости с разными версиями FFmpeg
-            #if LIBAVUTIL_VERSION_MAJOR >= 57
-                // FFmpeg 5.0+ с новым API
-                // Используем старый API для обратной совместимости
-                // В FFmpeg 5.x новые поля ch_layout есть, но старые еще работают
-                converted_frame->channel_layout = AV_CH_LAYOUT_STEREO;
-                converted_frame->channels = 2;
-            #else
-                // Старые версии FFmpeg
-                converted_frame->channel_layout = AV_CH_LAYOUT_STEREO;
-                converted_frame->channels = 2;
-            #endif
 
-			if (!ms->audio_decode_frame->channel_layout) {
-				ms->audio_decode_frame->channel_layout = av_get_default_channel_layout(ms->audio_decode_frame->channels);
+			if (ms->audio_decode_frame->ch_layout.nb_channels == 0) {
+				av_channel_layout_default(&ms->audio_decode_frame->ch_layout, ms->audio_decode_frame->ch_layout.nb_channels);
+			}
 
-				if (audio_equal_mono && (ms->audio_decode_frame->channels == 1)) {
-				    #if LIBAVUTIL_VERSION_MAJOR >= 58
-				        // FFmpeg 6.0+ может требовать swr_alloc_set_opts2
-				        // Но используем старую функцию для совместимости
-				        if (ms->swr) {
-				            swr_free(&ms->swr);
-				        }
-				        ms->swr = swr_alloc();
-				    #endif
-				    
-				    swr_alloc_set_opts(
-                        ms->swr,
-                        converted_frame->channel_layout,
-                        converted_frame->format,
-                        converted_frame->sample_rate,
-                        ms->audio_decode_frame->channel_layout,
-                        ms->audio_decode_frame->format,
-                        ms->audio_decode_frame->sample_rate,
-                        0,
-                        NULL);
+			if (audio_equal_mono && (ms->audio_decode_frame->ch_layout.nb_channels == 1)) {
+			    AVChannelLayout in_layout, out_layout;
+			    av_channel_layout_copy(&in_layout, &ms->audio_decode_frame->ch_layout);
+			    av_channel_layout_copy(&out_layout, &converted_frame->ch_layout);
 
-				    swr_set_matrix(ms->swr, stereo_matrix, 1);
-				}
+			    swr_alloc_set_opts2(&ms->swr,
+			                          &out_layout,
+			                          converted_frame->format,
+			                          converted_frame->sample_rate,
+			                          &in_layout,
+			                          ms->audio_decode_frame->format,
+			                          ms->audio_decode_frame->sample_rate,
+			                          0,
+			                          NULL);
+
+			    swr_set_matrix(ms->swr, stereo_matrix, 1);
 			}
 
 			if(swr_convert_frame(ms->swr, converted_frame, ms->audio_decode_frame)) {
@@ -1189,12 +1164,10 @@ static int decode_thread(void *arg) {
 	// Compute the number of samples we need to play back.
 	if (ms->audio_duration < 0) {
 		// Используем устаревшую функцию с макросом для подавления предупреждения
-		#if LIBAVFORMAT_VERSION_MAJOR < 59
-			if (av_fmt_ctx_get_duration_estimation_method(ctx) != AVFMT_DURATION_FROM_BITRATE) {
-		#else
-			// В новых версиях функция удалена, просто используем длительность
-			if (1) {
-		#endif
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+		if (av_fmt_ctx_get_duration_estimation_method(ctx) != AVFMT_DURATION_FROM_BITRATE) {
+		#pragma GCC diagnostic pop
 
 			long long duration = ((long long) ctx->duration) * audio_sample_rate;
 			ms->audio_duration = (unsigned int) (duration /  AV_TIME_BASE);
@@ -1355,12 +1328,10 @@ static int decode_sync_start(void *arg) {
 	// Compute the number of samples we need to play back.
 	if (ms->audio_duration < 0) {
 		// Используем устаревшую функцию с макросом для подавления предупреждения
-		#if LIBAVFORMAT_VERSION_MAJOR < 59
-			if (av_fmt_ctx_get_duration_estimation_method(ctx) != AVFMT_DURATION_FROM_BITRATE) {
-		#else
-			// В новых версиях функция удалена, просто используем длительность
-			if (1) {
-		#endif
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+		if (av_fmt_ctx_get_duration_estimation_method(ctx) != AVFMT_DURATION_FROM_BITRATE) {
+		#pragma GCC diagnostic pop
 
 			long long duration = ((long long) ctx->duration) * audio_sample_rate;
 			ms->audio_duration = (unsigned int) (duration /  AV_TIME_BASE);

@@ -75,6 +75,7 @@ set(INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}/pygame_sdl2-source/build/lib.linux-x86_64-3.9/pygame_sdl2
     ${CMAKE_CURRENT_SOURCE_DIR}/pygame_sdl2-source/src
 	${DEVKITPRO}/portlibs/switch/include
+	${CMAKE_SOURCE_DIR}/source
 )
 
 # ------------------------------------------------------------------------------

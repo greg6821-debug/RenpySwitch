@@ -58,12 +58,11 @@ source $DEVKITPRO/switchvars.sh
 
 # Создаём директорию для сборки
 mkdir -p build
-cd build
 
 # Собираем пакет с помощью makepkg
 # Если makepkg не установлен, используем стандартную сборку через PKGBUILD вручную
 # 1) Применяем патчи
-cd ../ffmpeg-7.1
+pushd ffmpeg-7.1
 patch -Np1 -i ../ffmpeg-7.1.patch
 patch -Np1 -i ../tls.patch
 
@@ -85,11 +84,11 @@ patch -Np1 -i ../tls.patch
 # 3) Собираем статически
 make -j$(nproc)
 # 4) Устанавливаем библиотеки в portlibs
-make DESTDIR="$DEVKITPRO/portlibs/switch" install
+make install
 popd
 # Очистка временных файлов
 rm -rf ~/switch-ffmpeg/build
-
+popd
 
 export LD_LIBRARY_PATH=$DEVKITPRO/portlibs/switch/lib:$LD_LIBRARY_PATH
 export PYTHONPATH=$DEVKITPRO/portlibs/switch/lib/python3.9:$PYTHONPATH

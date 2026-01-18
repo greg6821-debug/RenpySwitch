@@ -45,7 +45,7 @@ mkdir -p switch-ffmpeg
 pushd switch-ffmpeg
 #curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/PKGBUILD
 #curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/ffmpeg-7.1.patch
-curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/tls.patch
+#curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/tls.patch
 curl -LO https://github.com/greg6821-debug/scripts/releases/download/test/ffmpeg-6.0.zip
 unzip -qq ffmpeg-6.0.zip -d .
 # Скачиваем исходники FFmpeg
@@ -67,24 +67,38 @@ mkdir -p build
 #pushd ffmpeg-7.1
 pushd ffmpeg-6.0
 #patch -Np1 -i ../ffmpeg-7.1.patch
-patch -Np1 -i ../tls.patch
+#patch -Np1 -i ../tls.patch
 patch -Np1 -i ../ffmpeg-6.0.patch
 
-# 2) Конфигурация сборки под Switch
-./configure --prefix=$DEVKITPRO/portlibs/switch \
-    --enable-gpl --disable-shared --enable-static \
+# 2) Конфигурация сборки под Switch(7.1)
+# ./configure --prefix=$DEVKITPRO/portlibs/switch \
+#     --enable-gpl --disable-shared --enable-static \
+#     --cross-prefix=aarch64-none-elf- --enable-cross-compile \
+#     --arch=aarch64 --cpu=cortex-a57 --target-os=horizon --enable-pic \
+#     --extra-cflags='-D__SWITCH__ -D_GNU_SOURCE -O2 -march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIC -ftls-model=local-exec' \
+#     --extra-cxxflags='-D__SWITCH__ -D_GNU_SOURCE -O2 -march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIC -ftls-model=local-exec' \
+#     --extra-ldflags='-fPIE -L${DEVKITPRO}/portlibs/switch/lib -L${DEVKITPRO}/libnx/lib' \
+#     --disable-runtime-cpudetect --disable-programs --disable-debug --disable-doc --disable-autodetect \
+#     --enable-asm --enable-neon \
+#     --disable-avdevice --disable-encoders --disable-muxers \
+#     --enable-swscale --enable-swresample --enable-network \
+#     --disable-protocols --enable-protocol=file,http,ftp,tcp,udp,rtmp,tls,httpproxy \
+#     --enable-zlib --enable-bzlib --enable-libass --enable-libfreetype --enable-libfribidi --enable-libdav1d \
+#     --enable-libnx --enable-nvtegra
+  
+  ./configure --prefix=$PORTLIBS_PREFIX --enable-gpl --disable-shared --enable-static \
     --cross-prefix=aarch64-none-elf- --enable-cross-compile \
     --arch=aarch64 --cpu=cortex-a57 --target-os=horizon --enable-pic \
     --extra-cflags='-D__SWITCH__ -D_GNU_SOURCE -O2 -march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIC -ftls-model=local-exec' \
     --extra-cxxflags='-D__SWITCH__ -D_GNU_SOURCE -O2 -march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIC -ftls-model=local-exec' \
-    --extra-ldflags='-fPIE -L${DEVKITPRO}/portlibs/switch/lib -L${DEVKITPRO}/libnx/lib' \
+    --extra-ldflags='-fPIE -L${PORTLIBS_PREFIX}/lib -L${DEVKITPRO}/libnx/lib' \
     --disable-runtime-cpudetect --disable-programs --disable-debug --disable-doc --disable-autodetect \
     --enable-asm --enable-neon \
     --disable-avdevice --disable-encoders --disable-muxers \
-    --enable-swscale --enable-swresample --enable-network \
-    --disable-protocols --enable-protocol=file,http,ftp,tcp,udp,rtmp,tls,httpproxy \
+    --enable-swscale --enable-swresample --enable-network  \
+    --disable-protocols --enable-protocol=file,http,ftp,tcp,udp,rtmp \
     --enable-zlib --enable-bzlib --enable-libass --enable-libfreetype --enable-libfribidi --enable-libdav1d \
-    --enable-libnx --enable-nvtegra
+    --enable-tx1
 # 3) Собираем статически
 make -j$(nproc)
 # 4) Устанавливаем библиотеки в portlibs

@@ -1,0 +1,39 @@
+--- a/source/module/ffmedia.c
++++ b/source/module/ffmedia.c
+@@
+- static int rwops_write(void *opaque, uint8_t *buf, int buf_size)
++ static int rwops_write(void *opaque, const uint8_t *buf, int buf_size)
+@@
+- converted_frame->channel_layout = AV_CH_LAYOUT_STEREO;
++ converted_frame->ch_layout = av_channel_layout_default(2);
+@@
+- if (!ms->audio_decode_frame->channel_layout) {
+-     ms->audio_decode_frame->channel_layout = av_get_default_channel_layout(ms->audio_decode_frame->channels);
++ if (!ms->audio_decode_frame->ch_layout) {
++     ms->audio_decode_frame->ch_layout = av_channel_layout_default(ms->audio_decode_frame->ch);
+@@
+- if (audio_equal_mono && (ms->audio_decode_frame->channels == 1)) {
++ if (audio_equal_mono && (ms->audio_decode_frame->ch == 1)) {
+@@
+- swr_alloc_set_opts(
+-     swr_ctx,
+-     converted_frame->channel_layout,
+-     AV_SAMPLE_FMT_S16,
+-     converted_frame->nb_samples,
+-     ms->audio_decode_frame->channel_layout,
+-     ms->audio_decode_frame->format,
+-     ms->audio_decode_frame->nb_samples,
+-     0,
+-     NULL
+- );
++ swr_alloc_set_opts2(
++     &swr_ctx,
++     &converted_frame->ch_layout,
++     AV_SAMPLE_FMT_S16,
++     converted_frame->nb_samples,
++     &ms->audio_decode_frame->ch_layout,
++     ms->audio_decode_frame->format,
++     ms->audio_decode_frame->nb_samples,
++     0,
++     NULL
++ );

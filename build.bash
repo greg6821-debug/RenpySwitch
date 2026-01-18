@@ -2,22 +2,6 @@ set -e
 
 export DEVKITPRO=/opt/devkitpro
 
-# ===== FFmpeg (Switch) =====
-export FFMPEG_PREFIX=$DEVKITPRO/portlibs/switch
-export CFLAGS="$CFLAGS -I$FFMPEG_PREFIX/include"
-export CXXFLAGS="$CXXFLAGS -I$FFMPEG_PREFIX/include"
-export LDFLAGS="$LDFLAGS -L$FFMPEG_PREFIX/lib"
-
-export PKG_CONFIG_PATH=$FFMPEG_PREFIX/lib/pkgconfig
-export PKG_CONFIG_LIBDIR=$PKG_CONFIG_PATH
-export PKG_CONFIG_SYSROOT_DIR=/
-
-# Явно сообщаем pygame_sdl2, что FFmpeg есть
-export HAVE_FFMPEG=1
-export SDL_VIDEO_FFMPEG=1
-
-
-
 mkdir -p source/module
 mkdir -p include/module include/module/pygame_sdl2
 
@@ -28,14 +12,7 @@ RENPY_STATIC=1 python3.9 setup.py install_headers
 popd
 
 pushd pygame_sdl2-source
-
-PYGAME_SDL2_STATIC=1 \
-HAVE_FFMPEG=1 \
-SDL_VIDEO_FFMPEG=1 \
-CFLAGS="$CFLAGS" \
-LDFLAGS="$LDFLAGS -lavformat -lavcodec -lavutil -lswscale -lswresample" \
-python3.9 setup.py build_ext --inplace || true
-
+PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace || true
 rm -rf gen
 popd
 
@@ -48,14 +25,7 @@ mkdir -p renpy/uguu
 mkdir -p renpy/gl
 mkdir -p renpy/gl2
 mkdir -p renpy/text
-
-RENPY_STATIC=1 \
-HAVE_FFMPEG=1 \
-CFLAGS="$CFLAGS" \
-LDFLAGS="$LDFLAGS -lavformat -lavcodec -lavutil -lswscale -lswresample" \
-RENPY_DEPS_INSTALL=$FFMPEG_PREFIX \
-python3.9 setup.py build_ext --inplace || true
-
+RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local RENPY_STATIC=1 python3.9 setup.py build_ext --inplace || true
 rm -rf gen
 popd
 
@@ -131,10 +101,6 @@ nm CMakeFiles/renpy-switch.dir/source/module/*.o | grep PyInit || true
 echo "===== PyInit symbols ====="
 popd
 
-echo "===== CHECK FFMPEG SYMBOLS ====="
-nm renpy-switch.nso | grep avcodec || true
-nm renpy-switch.nso | grep swscale || true
-
 mkdir -p ./raw/switch/exefs
 
 #mkdir -p ./raw/switch/exefs2
@@ -190,7 +156,7 @@ cp ./renpy_clear/renpy.py ./raw/switch/romfs/Contents/
 #unzip -qq ./raw/lib.zip -d ./raw/lib/
 #rm ./raw/lib.zip
 
-#cp -r $DEVKITPRO/portlibs/switch/. ./raw/switchlibs
+cp -r $DEVKITPRO/portlibs/switch/. ./raw/switchlibs
 cp -r ./renpy_clear/lib/python3.9/. ./raw/lib
 cp -r ./renpy_clear/renpy ./raw/lib
 rm -rf ./raw/lib/renpy/common/

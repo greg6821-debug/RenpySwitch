@@ -55,24 +55,6 @@ set(OPT_FLAGS
     -fno-common
 )
 
-
-# ------------------------------------------------------------------------
-# FFmpeg для Switch
-# ------------------------------------------------------------------------
-set(FFMPEG_INCLUDE_DIR "${DEVKITPRO}/portlibs/switch/include")
-set(FFMPEG_LIB_DIR "${DEVKITPRO}/portlibs/switch/lib")
-
-list(APPEND INCLUDES ${FFMPEG_INCLUDE_DIR})
-
-set(FFMPEG_LIBS
-    ${FFMPEG_LIB_DIR}/libavcodec.a
-    ${FFMPEG_LIB_DIR}/libavformat.a
-    ${FFMPEG_LIB_DIR}/libavutil.a
-    ${FFMPEG_LIB_DIR}/libswscale.a
-    ${FFMPEG_LIB_DIR}/libswresample.a
-)
-
-
 # ------------------------------------------------------------------------------
 # Include paths
 # ------------------------------------------------------------------------------
@@ -277,14 +259,6 @@ if(_drm_includes)
     )
 endif()
 
-
-# Определяем макросы, чтобы pygame_sdl2 включал поддержку видео
-add_compile_definitions(
-    HAVE_FFMPEG=1
-    SDL_VIDEO_FFMPEG=1
-)
-
-
 # ------------------------------------------------------------------------------
 # Executable
 # ------------------------------------------------------------------------------
@@ -328,7 +302,6 @@ target_link_libraries(renpy-switch
     PkgConfig::SDL2_MIXER
     PkgConfig::SDL2_TTF
     PkgConfig::ZLIB
-	${FFMPEG_LIBS}
 )
 
 # ------------------------------------------------------------------------------

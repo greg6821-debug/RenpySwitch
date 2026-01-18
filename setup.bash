@@ -47,7 +47,7 @@ pushd switch-ffmpeg
 #curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/ffmpeg-7.1.patch
 #curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/tls.patch
 curl -LO https://github.com/greg6821-debug/scripts/releases/download/test/ffmpeg4.3.1.zip
-unzip -qq ffmpeg-4.3.1.zip -d .
+unzip -qq ffmpeg4.3.1.zip -d .
 # Скачиваем исходники FFmpeg
 #curl -LO https://ffmpeg.org/releases/ffmpeg-7.1.tar.xz
 curl -LO https://ffmpeg.org/releases/ffmpeg-4.3.1.tar.xz

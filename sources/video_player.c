@@ -10,8 +10,11 @@
 #include <libavutil/opt.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <math.h>
 #include <stdbool.h>
+#include <time.h>
+
+#define SKIP_HOLD_TIME 3.0  // секунд удержания для пропуска
 
 typedef struct {
     uint8_t *data;
@@ -21,6 +24,7 @@ typedef struct {
 
 static AudioBuffer audio_buf = {0};
 
+/// SDL аудио callback
 void audio_callback(void *userdata, Uint8 *stream, int len)
 {
     if (!audio_buf.data || audio_buf.pos >= audio_buf.size) {
@@ -39,6 +43,23 @@ void audio_callback(void *userdata, Uint8 *stream, int len)
         memset(stream + to_copy, 0, len - to_copy);
 }
 
+// ----------------- отрисовка круговой прогресс-бара -----------------
+void draw_circle_progress(SDL_Renderer *ren, int cx, int cy, int radius, float progress)
+{
+    int segments = 64;
+    float angle_step = 2.0f * M_PI / segments;
+
+    SDL_SetRenderDrawColor(ren, 255, 255, 255, 255); // белый
+
+    for (int i = 0; i < segments * progress; i++) {
+        float angle = i * angle_step - M_PI / 2;
+        int x = cx + (int)(cosf(angle) * radius);
+        int y = cy + (int)(sinf(angle) * radius);
+        SDL_RenderDrawPoint(ren, x, y);
+    }
+}
+
+// ----------------- основной видеоплеер -----------------
 void play_video_file(const char *path)
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0) {
@@ -61,7 +82,6 @@ void play_video_file(const char *path)
     if (avformat_open_input(&fmt, path, NULL, NULL) < 0) goto cleanup;
     avformat_find_stream_info(fmt, NULL);
 
-    // Находим видео и аудио потоки
     for (unsigned i=0;i<fmt->nb_streams;i++){
         if(fmt->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && vstream<0)
             vstream=i;
@@ -127,7 +147,28 @@ void play_video_file(const char *path)
     printf("[Video] Playing: %s\n", path);
 
     bool quit=false;
+    double hold_time=0.0;
+    const double dt = 0.016; // ~60fps
+    clock_t last_time = clock();
+
     while(!quit && av_read_frame(fmt, &pkt)>=0){
+        // время кадра
+        clock_t now = clock();
+        double elapsed = (double)(now - last_time)/CLOCKS_PER_SEC;
+        last_time = now;
+
+        // Joycon check
+        hidScanInput();
+        u64 kDown = hidKeysHeld(HidNpadButton_B);
+        if(kDown & HidNpadButton_B){
+            hold_time += elapsed;
+            if(hold_time >= SKIP_HOLD_TIME){
+                printf("[Video] Skipped video!\n");
+                quit=true;
+            }
+        } else hold_time = 0.0;
+
+        // Видео
         if(pkt.stream_index==vstream){
             avcodec_send_packet(vdec,&pkt);
             while(avcodec_receive_frame(vdec,frame)==0){
@@ -135,14 +176,22 @@ void play_video_file(const char *path)
                 SDL_UpdateTexture(tex,NULL,rgb->data[0],rgb->linesize[0]);
                 SDL_RenderClear(ren);
                 SDL_RenderCopy(ren,tex,NULL,NULL);
-                SDL_RenderPresent(ren);
 
-                // Проверка joycon
-                hidScanInput();
-                u64 kDown = hidKeysDown(CONTROLLER_P1_AUTO);
-                if(kDown & KEY_Y) quit=true;
+                // Круговой индикатор в правом нижнем углу
+                if(hold_time>0.0){
+                    float progress = fmin(hold_time/SKIP_HOLD_TIME, 1.0f);
+                    int radius = 20;
+                    int cx = w-30;
+                    int cy = h-30;
+                    draw_circle_progress(ren,cx,cy,radius,progress);
+                }
+
+                SDL_RenderPresent(ren);
+                SDL_Delay((int)(dt*1000));
             }
         }
+
+        // Аудио
         if(adec && pkt.stream_index==astream){
             avcodec_send_packet(adec,&pkt);
             while(avcodec_receive_frame(adec,aframe)==0){
@@ -153,6 +202,7 @@ void play_video_file(const char *path)
                 audio_buf.pos=0;
             }
         }
+
         av_packet_unref(&pkt);
     }
 
@@ -168,7 +218,6 @@ cleanup:
     if(fmt) avformat_close_input(&fmt);
     if(sws) sws_freeContext(sws);
     if(swr) swr_free(&swr);
-
     if(audio_buf.data) free(audio_buf.data);
 
     if(tex) SDL_DestroyTexture(tex);

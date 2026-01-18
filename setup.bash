@@ -42,7 +42,7 @@ unzip -qq python39-switch.zip -d $DEVKITPRO/portlibs/switch
 
 
 mkdir -p ~/switch-ffmpeg
-cd ~/switch-ffmpeg
+pushd switch-ffmpeg
 curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/PKGBUILD
 curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/ffmpeg-7.1.patch
 curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/tls.patch
@@ -51,8 +51,6 @@ curl -LO https://ffmpeg.org/releases/ffmpeg-7.1.tar.xz
 # Распаковываем исходники
 tar -xf ffmpeg-7.1.tar.xz
 # --- Сборка и установка switch-ffmpeg ---
-pushd ~/switch-ffmpeg
-
 # Инициализируем переменные DevkitPro для сборки
 source $DEVKITPRO/switchvars.sh
 

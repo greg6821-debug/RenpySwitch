@@ -82,6 +82,8 @@ RENPY_DEPS_INSTALL=/usr/lib/x86_64-linux-gnu:/usr:/usr/local python3.9 setup.py 
 popd
 
 cp sources/main.c source/main.c
+cp sources/video_player.c source/video_player.c
+cp sources/video_player.h source/video_player.h
 
 pushd source/module
 echo "== list source/module =="

@@ -4,7 +4,6 @@
 #include <libavutil/time.h>
 #include <libavutil/pixfmt.h>
 #include <libswscale/swscale.h>
-									 
 
 #include <SDL.h>
 #include <SDL_thread.h>
@@ -72,7 +71,7 @@ static int rwops_read(void *opaque, uint8_t *buf, int buf_size) {
 
 }
 
-static int rwops_write(void *opaque, uint8_t *buf, int buf_size) {
+static int rwops_write(void *opaque, const uint8_t *buf, int buf_size) {
     printf("Writing to an SDL_rwops is a really bad idea.\n");
     return -1;
 }
@@ -691,82 +690,36 @@ static void decode_audio(MediaState *ms) {
 			}
 
             converted_frame->sample_rate = audio_sample_rate;
-																						  
             converted_frame->format = AV_SAMPLE_FMT_S16;
             
-            // Для совместимости со старыми версиями FFmpeg
+            // Проверяем версию FFmpeg для совместимости
             #if LIBAVUTIL_VERSION_MAJOR >= 57
-                // FFmpeg 5.0+ с новым API каналов
-                #include <libavutil/channel_layout.h>
-																														   
-											 
-                av_channel_layout_from_mask(&converted_frame->ch_layout, AV_CH_LAYOUT_STEREO);
+                // FFmpeg 5.0+ с новым API
+                converted_frame->channel_layout = AV_CH_LAYOUT_STEREO;
+                converted_frame->channels = 2;
             #else
                 // Старые версии FFmpeg
                 converted_frame->channel_layout = AV_CH_LAYOUT_STEREO;
                 converted_frame->channels = 2;
             #endif
 
-			#if LIBAVUTIL_VERSION_MAJOR >= 57
-				// Новый API FFmpeg
-				if (ms->audio_decode_frame->ch_layout.nb_channels == 0) {
-					av_channel_layout_default(&ms->audio_decode_frame->ch_layout, 
-														  
-						ms->audio_decode_frame->ch_layout.nb_channels);
-				}
-			#else
-				// Старый API FFmpeg
-				if (!ms->audio_decode_frame->channel_layout) {
-					ms->audio_decode_frame->channel_layout = 
-						av_get_default_channel_layout(ms->audio_decode_frame->channels);
-				}
-			#endif
+			if (!ms->audio_decode_frame->channel_layout) {
+				ms->audio_decode_frame->channel_layout = av_get_default_channel_layout(ms->audio_decode_frame->channels);
 
-			if (audio_equal_mono) {
-				#if LIBAVUTIL_VERSION_MAJOR >= 57
-					if (ms->audio_decode_frame->ch_layout.nb_channels == 1) {
-						AVChannelLayout in_layout, out_layout;
-						av_channel_layout_copy(&in_layout, &ms->audio_decode_frame->ch_layout);
-						#if LIBAVUTIL_VERSION_MAJOR >= 58
-							// FFmpeg 6.0+ с swr_alloc_set_opts2
-							av_channel_layout_copy(&out_layout, &converted_frame->ch_layout);
-							swr_alloc_set_opts2(&ms->swr,
-								&out_layout,
-								converted_frame->format,
-								converted_frame->sample_rate,
-								&in_layout,
-								ms->audio_decode_frame->format,
-								ms->audio_decode_frame->sample_rate,
-								0,
-								NULL);
-						#else
-							// FFmpeg 5.x
-							swr_alloc_set_opts(ms->swr,
-								converted_frame->channel_layout,
-								converted_frame->format,
-								converted_frame->sample_rate,
-								ms->audio_decode_frame->channel_layout,
-								ms->audio_decode_frame->format,
-								ms->audio_decode_frame->sample_rate,
-								0,
-								NULL);
-						#endif
-						swr_set_matrix(ms->swr, stereo_matrix, 1);
-					}
-				#else
-					if (ms->audio_decode_frame->channels == 1) {
-						swr_alloc_set_opts(ms->swr,
-							converted_frame->channel_layout,
-							converted_frame->format,
-							converted_frame->sample_rate,
-							ms->audio_decode_frame->channel_layout,
-							ms->audio_decode_frame->format,
-							ms->audio_decode_frame->sample_rate,
-							0,
-							NULL);
-						swr_set_matrix(ms->swr, stereo_matrix, 1);
-					}
-				#endif
+				if (audio_equal_mono && (ms->audio_decode_frame->channels == 1)) {
+				    swr_alloc_set_opts(
+                        ms->swr,
+                        converted_frame->channel_layout,
+                        converted_frame->format,
+                        converted_frame->sample_rate,
+                        ms->audio_decode_frame->channel_layout,
+                        ms->audio_decode_frame->format,
+                        ms->audio_decode_frame->sample_rate,
+                        0,
+                        NULL);
+
+				    swr_set_matrix(ms->swr, stereo_matrix, 1);
+				}
 			}
 
 			if(swr_convert_frame(ms->swr, converted_frame, ms->audio_decode_frame)) {
@@ -1218,7 +1171,6 @@ static int decode_thread(void *arg) {
 	if (ms->audio_duration < 0) {
 		// Используем устаревшую функцию с макросом для подавления предупреждения
 		#if LIBAVFORMAT_VERSION_MAJOR < 59
-															
 			if (av_fmt_ctx_get_duration_estimation_method(ctx) != AVFMT_DURATION_FROM_BITRATE) {
 		#else
 			// В новых версиях функция удалена, просто используем длительность
@@ -1385,7 +1337,6 @@ static int decode_sync_start(void *arg) {
 	if (ms->audio_duration < 0) {
 		// Используем устаревшую функцию с макросом для подавления предупреждения
 		#if LIBAVFORMAT_VERSION_MAJOR < 59
-															
 			if (av_fmt_ctx_get_duration_estimation_method(ctx) != AVFMT_DURATION_FROM_BITRATE) {
 		#else
 			// В новых версиях функция удалена, просто используем длительность

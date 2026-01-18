@@ -72,7 +72,7 @@ static int rwops_read(void *opaque, uint8_t *buf, int buf_size) {
 
 }
 
-static int rwops_write(void *opaque, const uint8_t *buf, int buf_size) {
+static int rwops_write(void *opaque, uint8_t *buf, int buf_size) {
     printf("Writing to an SDL_rwops is a really bad idea.\n");
     return -1;
 }
@@ -693,18 +693,16 @@ static void decode_audio(MediaState *ms) {
             converted_frame->sample_rate = audio_sample_rate;
             converted_frame->format = AV_SAMPLE_FMT_S16;
             
-            // FFmpeg 7.1: используем новый API ch_layout
-            // Инициализируем ch_layout для стерео выхода
-            av_channel_layout_uninit(&converted_frame->ch_layout);
-            av_channel_layout_default(&converted_frame->ch_layout, 2);
-            
-            // Проверяем и инициализируем ch_layout для входного кадра
-            if (av_channel_layout_check(&ms->audio_decode_frame->ch_layout) == 0) {
-                // Если ch_layout не валиден, устанавливаем моно по умолчанию
-                av_channel_layout_uninit(&ms->audio_decode_frame->ch_layout);
-                av_channel_layout_default(&ms->audio_decode_frame->ch_layout, 
-                    ms->audio_decode_frame->ch_layout.nb_channels > 0 ? 
-                    ms->audio_decode_frame->ch_layout.nb_channels : 1);
+            // Используем старый API для совместимости
+            converted_frame->channel_layout = AV_CH_LAYOUT_STEREO;
+            converted_frame->channels = 2;
+
+            // Проверяем и инициализируем channel_layout для входного кадра
+            if (ms->audio_decode_frame->channel_layout == 0) {
+                // Если channel_layout не установлен, устанавливаем моно по умолчанию
+                ms->audio_decode_frame->channel_layout = av_get_default_channel_layout(
+                    ms->audio_decode_frame->channels > 0 ? 
+                    ms->audio_decode_frame->channels : 1);
             }
 
             // Инициализируем swr контекст если нужно
@@ -712,26 +710,27 @@ static void decode_audio(MediaState *ms) {
                 ms->swr = swr_alloc();
             }
 
-			if (audio_equal_mono && (ms->audio_decode_frame->ch_layout.nb_channels == 1)) {
-			    // Для моно в стерео с использованием нового API
+			if (audio_equal_mono && (ms->audio_decode_frame->channels == 1)) {
+			    // Для моно в стерео с использованием старого API
 			    // Освобождаем старый контекст если был
 			    if (ms->swr) {
 			        swr_free(&ms->swr);
 			        ms->swr = swr_alloc();
 			    }
 			    
-			    // Используем swr_alloc_set_opts2 для нового API
-			    ret = swr_alloc_set_opts2(&ms->swr,
-			                           &converted_frame->ch_layout,
-			                           converted_frame->format,
-			                           converted_frame->sample_rate,
-			                           &ms->audio_decode_frame->ch_layout,
-			                           ms->audio_decode_frame->format,
-			                           ms->audio_decode_frame->sample_rate,
-			                           0,
-			                           NULL);
+			    // Используем старый API swr_alloc_set_opts
+			    ms->swr = swr_alloc_set_opts(
+			        NULL,
+			        converted_frame->channel_layout,
+			        converted_frame->format,
+			        converted_frame->sample_rate,
+			        ms->audio_decode_frame->channel_layout,
+			        ms->audio_decode_frame->format,
+			        ms->audio_decode_frame->sample_rate,
+			        0,
+			        NULL);
 			    
-			    if (ret < 0) {
+			    if (ms->swr == NULL) {
 			        av_frame_free(&converted_frame);
 			        continue;
 			    }
@@ -748,27 +747,49 @@ static void decode_audio(MediaState *ms) {
 			} else if (ms->swr == NULL) {
 			    // Инициализируем swr для случая когда конвертация не требуется
 			    // но нужен ресэмплинг
-			    ret = swr_alloc_set_opts2(&ms->swr,
-			                           &converted_frame->ch_layout,
-			                           converted_frame->format,
-			                           converted_frame->sample_rate,
-			                           &ms->audio_decode_frame->ch_layout,
-			                           ms->audio_decode_frame->format,
-			                           ms->audio_decode_frame->sample_rate,
-			                           0,
-			                           NULL);
+			    ms->swr = swr_alloc_set_opts(
+			        NULL,
+			        converted_frame->channel_layout,
+			        converted_frame->format,
+			        converted_frame->sample_rate,
+			        ms->audio_decode_frame->channel_layout,
+			        ms->audio_decode_frame->format,
+			        ms->audio_decode_frame->sample_rate,
+			        0,
+			        NULL);
 			    
-			    if (ret >= 0) {
+			    if (ms->swr != NULL) {
 			        swr_init(ms->swr);
 			    }
 			}
 
 			if (ms->swr) {
-			    ret = swr_convert_frame(ms->swr, converted_frame, ms->audio_decode_frame);
+			    // Используем старый API для конвертации
+			    converted_frame->nb_samples = av_rescale_rnd(
+			        swr_get_delay(ms->swr, ms->audio_decode_frame->sample_rate) + 
+			        ms->audio_decode_frame->nb_samples,
+			        converted_frame->sample_rate, 
+			        ms->audio_decode_frame->sample_rate, 
+			        AV_ROUND_UP);
+			        
+			    if (av_frame_get_buffer(converted_frame, 0) < 0) {
+			        av_frame_free(&converted_frame);
+			        continue;
+			    }
+			    
+			    ret = swr_convert(
+			        ms->swr, 
+			        converted_frame->data, 
+			        converted_frame->nb_samples,
+			        (const uint8_t **)ms->audio_decode_frame->data, 
+			        ms->audio_decode_frame->nb_samples);
+			    
 			    if (ret < 0) {
 			        av_frame_free(&converted_frame);
 			        continue;
 			    }
+			    
+			    converted_frame->nb_samples = ret;
 			} else {
 			    // Если swr не инициализирован, просто копируем данные
 			    converted_frame->nb_samples = ms->audio_decode_frame->nb_samples;
@@ -778,13 +799,14 @@ static void decode_audio(MediaState *ms) {
 			    }
 			    
 			    // Простое копирование (без ресэмплинга)
-			    // Это упрощенный случай, на практике лучше использовать swr
 			    av_frame_copy(converted_frame, ms->audio_decode_frame);
 			    av_frame_copy_props(converted_frame, ms->audio_decode_frame);
 			    
 			    // Обновляем параметры выхода
 			    converted_frame->sample_rate = audio_sample_rate;
 			    converted_frame->format = AV_SAMPLE_FMT_S16;
+			    converted_frame->channel_layout = AV_CH_LAYOUT_STEREO;
+			    converted_frame->channels = 2;
 			}
 
 			double start = ms->audio_decode_frame->best_effort_timestamp * timebase;

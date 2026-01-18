@@ -10,6 +10,7 @@
 #include <libavutil/opt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <stdbool.h>
 #include <time.h>
@@ -20,7 +21,6 @@ typedef struct {
     uint8_t *data;
     int size;
     int pos;
-    SDL_mutex *mutex;  // Мьютекс для потокобезопасности
 } AudioBuffer;
 
 static AudioBuffer audio_buf = {0};
@@ -30,11 +30,8 @@ void audio_callback(void *userdata, Uint8 *stream, int len)
 {
     AudioBuffer *buf = (AudioBuffer*)userdata;
     
-    SDL_LockMutex(buf->mutex);
-    
     if (!buf->data || buf->pos >= buf->size) {
         memset(stream, 0, len);
-        SDL_UnlockMutex(buf->mutex);
         return;
     }
 
@@ -47,8 +44,6 @@ void audio_callback(void *userdata, Uint8 *stream, int len)
 
     if (to_copy < len)
         memset(stream + to_copy, 0, len - to_copy);
-    
-    SDL_UnlockMutex(buf->mutex);
 }
 
 // ----------------- отрисовка круговой прогресс-бара -----------------
@@ -87,13 +82,6 @@ void play_video_file(const char *path, int skip_enabled)
     int vstream = -1, astream = -1;
     int w = 0, h = 0;
     int ret = 0;
-
-    // Инициализация audio buffer мьютекса
-    audio_buf.mutex = SDL_CreateMutex();
-    if (!audio_buf.mutex) {
-        printf("[Video] Failed to create mutex\n");
-        goto cleanup;
-    }
 
     if (avformat_open_input(&fmt, path, NULL, NULL) < 0) {
         printf("[Video] Failed to open file: %s\n", path);
@@ -237,10 +225,8 @@ void play_video_file(const char *path, int skip_enabled)
                 av_opt_set_sample_fmt(swr, "in_sample_fmt", adec->sample_fmt, 0);
                 
                 // Настройка выходного канального лэйаута
-                AVChannelLayout out_chlayout = AV_CHANNEL_LAYOUT_STEREO;
-                if (spec.channels == 1) {
-                    out_chlayout = AV_CHANNEL_LAYOUT_MONO;
-                }
+                AVChannelLayout out_chlayout;
+                av_channel_layout_default(&out_chlayout, spec.channels);
                 
                 av_opt_set_chlayout(swr, "out_chlayout", &out_chlayout, 0);
                 av_opt_set_int(swr, "out_sample_rate", spec.freq, 0);
@@ -254,6 +240,8 @@ void play_video_file(const char *path, int skip_enabled)
                     adec = NULL;
                 } else {
                     SDL_PauseAudio(0);
+                    // Освобождаем out_chlayout после использования
+                    av_channel_layout_uninit(&out_chlayout);
                 }
             }
         }
@@ -279,19 +267,16 @@ void play_video_file(const char *path, int skip_enabled)
         last_time = now;
 
         // Joycon check
-        padConfigureInput(1, HidNpadStyleSet_NpadStandard);
-        PadState pad;
-        padInitializeDefault(&pad);
-        padUpdate(&pad);
+        hidScanInput();
+        u64 kHeld = hidKeysHeld(HidNpadIdType_No1);  // Используем HidNpadIdType_No1 вместо CONTROLLER_P1_AUTO
         
-        u64 kHeld = padGetButtons(&pad);
         if (skip_enabled && (kHeld & HidNpadButton_B)) {
             hold_time += elapsed;
-            if (hold_time >= 3.0f) { // 3 секунды удержания
+            if (hold_time >= SKIP_HOLD_TIME) {
                 quit = true;
             }
         } else {
-            hold_time = 0.0f;
+            hold_time = 0.0;
         }
 
         // Проверка SDL событий для выхода
@@ -305,8 +290,8 @@ void play_video_file(const char *path, int skip_enabled)
         // Видео
         if (pkt->stream_index == vstream) {
             ret = avcodec_send_packet(vdec, pkt);
-            if (ret < 0 && ret != AVERROR(EAGAIN)) {
-                printf("[Video] Error sending video packet\n");
+            if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
+                printf("[Video] Error sending video packet: %d\n", ret);
             }
             
             while (avcodec_receive_frame(vdec, frame) == 0) {
@@ -334,8 +319,8 @@ void play_video_file(const char *path, int skip_enabled)
         // Аудио
         if (adec && pkt->stream_index == astream) {
             ret = avcodec_send_packet(adec, pkt);
-            if (ret < 0 && ret != AVERROR(EAGAIN)) {
-                printf("[Video] Error sending audio packet\n");
+            if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
+                printf("[Video] Error sending audio packet: %d\n", ret);
             }
             
             while (avcodec_receive_frame(adec, aframe) == 0) {
@@ -344,38 +329,30 @@ void play_video_file(const char *path, int skip_enabled)
                                                 aframe->nb_samples, 
                                                 spec.freq, aframe->sample_rate, AV_ROUND_UP);
                 
+                uint8_t *audio_buffer = NULL;
                 int out_linesize;
-                int out_count = av_samples_get_buffer_size(&out_linesize, spec.channels,
-                                                         out_samples, AV_SAMPLE_FMT_S16, 1);
+                int out_count = av_samples_alloc(&audio_buffer, &out_linesize, spec.channels,
+                                                out_samples, AV_SAMPLE_FMT_S16, 1);
                 
-                SDL_LockMutex(audio_buf.mutex);
-                
-                // Освобождаем старый буфер
-                if (audio_buf.data) {
-                    free(audio_buf.data);
-                    audio_buf.data = NULL;
-                }
-                
-                // Выделяем новый
-                audio_buf.data = (uint8_t*)malloc(out_count);
-                if (audio_buf.data) {
-                    uint8_t *out_buf[1] = { audio_buf.data };
-                    int converted = swr_convert(swr, out_buf, out_samples,
+                if (out_count >= 0) {
+                    int converted = swr_convert(swr, &audio_buffer, out_samples,
                                               (const uint8_t**)aframe->data, aframe->nb_samples);
                     
                     if (converted > 0) {
+                        // Освобождаем старый буфер
+                        if (audio_buf.data) {
+                            free(audio_buf.data);
+                        }
+                        
+                        // Обновляем буфер
+                        audio_buf.data = audio_buffer;
                         audio_buf.size = av_samples_get_buffer_size(&out_linesize, spec.channels,
                                                                   converted, AV_SAMPLE_FMT_S16, 1);
                         audio_buf.pos = 0;
                     } else {
-                        free(audio_buf.data);
-                        audio_buf.data = NULL;
-                        audio_buf.size = 0;
-                        audio_buf.pos = 0;
+                        av_freep(&audio_buffer);
                     }
                 }
-                
-                SDL_UnlockMutex(audio_buf.mutex);
             }
         }
 
@@ -386,20 +363,15 @@ void play_video_file(const char *path, int skip_enabled)
     if (adec) {
         SDL_PauseAudio(1);
         SDL_Delay(100); // Даем время завершиться коллбэкам
+        SDL_CloseAudio();
     }
 
 cleanup:
-    if (audio_buf.mutex) {
-        SDL_LockMutex(audio_buf.mutex);
-        if (audio_buf.data) {
-            free(audio_buf.data);
-            audio_buf.data = NULL;
-        }
-        SDL_UnlockMutex(audio_buf.mutex);
-        SDL_DestroyMutex(audio_buf.mutex);
-        audio_buf.mutex = NULL;
+    // Освобождаем аудио буфер
+    if (audio_buf.data) {
+        free(audio_buf.data);
+        audio_buf.data = NULL;
     }
-    
     audio_buf.size = 0;
     audio_buf.pos = 0;
     

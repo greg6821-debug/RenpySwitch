@@ -123,8 +123,6 @@ rm renpy-$RENPY_VER-sdk.zip
 cp -rf switch_enc.h renpy-source/module/libhydrogen/impl/random
 cp -rf encryption.patch renpy-source/module/libhydrogen/impl
 
-cp -rf ffmedia.c renpy-source/module
-
 #rm -rf raw
 #unzip -qq rawproject.zip -d raw
 #rm rawproject.zip

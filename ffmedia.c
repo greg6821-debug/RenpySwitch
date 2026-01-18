@@ -72,7 +72,14 @@ static int rwops_read(void *opaque, uint8_t *buf, int buf_size) {
 
 }
 
+// Определяем макрос для проверки версии FFmpeg
+#if LIBAVUTIL_VERSION_MAJOR >= 57
+// FFmpeg 5.0+ использует const для write_packet
 static int rwops_write(void *opaque, const uint8_t *buf, int buf_size) {
+#else
+// Более старые версии FFmpeg
+static int rwops_write(void *opaque, uint8_t *buf, int buf_size) {
+#endif
     printf("Writing to an SDL_rwops is a really bad idea.\n");
     return -1;
 }
@@ -693,34 +700,45 @@ static void decode_audio(MediaState *ms) {
             converted_frame->sample_rate = audio_sample_rate;
             converted_frame->format = AV_SAMPLE_FMT_S16;
             
-            // FFmpeg 7.1 использует только новый API ch_layout
-            av_channel_layout_from_mask(&converted_frame->ch_layout, AV_CH_LAYOUT_STEREO);
+            // Для совместимости с разными версиями FFmpeg
+            #if LIBAVUTIL_VERSION_MAJOR >= 57
+                // FFmpeg 5.0+ с новым API
+                // Используем старый API для обратной совместимости
+                // В FFmpeg 5.x новые поля ch_layout есть, но старые еще работают
+                converted_frame->channel_layout = AV_CH_LAYOUT_STEREO;
+                converted_frame->channels = 2;
+            #else
+                // Старые версии FFmpeg
+                converted_frame->channel_layout = AV_CH_LAYOUT_STEREO;
+                converted_frame->channels = 2;
+            #endif
 
-			// Проверяем, установлен ли layout в декодированном кадре
-			if (ms->audio_decode_frame->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC) {
-				// Если layout не указан, устанавливаем моно по умолчанию
-				av_channel_layout_default(&ms->audio_decode_frame->ch_layout, 
-					ms->audio_decode_frame->ch_layout.nb_channels > 0 ? 
-					ms->audio_decode_frame->ch_layout.nb_channels : 1);
-			}
+			if (!ms->audio_decode_frame->channel_layout) {
+				ms->audio_decode_frame->channel_layout = av_get_default_channel_layout(ms->audio_decode_frame->channels);
 
-			if (audio_equal_mono && (ms->audio_decode_frame->ch_layout.nb_channels == 1)) {
-				// Используем новый API swr_alloc_set_opts2 для FFmpeg 6.0+
-				AVChannelLayout out_layout;
-				av_channel_layout_from_mask(&out_layout, AV_CH_LAYOUT_STEREO);
-				
-				swr_alloc_set_opts2(&ms->swr,
-					&out_layout,
-					converted_frame->format,
-					converted_frame->sample_rate,
-					&ms->audio_decode_frame->ch_layout,
-					ms->audio_decode_frame->format,
-					ms->audio_decode_frame->sample_rate,
-					0,
-					NULL);
-				
-				av_channel_layout_uninit(&out_layout);
-				swr_set_matrix(ms->swr, stereo_matrix, 1);
+				if (audio_equal_mono && (ms->audio_decode_frame->channels == 1)) {
+				    #if LIBAVUTIL_VERSION_MAJOR >= 58
+				        // FFmpeg 6.0+ может требовать swr_alloc_set_opts2
+				        // Но используем старую функцию для совместимости
+				        if (ms->swr) {
+				            swr_free(&ms->swr);
+				        }
+				        ms->swr = swr_alloc();
+				    #endif
+				    
+				    swr_alloc_set_opts(
+                        ms->swr,
+                        converted_frame->channel_layout,
+                        converted_frame->format,
+                        converted_frame->sample_rate,
+                        ms->audio_decode_frame->channel_layout,
+                        ms->audio_decode_frame->format,
+                        ms->audio_decode_frame->sample_rate,
+                        0,
+                        NULL);
+
+				    swr_set_matrix(ms->swr, stereo_matrix, 1);
+				}
 			}
 
 			if(swr_convert_frame(ms->swr, converted_frame, ms->audio_decode_frame)) {

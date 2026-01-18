@@ -64,7 +64,8 @@ mkdir -p build
 # Собираем пакет с помощью makepkg
 # Если makepkg не установлен, используем стандартную сборку через PKGBUILD вручную
 # 1) Применяем патчи
-pushd ffmpeg-7.1
+#pushd ffmpeg-7.1
+pushd ffmpeg-6.0
 #patch -Np1 -i ../ffmpeg-7.1.patch
 #patch -Np1 -i ../tls.patch
 patch -Np1 -i ../ffmpeg-6.0.patch

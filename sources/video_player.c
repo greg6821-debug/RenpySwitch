@@ -65,30 +65,12 @@ void draw_circle_progress(SDL_Renderer *ren, int cx, int cy, int radius, float p
 // ----------------- основной видеоплеер -----------------
 void play_video_file(const char *path, int skip_enabled)
 {
-    // Сначала попробуем открыть файл напрямую
-    FILE *test = fopen(path, "rb");
-    if (!test) {
-        // Попробуем альтернативный путь
-        char alt_path[256];
-        snprintf(alt_path, sizeof(alt_path), "sdmc:%s", path);
-        test = fopen(alt_path, "rb");
-        if (!test) {
-            printf("[Video] Cannot open file: %s\n", path);
-            return;
-        }
-        fclose(test);
-        path = alt_path;
-    } else {
-        fclose(test);
-    }
-    
-    printf("[Video] Starting playback: %s\n", path);
+    printf("[Video] Attempting to play: %s\n", path);
     
     // Инициализируем контроллеры
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
     PadState pad;
     padInitializeDefault(&pad);
-    padUpdate(&pad);
     
     // Инициализируем SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0) {
@@ -111,12 +93,17 @@ void play_video_file(const char *path, int skip_enabled)
     int w = 0, h = 0;
     int ret = 0;
 
+    // Регистрируем все кодеки и форматы FFmpeg
+    avformat_network_init();
+    
+    // Пытаемся открыть файл через FFmpeg
+    printf("[Video] Opening file with FFmpeg...\n");
     if (avformat_open_input(&fmt, path, NULL, NULL) < 0) {
         printf("[Video] Failed to open file with ffmpeg: %s\n", path);
         goto cleanup;
     }
     
-    printf("[Video] File opened\n");
+    printf("[Video] File opened successfully\n");
     
     if (avformat_find_stream_info(fmt, NULL) < 0) {
         printf("[Video] Failed to find stream info\n");
@@ -129,11 +116,11 @@ void play_video_file(const char *path, int skip_enabled)
         AVCodecParameters *codecpar = fmt->streams[i]->codecpar;
         if (codecpar->codec_type == AVMEDIA_TYPE_VIDEO && vstream < 0) {
             vstream = i;
-            printf("[Video] Found video stream at index %d\n", i);
+            printf("[Video] Found video stream at index %d, codec: %d\n", i, codecpar->codec_id);
         }
         if (codecpar->codec_type == AVMEDIA_TYPE_AUDIO && astream < 0) {
             astream = i;
-            printf("[Video] Found audio stream at index %d\n", i);
+            printf("[Video] Found audio stream at index %d, codec: %d\n", i, codecpar->codec_id);
         }
     }
 
@@ -167,7 +154,7 @@ void play_video_file(const char *path, int skip_enabled)
     
     w = vdec->width;
     h = vdec->height;
-    printf("[Video] Video dimensions: %dx%d\n", w, h);
+    printf("[Video] Video dimensions: %dx%d, pix_fmt: %d\n", w, h, vdec->pix_fmt);
 
     // Аудио декодер
     if (astream >= 0) {

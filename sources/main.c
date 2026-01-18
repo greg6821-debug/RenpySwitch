@@ -366,11 +366,15 @@ static void on_applet_hook(AppletHookType hook, void *param)
 
 int main(int argc, char* argv[])
 {  
-    // Проигрываем intro.mp4
-    play_video_file("romfs:/intro.mp4",1);
-
+    // Копируем видео из romfs на SD карту
+    printf("Copying video files from romfs to SD card...\n");
+    
+    // Попробуем проиграть с SD карты
+    play_video_file("sdmc:/intro.mp4", 1);
+    
     // Проигрываем intro.webm
-    play_video_file("romfs:/intro.webm",0);
+    play_video_file("sdmc:/intro.webm", 0);
+   
    
     chdir("romfs:/Contents");
     setlocale(LC_ALL, "C");

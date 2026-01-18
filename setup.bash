@@ -46,6 +46,10 @@ cd ~/switch-ffmpeg
 curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/PKGBUILD
 curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/ffmpeg-7.1.patch
 curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/tls.patch
+# Скачиваем исходники FFmpeg
+curl -LO https://ffmpeg.org/releases/ffmpeg-7.1.tar.xz
+# Распаковываем исходники
+tar -xf ffmpeg-7.1.tar.xz
 # --- Сборка и установка switch-ffmpeg ---
 pushd ~/switch-ffmpeg
 

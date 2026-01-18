@@ -42,6 +42,9 @@ dkp-pacman -U --noconfirm switch-libfribidi-1.0.12-1-any.pkg.tar.xz
 unzip -qq python39-switch.zip -d $DEVKITPRO/portlibs/switch
 
 
+dkp-pacman -S --noconfirm switch-ffmpeg
+
+
 export LD_LIBRARY_PATH=$DEVKITPRO/portlibs/switch/lib:$LD_LIBRARY_PATH
 export PYTHONPATH=$DEVKITPRO/portlibs/switch/lib/python3.9:$PYTHONPATH
 export C_INCLUDE_PATH=$DEVKITPRO/portlibs/switch/include:$C_INCLUDE_PATH

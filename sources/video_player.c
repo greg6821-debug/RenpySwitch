@@ -249,6 +249,11 @@ void play_video_file(const char *path, int skip_enabled)
 
     printf("[Video] Playing: %s\n", path);
 
+    // Инициализация контроллера Switch
+    PadState pad;
+    padConfigureInput(1, HidNpadStyleSet_NpadStandard);
+    padInitializeDefault(&pad);
+
     bool quit = false;
     double hold_time = 0.0;
     const double dt = 0.016; // ~60fps
@@ -266,9 +271,9 @@ void play_video_file(const char *path, int skip_enabled)
         double elapsed = (double)(now - last_time) / CLOCKS_PER_SEC;
         last_time = now;
 
-        // Joycon check
-        hidScanInput();
-        u64 kHeld = hidKeysHeld(HidNpadIdType_No1);  // Используем HidNpadIdType_No1 вместо CONTROLLER_P1_AUTO
+        // Joycon check - используем API контроллеров Switch
+        padUpdate(&pad);
+        u64 kHeld = padGetButtons(&pad);
         
         if (skip_enabled && (kHeld & HidNpadButton_B)) {
             hold_time += elapsed;
@@ -391,3 +396,4 @@ cleanup:
     if (win) SDL_DestroyWindow(win);
     SDL_Quit();
 }
+

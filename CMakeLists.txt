@@ -74,6 +74,7 @@ set(INCLUDES
     # Путь к сгенерированным заголовочным файлам pygame_sdl2
     ${CMAKE_CURRENT_SOURCE_DIR}/pygame_sdl2-source/build/lib.linux-x86_64-3.9/pygame_sdl2
     ${CMAKE_CURRENT_SOURCE_DIR}/pygame_sdl2-source/src
+	${DEVKITPRO}/portlibs/switch/include
 )
 
 # ------------------------------------------------------------------------------

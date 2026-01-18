@@ -366,6 +366,12 @@ static void on_applet_hook(AppletHookType hook, void *param)
 
 int main(int argc, char* argv[])
 {  
+    // Проигрываем intro.mp4
+    play_video_file("romfs:/intro.mp4");
+
+    // Проигрываем intro.webm
+    play_video_file("romfs:/intro.webm");
+   
     chdir("romfs:/Contents");
     setlocale(LC_ALL, "C");
     setenv("MESA_NO_ERROR", "1", 1);

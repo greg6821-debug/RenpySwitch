@@ -29,7 +29,7 @@ apt-get -y install libsdl2-dev libsdl2-image-dev libjpeg-dev \
     libswscale-dev libglew-dev libfribidi-dev libharfbuzz-dev \
     libavcodec-dev libswresample-dev libsdl2-gfx-dev libgl1-mesa-glx \
     libwebp-dev libopenal-dev libvorbis-dev libopusfile-dev \
-    libmpg123-dev libmodplug-dev libflac-dev \
+    libmpg123-dev libmodplug-dev libflac-dev libvpx-dev\
     pkg-config autoconf automake libtool
 
 

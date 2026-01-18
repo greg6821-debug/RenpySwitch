@@ -367,10 +367,10 @@ static void on_applet_hook(AppletHookType hook, void *param)
 int main(int argc, char* argv[])
 {  
     // Проигрываем intro.mp4
-    play_video_file("romfs:/intro.mp4");
+    play_video_file("romfs:/intro.mp4",1);
 
     // Проигрываем intro.webm
-    play_video_file("romfs:/intro.webm");
+    play_video_file("romfs:/intro.webm",0);
    
     chdir("romfs:/Contents");
     setlocale(LC_ALL, "C");

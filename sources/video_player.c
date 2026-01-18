@@ -8,7 +8,6 @@
 #include <libavutil/imgutils.h>
 #include <libavutil/samplefmt.h>
 #include <libavutil/opt.h>
-#include <libavutil/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,13 +16,11 @@
 #include <time.h>
 
 #define SKIP_HOLD_TIME 3.0  // секунд удержания для пропуска
-#define MAX_AUDIO_FRAME_SIZE 192000  // максимальный размер аудио фрейма
 
 typedef struct {
     uint8_t *data;
     int size;
     int pos;
-    SDL_mutex *mutex;
 } AudioBuffer;
 
 static AudioBuffer audio_buf = {0};
@@ -33,11 +30,8 @@ void audio_callback(void *userdata, Uint8 *stream, int len)
 {
     AudioBuffer *buf = (AudioBuffer*)userdata;
     
-    SDL_LockMutex(buf->mutex);
-    
     if (!buf->data || buf->pos >= buf->size) {
         memset(stream, 0, len);
-        SDL_UnlockMutex(buf->mutex);
         return;
     }
 
@@ -50,8 +44,6 @@ void audio_callback(void *userdata, Uint8 *stream, int len)
 
     if (to_copy < len)
         memset(stream + to_copy, 0, len - to_copy);
-    
-    SDL_UnlockMutex(buf->mutex);
 }
 
 // ----------------- отрисовка круговой прогресс-бара -----------------
@@ -73,10 +65,38 @@ void draw_circle_progress(SDL_Renderer *ren, int cx, int cy, int radius, float p
 // ----------------- основной видеоплеер -----------------
 void play_video_file(const char *path, int skip_enabled)
 {
+    // Сначала попробуем открыть файл напрямую
+    FILE *test = fopen(path, "rb");
+    if (!test) {
+        // Попробуем альтернативный путь
+        char alt_path[256];
+        snprintf(alt_path, sizeof(alt_path), "sdmc:%s", path);
+        test = fopen(alt_path, "rb");
+        if (!test) {
+            printf("[Video] Cannot open file: %s\n", path);
+            return;
+        }
+        fclose(test);
+        path = alt_path;
+    } else {
+        fclose(test);
+    }
+    
+    printf("[Video] Starting playback: %s\n", path);
+    
+    // Инициализируем контроллеры
+    padConfigureInput(1, HidNpadStyleSet_NpadStandard);
+    PadState pad;
+    padInitializeDefault(&pad);
+    padUpdate(&pad);
+    
+    // Инициализируем SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0) {
         printf("[Video] SDL_Init failed: %s\n", SDL_GetError());
         return;
     }
+    
+    printf("[Video] SDL initialized\n");
 
     AVFormatContext *fmt = NULL;
     AVCodecContext *vdec = NULL;
@@ -91,28 +111,30 @@ void play_video_file(const char *path, int skip_enabled)
     int w = 0, h = 0;
     int ret = 0;
 
-    // Инициализация audio buffer мьютекса
-    audio_buf.mutex = SDL_CreateMutex();
-    if (!audio_buf.mutex) {
-        printf("[Video] Failed to create mutex\n");
-        goto cleanup;
-    }
-
     if (avformat_open_input(&fmt, path, NULL, NULL) < 0) {
-        printf("[Video] Failed to open file: %s\n", path);
+        printf("[Video] Failed to open file with ffmpeg: %s\n", path);
         goto cleanup;
     }
+    
+    printf("[Video] File opened\n");
     
     if (avformat_find_stream_info(fmt, NULL) < 0) {
         printf("[Video] Failed to find stream info\n");
         goto cleanup;
     }
 
+    printf("[Video] Found %d streams\n", fmt->nb_streams);
+    
     for (unsigned i = 0; i < fmt->nb_streams; i++) {
-        if (fmt->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && vstream < 0)
+        AVCodecParameters *codecpar = fmt->streams[i]->codecpar;
+        if (codecpar->codec_type == AVMEDIA_TYPE_VIDEO && vstream < 0) {
             vstream = i;
-        if (fmt->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && astream < 0)
+            printf("[Video] Found video stream at index %d\n", i);
+        }
+        if (codecpar->codec_type == AVMEDIA_TYPE_AUDIO && astream < 0) {
             astream = i;
+            printf("[Video] Found audio stream at index %d\n", i);
+        }
     }
 
     if (vstream < 0) {
@@ -142,8 +164,10 @@ void play_video_file(const char *path, int skip_enabled)
         printf("[Video] Failed to open video codec\n");
         goto cleanup;
     }
+    
     w = vdec->width;
     h = vdec->height;
+    printf("[Video] Video dimensions: %dx%d\n", w, h);
 
     // Аудио декодер
     if (astream >= 0) {
@@ -162,8 +186,13 @@ void play_video_file(const char *path, int skip_enabled)
                 printf("[Video] Failed to open audio codec\n");
                 avcodec_free_context(&adec);
                 adec = NULL;
+            } else {
+                printf("[Video] Audio codec opened: %dHz, %d channels\n", 
+                       adec->sample_rate, adec->ch_layout.nb_channels);
             }
         }
+    } else {
+        printf("[Video] No audio stream found\n");
     }
 
     frame = av_frame_alloc();
@@ -199,7 +228,7 @@ void play_video_file(const char *path, int skip_enabled)
         goto cleanup;
     }
     
-    SDL_Renderer *ren = SDL_CreateRenderer(win, -1, 0);
+    SDL_Renderer *ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!ren) {
         printf("[Video] Failed to create renderer: %s\n", SDL_GetError());
         goto cleanup;
@@ -211,6 +240,8 @@ void play_video_file(const char *path, int skip_enabled)
         printf("[Video] Failed to create texture: %s\n", SDL_GetError());
         goto cleanup;
     }
+
+    printf("[Video] SDL window created: %dx%d\n", w, h);
 
     // SDL Audio
     SDL_AudioSpec spec;
@@ -225,7 +256,7 @@ void play_video_file(const char *path, int skip_enabled)
         
         if (SDL_OpenAudio(&spec, NULL) < 0) {
             printf("[Video] Failed to open audio: %s\n", SDL_GetError());
-            adec = NULL; // Отключаем аудио
+            adec = NULL;
         } else {
             // Инициализация SwrContext для FFmpeg 6.0
             swr = swr_alloc();
@@ -257,33 +288,17 @@ void play_video_file(const char *path, int skip_enabled)
                     SDL_PauseAudio(0);
                     // Освобождаем out_chlayout после использования
                     av_channel_layout_uninit(&out_chlayout);
+                    printf("[Video] Audio initialized successfully\n");
                 }
             }
         }
     }
 
-    printf("[Video] Playing: %s\n", path);
-
-    // Инициализация контроллера Switch
-    PadState pad;
-    padConfigureInput(1, HidNpadStyleSet_NpadStandard);
-    padInitializeDefault(&pad);
+    printf("[Video] Starting playback loop\n");
 
     bool quit = false;
     double hold_time = 0.0;
-    double video_clock = 0.0; // Текущее время видео
-    double last_frame_time = 0.0;
-    double frame_delay = 0.0; // Задержка между кадрами
-    
-    // Получаем FPS видео для правильной синхронизации
-    AVRational frame_rate = av_guess_frame_rate(fmt, fmt->streams[vstream], NULL);
-    if (frame_rate.num && frame_rate.den) {
-        frame_delay = 1.0 / av_q2d(frame_rate);
-        printf("[Video] Frame rate: %d/%d (%.2f fps)\n", frame_rate.num, frame_rate.den, av_q2d(frame_rate));
-    } else {
-        frame_delay = 1.0 / 30.0; // По умолчанию 30 fps
-        printf("[Video] Using default 30 fps\n");
-    }
+    clock_t last_time = clock();
     
     pkt = av_packet_alloc();
     if (!pkt) {
@@ -291,41 +306,20 @@ void play_video_file(const char *path, int skip_enabled)
         goto cleanup;
     }
 
-    // Время начала воспроизведения
-    Uint32 start_time = SDL_GetTicks();
-    Uint32 prev_frame_time = start_time;
-    
-    // Очередь пакетов для аудио
-    AVPacket *audio_pkt = NULL;
-    bool audio_pkt_has_data = false;
+    while (!quit && av_read_frame(fmt, pkt) >= 0) {
+        // время кадра
+        clock_t now = clock();
+        double elapsed = (double)(now - last_time) / CLOCKS_PER_SEC;
+        last_time = now;
 
-    while (!quit) {
-        // Читаем новый пакет
-        if (!audio_pkt_has_data) {
-            ret = av_read_frame(fmt, pkt);
-            if (ret < 0) {
-                // Достигнут конец файла или ошибка
-                break;
-            }
-            
-            if (pkt->stream_index == astream && adec) {
-                // Сохраняем аудио пакет для обработки
-                audio_pkt = av_packet_clone(pkt);
-                audio_pkt_has_data = true;
-            }
-        }
-
-        // Joycon check - используем API контроллеров Switch
+        // Обновляем состояние контроллера
         padUpdate(&pad);
         u64 kHeld = padGetButtons(&pad);
-        
-        Uint32 current_time = SDL_GetTicks();
-        double elapsed = (current_time - prev_frame_time) / 1000.0;
-        prev_frame_time = current_time;
         
         if (skip_enabled && (kHeld & HidNpadButton_B)) {
             hold_time += elapsed;
             if (hold_time >= SKIP_HOLD_TIME) {
+                printf("[Video] Skip triggered\n");
                 quit = true;
             }
         } else {
@@ -337,123 +331,88 @@ void play_video_file(const char *path, int skip_enabled)
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 quit = true;
+            } else if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_ESCAPE) {
+                    quit = true;
+                }
             }
         }
 
-        // Обработка видео
+        // Видео
         if (pkt->stream_index == vstream) {
             ret = avcodec_send_packet(vdec, pkt);
             if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
                 printf("[Video] Error sending video packet: %d\n", ret);
-            } else {
-			
-                while (avcodec_receive_frame(vdec, frame) == 0) {
-                    // Обновляем время видео
-                    if (frame->pts != AV_NOPTS_VALUE) {
-                        video_clock = frame->pts * av_q2d(fmt->streams[vstream]->time_base);
-                    } else {
-                        video_clock += frame_delay;
-                    }
-                    
-                    // Синхронизация
-                    double actual_delay = frame_delay;
-                    double diff = video_clock - (SDL_GetTicks() - start_time) / 1000.0;
-                    
-                    if (diff > 0.01) {
-                        // Видео опережает, немного ждем
-                        SDL_Delay((Uint32)(diff * 1000));
-                    } else if (diff < -0.01) {
-                        // Видео отстает, пропускаем кадр
-                        continue;
-                    }
-                    
-                    // Конвертируем и отображаем кадр
-                    sws_scale(sws, (const uint8_t * const *)frame->data, 
-                             frame->linesize, 0, h, rgb->data, rgb->linesize);
-                    
-                    SDL_UpdateTexture(tex, NULL, rgb->data[0], rgb->linesize[0]);
-                    SDL_RenderClear(ren);
-                    SDL_RenderCopy(ren, tex, NULL, NULL);
+            }
+            
+            while (avcodec_receive_frame(vdec, frame) == 0) {
+                sws_scale(sws, (const uint8_t * const *)frame->data, 
+                         frame->linesize, 0, h, rgb->data, rgb->linesize);
+                
+                SDL_UpdateTexture(tex, NULL, rgb->data[0], rgb->linesize[0]);
+                SDL_RenderClear(ren);
+                SDL_RenderCopy(ren, tex, NULL, NULL);
 
-                    // Круговой индикатор в правом нижнем углу
-                    if (hold_time > 0.0) {
-                        float progress = fmin(hold_time / SKIP_HOLD_TIME, 1.0f);
-                        int radius = 20;
-                        int cx = w - 30;
-                        int cy = h - 30;
-                        draw_circle_progress(ren, cx, cy, radius, progress);
-                    }
-
-                    SDL_RenderPresent(ren);
+                // Круговой индикатор в правом нижнем углу
+                if (hold_time > 0.0) {
+                    float progress = fmin(hold_time / SKIP_HOLD_TIME, 1.0f);
+                    int radius = 20;
+                    int cx = w - 30;
+                    int cy = h - 30;
+                    draw_circle_progress(ren, cx, cy, radius, progress);
                 }
+
+                SDL_RenderPresent(ren);
+                
+                // Контроль FPS через vsync
+                SDL_Delay(1);
             }
         }
 
-        // Обработка аудио
-        if (adec && audio_pkt_has_data && audio_pkt) {
-            ret = avcodec_send_packet(adec, audio_pkt);
+        // Аудио
+        if (adec && pkt->stream_index == astream) {
+            ret = avcodec_send_packet(adec, pkt);
             if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
                 printf("[Video] Error sending audio packet: %d\n", ret);
-            } else {
-			
-                while (avcodec_receive_frame(adec, aframe) == 0) {
-                    // Выделяем буфер для конвертированного аудио
-                    int out_samples = av_rescale_rnd(swr_get_delay(swr, aframe->sample_rate) + 
-                                                    aframe->nb_samples, 
-                                                    spec.freq, aframe->sample_rate, AV_ROUND_UP);
-				
-											 
-								 
-																							 
-																				   
-				
-									 
-																				
-																								 
+            }
+            
+            while (avcodec_receive_frame(adec, aframe) == 0) {
+                // Выделяем буфер для конвертированного аудио
+                int out_samples = av_rescale_rnd(swr_get_delay(swr, aframe->sample_rate) + 
+                                                aframe->nb_samples, 
+                                                spec.freq, aframe->sample_rate, AV_ROUND_UP);
+                
+                uint8_t *audio_buffer = NULL;
+                int out_linesize;
+                int out_count = av_samples_alloc(&audio_buffer, &out_linesize, spec.channels,
+                                                out_samples, AV_SAMPLE_FMT_S16, 1);
+                
+                if (out_count >= 0) {
+                    int converted = swr_convert(swr, &audio_buffer, out_samples,
+                                              (const uint8_t**)aframe->data, aframe->nb_samples);
                     
-                    uint8_t *audio_buffer = NULL;
-                    int out_linesize;
-                    int out_count = av_samples_alloc(&audio_buffer, &out_linesize, spec.channels,
-                                                    out_samples, AV_SAMPLE_FMT_S16, 1);
-                    
-                    if (out_count >= 0 && audio_buffer) {
-																		 
-                        int converted = swr_convert(swr, &audio_buffer, out_samples,
-                                                  (const uint8_t**)aframe->data, aframe->nb_samples);
-						 
-                        
-                        if (converted > 0) {
-                            SDL_LockMutex(audio_buf.mutex);
-                            
-                            // Освобождаем старый буфер
-                            if (audio_buf.data) {
-                                free(audio_buf.data);
-                            }
-                            
-                            // Обновляем буфер
-                            audio_buf.data = audio_buffer;
-                            audio_buf.size = av_samples_get_buffer_size(&out_linesize, spec.channels,
-                                                                      converted, AV_SAMPLE_FMT_S16, 1);
-                            audio_buf.pos = 0;
-                            
-                            SDL_UnlockMutex(audio_buf.mutex);
-                        } else {
-                            av_freep(&audio_buffer);
+                    if (converted > 0) {
+                        // Освобождаем старый буфер
+                        if (audio_buf.data) {
+                            free(audio_buf.data);
                         }
+                        
+                        // Обновляем буфер
+                        audio_buf.data = audio_buffer;
+                        audio_buf.size = av_samples_get_buffer_size(&out_linesize, spec.channels,
+                                                                  converted, AV_SAMPLE_FMT_S16, 1);
+                        audio_buf.pos = 0;
+                    } else {
+                        av_freep(&audio_buffer);
                     }
                 }
             }
-            
-            // Освобождаем аудио пакет
-            av_packet_free(&audio_pkt);
-            audio_pkt_has_data = false;
         }
 
         av_packet_unref(pkt);
-        
-        // Небольшая задержка для снижения нагрузки на CPU
-        SDL_Delay(1);
     }
+
+    printf("[Video] Playback finished\n");
 
     // Ждем окончания воспроизведения аудио
     if (adec) {
@@ -463,36 +422,70 @@ void play_video_file(const char *path, int skip_enabled)
     }
 
 cleanup:
+    printf("[Video] Cleaning up\n");
+    
     // Освобождаем аудио буфер
-    SDL_LockMutex(audio_buf.mutex);
     if (audio_buf.data) {
         free(audio_buf.data);
         audio_buf.data = NULL;
     }
-    SDL_UnlockMutex(audio_buf.mutex);
-    
     audio_buf.size = 0;
     audio_buf.pos = 0;
     
-    if (audio_buf.mutex) {
-        SDL_DestroyMutex(audio_buf.mutex);
-        audio_buf.mutex = NULL;
+    if (buffer) {
+        free(buffer);
+        buffer = NULL;
+    }
+    if (frame) {
+        av_frame_free(&frame);
+        frame = NULL;
+    }
+    if (rgb) {
+        av_frame_free(&rgb);
+        rgb = NULL;
+    }
+    if (aframe) {
+        av_frame_free(&aframe);
+        aframe = NULL;
+    }
+    if (vdec) {
+        avcodec_free_context(&vdec);
+        vdec = NULL;
+    }
+    if (adec) {
+        avcodec_free_context(&adec);
+        adec = NULL;
+    }
+    if (fmt) {
+        avformat_close_input(&fmt);
+        fmt = NULL;
+    }
+    if (sws) {
+        sws_freeContext(sws);
+        sws = NULL;
+    }
+    if (swr) {
+        swr_free(&swr);
+        swr = NULL;
+    }
+    if (pkt) {
+        av_packet_free(&pkt);
+        pkt = NULL;
+    }
+
+    if (tex) {
+        SDL_DestroyTexture(tex);
+        tex = NULL;
+    }
+    if (ren) {
+        SDL_DestroyRenderer(ren);
+        ren = NULL;
+    }
+    if (win) {
+        SDL_DestroyWindow(win);
+        win = NULL;
     }
     
-    if (buffer) free(buffer);
-    if (frame) av_frame_free(&frame);
-    if (rgb) av_frame_free(&rgb);
-    if (aframe) av_frame_free(&aframe);
-    if (vdec) avcodec_free_context(&vdec);
-    if (adec) avcodec_free_context(&adec);
-    if (fmt) avformat_close_input(&fmt);
-    if (sws) sws_freeContext(sws);
-    if (swr) swr_free(&swr);
-    if (pkt) av_packet_free(&pkt);
-    if (audio_pkt) av_packet_free(&audio_pkt);
-
-    if (tex) SDL_DestroyTexture(tex);
-    if (ren) SDL_DestroyRenderer(ren);
-    if (win) SDL_DestroyWindow(win);
     SDL_Quit();
+    printf("[Video] Cleanup complete\n");
 }

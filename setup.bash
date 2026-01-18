@@ -122,17 +122,12 @@ rm renpy-$RENPY_VER-sdk.zip
 
 cp -rf switch_enc.h renpy-source/module/libhydrogen/impl/random
 cp -rf encryption.patch renpy-source/module/libhydrogen/impl
-cp -rf ffmedia-ffmpeg7.patch renpy-source/module
+
+cp -rf ffmedia.c renpy-source/module
 
 #rm -rf raw
 #unzip -qq rawproject.zip -d raw
 #rm rawproject.zip
-
-# --- Применяем патч для ffmedia.c под FFmpeg 7.1 ---
-pushd renpy-source/module/
-patch -p1 < ffmedia-ffmpeg7.patch
-popd
-
 
 pushd renpy-source/module/libhydrogen/impl
 patch -p1 < encryption.patch

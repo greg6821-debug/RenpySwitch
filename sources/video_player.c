@@ -15,44 +15,38 @@
 #include <stdbool.h>
 #include <time.h>
 
-#define SKIP_HOLD_TIME 3.0  // секунд удержания для пропуска
+#define SKIP_HOLD_TIME 3.0
 
-typedef struct {
-    uint8_t *data;
-    int size;
-    int pos;
-} AudioBuffer;
+static uint8_t *audio_buffer = NULL;
+static int audio_buffer_size = 0;
+static int audio_buffer_pos = 0;
 
-static AudioBuffer audio_buf = {0};
-
-/// SDL аудио callback
 void audio_callback(void *userdata, Uint8 *stream, int len)
 {
-    AudioBuffer *buf = (AudioBuffer*)userdata;
+    (void)userdata;
     
-    if (!buf->data || buf->pos >= buf->size) {
+    if (!audio_buffer || audio_buffer_pos >= audio_buffer_size) {
         memset(stream, 0, len);
         return;
     }
 
     int to_copy = len;
-    if (buf->pos + to_copy > buf->size)
-        to_copy = buf->size - buf->pos;
+    if (audio_buffer_pos + to_copy > audio_buffer_size)
+        to_copy = audio_buffer_size - audio_buffer_pos;
 
-    memcpy(stream, buf->data + buf->pos, to_copy);
-    buf->pos += to_copy;
+    memcpy(stream, audio_buffer + audio_buffer_pos, to_copy);
+    audio_buffer_pos += to_copy;
 
     if (to_copy < len)
         memset(stream + to_copy, 0, len - to_copy);
 }
 
-// ----------------- отрисовка круговой прогресс-бара -----------------
 void draw_circle_progress(SDL_Renderer *ren, int cx, int cy, int radius, float progress)
 {
     int segments = 64;
     float angle_step = 2.0f * M_PI / segments;
 
-    SDL_SetRenderDrawColor(ren, 255, 255, 255, 255); // белый
+    SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
 
     for (int i = 0; i < segments * progress; i++) {
         float angle = i * angle_step - M_PI / 2;
@@ -62,10 +56,9 @@ void draw_circle_progress(SDL_Renderer *ren, int cx, int cy, int radius, float p
     }
 }
 
-// ----------------- основной видеоплеер -----------------
 void play_video_file(const char *path, int skip_enabled)
 {
-    printf("[Video] Attempting to play: %s\n", path);
+    printf("[Video] Starting playback: %s\n", path);
     
     // Инициализируем контроллеры
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
@@ -78,230 +71,228 @@ void play_video_file(const char *path, int skip_enabled)
         return;
     }
     
-    printf("[Video] SDL initialized\n");
-
-    AVFormatContext *fmt = NULL;
-    AVCodecContext *vdec = NULL;
-    AVCodecContext *adec = NULL;
-    AVFrame *frame = NULL, *rgb = NULL;
-    AVFrame *aframe = NULL;
-    struct SwsContext *sws = NULL;
-    struct SwrContext *swr = NULL;
-    AVPacket *pkt = NULL;
-
-    int vstream = -1, astream = -1;
-    int w = 0, h = 0;
-    int ret = 0;
-
-    // Регистрируем все кодеки и форматы FFmpeg
-    avformat_network_init();
+    // Сначала пробуем открыть файл напрямую
+    AVFormatContext *fmt_ctx = NULL;
     
-    // Пытаемся открыть файл через FFmpeg
-    printf("[Video] Opening file with FFmpeg...\n");
-    if (avformat_open_input(&fmt, path, NULL, NULL) < 0) {
-        printf("[Video] Failed to open file with ffmpeg: %s\n", path);
-        goto cleanup;
+    // Пробуем разные префиксы
+    char full_path[256];
+    snprintf(full_path, sizeof(full_path), "sdmc:%s", path);
+    
+    // Удаляем "romfs:/" если есть
+    const char *actual_path = path;
+    if (strncmp(path, "romfs:/", 7) == 0) {
+        // Попробуем открыть без префикса
+        actual_path = path + 7;
+    }
+    
+    // Пробуем открыть файл
+    if (avformat_open_input(&fmt_ctx, full_path, NULL, NULL) < 0) {
+        printf("[Video] Cannot open file: %s\n", full_path);
+        // Попробуем без sdmc: префикса
+        if (avformat_open_input(&fmt_ctx, path, NULL, NULL) < 0) {
+            printf("[Video] Cannot open file: %s\n", path);
+            // Попробуем с romfs: префиксом
+            if (strncmp(path, "romfs:/", 7) != 0) {
+                snprintf(full_path, sizeof(full_path), "romfs:/%s", path);
+                if (avformat_open_input(&fmt_ctx, full_path, NULL, NULL) < 0) {
+                    printf("[Video] Cannot open any variant of the file\n");
+                    SDL_Quit();
+                    return;
+                }
+            } else {
+                SDL_Quit();
+                return;
+            }
+        }
     }
     
     printf("[Video] File opened successfully\n");
     
-    if (avformat_find_stream_info(fmt, NULL) < 0) {
-        printf("[Video] Failed to find stream info\n");
-        goto cleanup;
+    if (avformat_find_stream_info(fmt_ctx, NULL) < 0) {
+        printf("[Video] Could not find stream information\n");
+        avformat_close_input(&fmt_ctx);
+        SDL_Quit();
+        return;
     }
-
-    printf("[Video] Found %d streams\n", fmt->nb_streams);
     
-    for (unsigned i = 0; i < fmt->nb_streams; i++) {
-        AVCodecParameters *codecpar = fmt->streams[i]->codecpar;
-        if (codecpar->codec_type == AVMEDIA_TYPE_VIDEO && vstream < 0) {
-            vstream = i;
-            printf("[Video] Found video stream at index %d, codec: %d\n", i, codecpar->codec_id);
-        }
-        if (codecpar->codec_type == AVMEDIA_TYPE_AUDIO && astream < 0) {
-            astream = i;
-            printf("[Video] Found audio stream at index %d, codec: %d\n", i, codecpar->codec_id);
+    // Находим видеопоток
+    int video_stream_index = -1;
+    int audio_stream_index = -1;
+    
+    for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
+        if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+            video_stream_index = i;
+        } else if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
+            audio_stream_index = i;
         }
     }
-
-    if (vstream < 0) {
+    
+    if (video_stream_index == -1) {
         printf("[Video] No video stream found\n");
-        goto cleanup;
-    }
-
-    // Видео декодер
-    const AVCodec *vcodec = avcodec_find_decoder(fmt->streams[vstream]->codecpar->codec_id);
-    if (!vcodec) {
-        printf("[Video] Video codec not found\n");
-        goto cleanup;
+        avformat_close_input(&fmt_ctx);
+        SDL_Quit();
+        return;
     }
     
-    vdec = avcodec_alloc_context3(vcodec);
-    if (!vdec) {
-        printf("[Video] Failed to alloc video context\n");
-        goto cleanup;
+    // Получаем параметры кодека видеопотока
+    AVCodecParameters *video_codec_params = fmt_ctx->streams[video_stream_index]->codecpar;
+    const AVCodec *video_codec = avcodec_find_decoder(video_codec_params->codec_id);
+    
+    if (!video_codec) {
+        printf("[Video] Unsupported video codec\n");
+        avformat_close_input(&fmt_ctx);
+        SDL_Quit();
+        return;
     }
     
-    if (avcodec_parameters_to_context(vdec, fmt->streams[vstream]->codecpar) < 0) {
-        printf("[Video] Failed to copy video codec params\n");
-        goto cleanup;
+    AVCodecContext *video_codec_ctx = avcodec_alloc_context3(video_codec);
+    if (!video_codec_ctx) {
+        printf("[Video] Could not allocate video codec context\n");
+        avformat_close_input(&fmt_ctx);
+        SDL_Quit();
+        return;
     }
     
-    if (avcodec_open2(vdec, vcodec, NULL) < 0) {
-        printf("[Video] Failed to open video codec\n");
-        goto cleanup;
+    if (avcodec_parameters_to_context(video_codec_ctx, video_codec_params) < 0) {
+        printf("[Video] Could not copy video codec parameters\n");
+        avcodec_free_context(&video_codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        SDL_Quit();
+        return;
     }
     
-    w = vdec->width;
-    h = vdec->height;
-    printf("[Video] Video dimensions: %dx%d, pix_fmt: %d\n", w, h, vdec->pix_fmt);
-
-    // Аудио декодер
-    if (astream >= 0) {
-        const AVCodec *acodec = avcodec_find_decoder(fmt->streams[astream]->codecpar->codec_id);
-        if (!acodec) {
-            printf("[Video] Audio codec not found\n");
-        } else {
-            adec = avcodec_alloc_context3(acodec);
-            if (!adec) {
-                printf("[Video] Failed to alloc audio context\n");
-            } else if (avcodec_parameters_to_context(adec, fmt->streams[astream]->codecpar) < 0) {
-                printf("[Video] Failed to copy audio codec params\n");
-                avcodec_free_context(&adec);
-                adec = NULL;
-            } else if (avcodec_open2(adec, acodec, NULL) < 0) {
-                printf("[Video] Failed to open audio codec\n");
-                avcodec_free_context(&adec);
-                adec = NULL;
-            } else {
-                printf("[Video] Audio codec opened: %dHz, %d channels\n", 
-                       adec->sample_rate, adec->ch_layout.nb_channels);
-            }
-        }
+    if (avcodec_open2(video_codec_ctx, video_codec, NULL) < 0) {
+        printf("[Video] Could not open video codec\n");
+        avcodec_free_context(&video_codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        SDL_Quit();
+        return;
+    }
+    
+    // Создаем окно SDL
+    SDL_Window *window = SDL_CreateWindow("Video", 
+                                         SDL_WINDOWPOS_CENTERED, 
+                                         SDL_WINDOWPOS_CENTERED, 
+                                         video_codec_ctx->width, 
+                                         video_codec_ctx->height, 
+                                         0);
+    if (!window) {
+        printf("[Video] Could not create window: %s\n", SDL_GetError());
+        avcodec_free_context(&video_codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        SDL_Quit();
+        return;
+    }
+    
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 
+                                               SDL_RENDERER_ACCELERATED | 
+                                               SDL_RENDERER_PRESENTVSYNC);
+    if (!renderer) {
+        printf("[Video] Could not create renderer: %s\n", SDL_GetError());
+        SDL_DestroyWindow(window);
+        avcodec_free_context(&video_codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        SDL_Quit();
+        return;
+    }
+    
+    SDL_Texture *texture = SDL_CreateTexture(renderer,
+                                            SDL_PIXELFORMAT_RGBA32,
+                                            SDL_TEXTUREACCESS_STREAMING,
+                                            video_codec_ctx->width,
+                                            video_codec_ctx->height);
+    if (!texture) {
+        printf("[Video] Could not create texture: %s\n", SDL_GetError());
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        avcodec_free_context(&video_codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        SDL_Quit();
+        return;
+    }
+    
+    // Подготавливаем контекст для преобразования изображения
+    struct SwsContext *sws_ctx = sws_getContext(
+        video_codec_ctx->width,
+        video_codec_ctx->height,
+        video_codec_ctx->pix_fmt,
+        video_codec_ctx->width,
+        video_codec_ctx->height,
+        AV_PIX_FMT_RGBA,
+        SWS_BILINEAR,
+        NULL,
+        NULL,
+        NULL
+    );
+    
+    if (!sws_ctx) {
+        printf("[Video] Could not create sws context\n");
+        SDL_DestroyTexture(texture);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        avcodec_free_context(&video_codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        SDL_Quit();
+        return;
+    }
+    
+    // Выделяем память для преобразованного кадра
+    AVFrame *frame = av_frame_alloc();
+    AVFrame *rgba_frame = av_frame_alloc();
+    if (!frame || !rgba_frame) {
+        printf("[Video] Could not allocate frames\n");
+        if (frame) av_frame_free(&frame);
+        if (rgba_frame) av_frame_free(&rgba_frame);
+        sws_freeContext(sws_ctx);
+        SDL_DestroyTexture(texture);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        avcodec_free_context(&video_codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        SDL_Quit();
+        return;
+    }
+    
+    int num_bytes = av_image_get_buffer_size(AV_PIX_FMT_RGBA, 
+                                            video_codec_ctx->width, 
+                                            video_codec_ctx->height, 
+                                            1);
+    uint8_t *buffer = (uint8_t*)av_malloc(num_bytes * sizeof(uint8_t));
+    
+    av_image_fill_arrays(rgba_frame->data, rgba_frame->linesize, buffer,
+                        AV_PIX_FMT_RGBA, video_codec_ctx->width, 
+                        video_codec_ctx->height, 1);
+    
+    // Аудио инициализация (упрощенная версия)
+    SDL_AudioSpec wanted_spec, obtained_spec;
+    SDL_zero(wanted_spec);
+    wanted_spec.freq = 48000;
+    wanted_spec.format = AUDIO_S16SYS;
+    wanted_spec.channels = 2;
+    wanted_spec.samples = 1024;
+    wanted_spec.callback = audio_callback;
+    
+    if (SDL_OpenAudio(&wanted_spec, &obtained_spec) < 0) {
+        printf("[Video] Could not open audio: %s\n", SDL_GetError());
+        // Продолжаем без звука
     } else {
-        printf("[Video] No audio stream found\n");
-    }
-
-    frame = av_frame_alloc();
-    rgb = av_frame_alloc();
-    aframe = av_frame_alloc();
-    
-    if (!frame || !rgb || !aframe) {
-        printf("[Video] Failed to alloc frames\n");
-        goto cleanup;
-    }
-
-    int num_bytes = av_image_get_buffer_size(AV_PIX_FMT_RGBA, w, h, 1);
-    uint8_t *buffer = (uint8_t*)malloc(num_bytes);
-    if (!buffer) {
-        printf("[Video] Failed to alloc image buffer\n");
-        goto cleanup;
+        SDL_PauseAudio(0);
     }
     
-    av_image_fill_arrays(rgb->data, rgb->linesize, buffer, AV_PIX_FMT_RGBA, w, h, 1);
-
-    sws = sws_getContext(w, h, vdec->pix_fmt, w, h, AV_PIX_FMT_RGBA, 
-                         SWS_BILINEAR, NULL, NULL, NULL);
-    if (!sws) {
-        printf("[Video] Failed to create sws context\n");
-        goto cleanup;
-    }
-
-    // SDL окно
-    SDL_Window *win = SDL_CreateWindow("Video", SDL_WINDOWPOS_CENTERED, 
-                                       SDL_WINDOWPOS_CENTERED, w, h, 0);
-    if (!win) {
-        printf("[Video] Failed to create window: %s\n", SDL_GetError());
-        goto cleanup;
-    }
-    
-    SDL_Renderer *ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (!ren) {
-        printf("[Video] Failed to create renderer: %s\n", SDL_GetError());
-        goto cleanup;
-    }
-    
-    SDL_Texture *tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_RGBA32, 
-                                        SDL_TEXTUREACCESS_STREAMING, w, h);
-    if (!tex) {
-        printf("[Video] Failed to create texture: %s\n", SDL_GetError());
-        goto cleanup;
-    }
-
-    printf("[Video] SDL window created: %dx%d\n", w, h);
-
-    // SDL Audio
-    SDL_AudioSpec spec;
-    SDL_zero(spec);
-    if (adec) {
-        spec.freq = adec->sample_rate;
-        spec.format = AUDIO_S16SYS;
-        spec.channels = adec->ch_layout.nb_channels;
-        spec.samples = 1024;
-        spec.callback = audio_callback;
-        spec.userdata = &audio_buf;
-        
-        if (SDL_OpenAudio(&spec, NULL) < 0) {
-            printf("[Video] Failed to open audio: %s\n", SDL_GetError());
-            adec = NULL;
-        } else {
-            // Инициализация SwrContext для FFmpeg 6.0
-            swr = swr_alloc();
-            if (!swr) {
-                printf("[Video] Failed to alloc swr context\n");
-                SDL_CloseAudio();
-                adec = NULL;
-            } else {
-                // Настройка входного канального лэйаута
-                av_opt_set_chlayout(swr, "in_chlayout", &adec->ch_layout, 0);
-                av_opt_set_int(swr, "in_sample_rate", adec->sample_rate, 0);
-                av_opt_set_sample_fmt(swr, "in_sample_fmt", adec->sample_fmt, 0);
-                
-                // Настройка выходного канального лэйаута
-                AVChannelLayout out_chlayout;
-                av_channel_layout_default(&out_chlayout, spec.channels);
-                
-                av_opt_set_chlayout(swr, "out_chlayout", &out_chlayout, 0);
-                av_opt_set_int(swr, "out_sample_rate", spec.freq, 0);
-                av_opt_set_sample_fmt(swr, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
-                
-                if (swr_init(swr) < 0) {
-                    printf("[Video] Failed to init swr context\n");
-                    swr_free(&swr);
-                    swr = NULL;
-                    SDL_CloseAudio();
-                    adec = NULL;
-                } else {
-                    SDL_PauseAudio(0);
-                    // Освобождаем out_chlayout после использования
-                    av_channel_layout_uninit(&out_chlayout);
-                    printf("[Video] Audio initialized successfully\n");
-                }
-            }
-        }
-    }
-
-    printf("[Video] Starting playback loop\n");
-
+    // Основной цикл воспроизведения
+    AVPacket packet;
     bool quit = false;
     double hold_time = 0.0;
     clock_t last_time = clock();
     
-    pkt = av_packet_alloc();
-    if (!pkt) {
-        printf("[Video] Failed to alloc packet\n");
-        goto cleanup;
-    }
-
-    while (!quit && av_read_frame(fmt, pkt) >= 0) {
-        // время кадра
-        clock_t now = clock();
-        double elapsed = (double)(now - last_time) / CLOCKS_PER_SEC;
-        last_time = now;
-
+    while (!quit && av_read_frame(fmt_ctx, &packet) >= 0) {
         // Обновляем состояние контроллера
         padUpdate(&pad);
         u64 kHeld = padGetButtons(&pad);
+        
+        clock_t now = clock();
+        double elapsed = (double)(now - last_time) / CLOCKS_PER_SEC;
+        last_time = now;
         
         if (skip_enabled && (kHeld & HidNpadButton_B)) {
             hold_time += elapsed;
@@ -312,167 +303,75 @@ void play_video_file(const char *path, int skip_enabled)
         } else {
             hold_time = 0.0;
         }
-
-        // Проверка SDL событий для выхода
+        
+        // Проверка событий SDL
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 quit = true;
-            } else if (event.type == SDL_KEYDOWN) {
-                if (event.key.keysym.sym == SDLK_ESCAPE) {
-                    quit = true;
-                }
             }
         }
-
-        // Видео
-        if (pkt->stream_index == vstream) {
-            ret = avcodec_send_packet(vdec, pkt);
-            if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-                printf("[Video] Error sending video packet: %d\n", ret);
+        
+        // Если пакет из видеопотока
+        if (packet.stream_index == video_stream_index) {
+            if (avcodec_send_packet(video_codec_ctx, &packet) < 0) {
+                printf("[Video] Error sending packet\n");
+                break;
             }
             
-            while (avcodec_receive_frame(vdec, frame) == 0) {
-                sws_scale(sws, (const uint8_t * const *)frame->data, 
-                         frame->linesize, 0, h, rgb->data, rgb->linesize);
+            while (avcodec_receive_frame(video_codec_ctx, frame) == 0) {
+                // Преобразуем кадр в RGBA
+                sws_scale(sws_ctx, (uint8_t const * const *)frame->data,
+                         frame->linesize, 0, video_codec_ctx->height,
+                         rgba_frame->data, rgba_frame->linesize);
                 
-                SDL_UpdateTexture(tex, NULL, rgb->data[0], rgb->linesize[0]);
-                SDL_RenderClear(ren);
-                SDL_RenderCopy(ren, tex, NULL, NULL);
-
-                // Круговой индикатор в правом нижнем углу
+                // Обновляем текстуру SDL
+                SDL_UpdateTexture(texture, NULL, rgba_frame->data[0], 
+                                rgba_frame->linesize[0]);
+                
+                // Отрисовываем
+                SDL_RenderClear(renderer);
+                SDL_RenderCopy(renderer, texture, NULL, NULL);
+                
+                // Рисуем индикатор пропуска если нужно
                 if (hold_time > 0.0) {
                     float progress = fmin(hold_time / SKIP_HOLD_TIME, 1.0f);
-                    int radius = 20;
-                    int cx = w - 30;
-                    int cy = h - 30;
-                    draw_circle_progress(ren, cx, cy, radius, progress);
+                    draw_circle_progress(renderer, 
+                                       video_codec_ctx->width - 30,
+                                       video_codec_ctx->height - 30,
+                                       20, progress);
                 }
-
-                SDL_RenderPresent(ren);
                 
-                // Контроль FPS через vsync
-                SDL_Delay(1);
+                SDL_RenderPresent(renderer);
+                
+                // Небольшая задержка для контроля скорости
+                SDL_Delay(16);
             }
         }
-
-        // Аудио
-        if (adec && pkt->stream_index == astream) {
-            ret = avcodec_send_packet(adec, pkt);
-            if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-                printf("[Video] Error sending audio packet: %d\n", ret);
-            }
-            
-            while (avcodec_receive_frame(adec, aframe) == 0) {
-                // Выделяем буфер для конвертированного аудио
-                int out_samples = av_rescale_rnd(swr_get_delay(swr, aframe->sample_rate) + 
-                                                aframe->nb_samples, 
-                                                spec.freq, aframe->sample_rate, AV_ROUND_UP);
-                
-                uint8_t *audio_buffer = NULL;
-                int out_linesize;
-                int out_count = av_samples_alloc(&audio_buffer, &out_linesize, spec.channels,
-                                                out_samples, AV_SAMPLE_FMT_S16, 1);
-                
-                if (out_count >= 0) {
-                    int converted = swr_convert(swr, &audio_buffer, out_samples,
-                                              (const uint8_t**)aframe->data, aframe->nb_samples);
-                    
-                    if (converted > 0) {
-                        // Освобождаем старый буфер
-                        if (audio_buf.data) {
-                            free(audio_buf.data);
-                        }
-                        
-                        // Обновляем буфер
-                        audio_buf.data = audio_buffer;
-                        audio_buf.size = av_samples_get_buffer_size(&out_linesize, spec.channels,
-                                                                  converted, AV_SAMPLE_FMT_S16, 1);
-                        audio_buf.pos = 0;
-                    } else {
-                        av_freep(&audio_buffer);
-                    }
-                }
-            }
-        }
-
-        av_packet_unref(pkt);
-    }
-
-    printf("[Video] Playback finished\n");
-
-    // Ждем окончания воспроизведения аудио
-    if (adec) {
-        SDL_PauseAudio(1);
-        SDL_Delay(100); // Даем время завершиться коллбэкам
-        SDL_CloseAudio();
-    }
-
-cleanup:
-    printf("[Video] Cleaning up\n");
-    
-    // Освобождаем аудио буфер
-    if (audio_buf.data) {
-        free(audio_buf.data);
-        audio_buf.data = NULL;
-    }
-    audio_buf.size = 0;
-    audio_buf.pos = 0;
-    
-    if (buffer) {
-        free(buffer);
-        buffer = NULL;
-    }
-    if (frame) {
-        av_frame_free(&frame);
-        frame = NULL;
-    }
-    if (rgb) {
-        av_frame_free(&rgb);
-        rgb = NULL;
-    }
-    if (aframe) {
-        av_frame_free(&aframe);
-        aframe = NULL;
-    }
-    if (vdec) {
-        avcodec_free_context(&vdec);
-        vdec = NULL;
-    }
-    if (adec) {
-        avcodec_free_context(&adec);
-        adec = NULL;
-    }
-    if (fmt) {
-        avformat_close_input(&fmt);
-        fmt = NULL;
-    }
-    if (sws) {
-        sws_freeContext(sws);
-        sws = NULL;
-    }
-    if (swr) {
-        swr_free(&swr);
-        swr = NULL;
-    }
-    if (pkt) {
-        av_packet_free(&pkt);
-        pkt = NULL;
-    }
-
-    if (tex) {
-        SDL_DestroyTexture(tex);
-        tex = NULL;
-    }
-    if (ren) {
-        SDL_DestroyRenderer(ren);
-        ren = NULL;
-    }
-    if (win) {
-        SDL_DestroyWindow(win);
-        win = NULL;
+        
+        av_packet_unref(&packet);
     }
     
+    // Очистка
+    printf("[Video] Playback finished, cleaning up\n");
+    
+    if (audio_buffer) {
+        free(audio_buffer);
+        audio_buffer = NULL;
+    }
+    
+    SDL_CloseAudio();
+    
+    av_free(buffer);
+    av_frame_free(&rgba_frame);
+    av_frame_free(&frame);
+    sws_freeContext(sws_ctx);
+    SDL_DestroyTexture(texture);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    avcodec_free_context(&video_codec_ctx);
+    avformat_close_input(&fmt_ctx);
     SDL_Quit();
+    
     printf("[Video] Cleanup complete\n");
 }

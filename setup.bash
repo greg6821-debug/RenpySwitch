@@ -41,11 +41,50 @@ dkp-pacman -U --noconfirm switch-libfribidi-1.0.12-1-any.pkg.tar.xz
 unzip -qq python39-switch.zip -d $DEVKITPRO/portlibs/switch
 
 
-# Обновляем репозитории
-dkp-pacman -Sy
+mkdir -p ~/switch-ffmpeg
+cd ~/switch-ffmpeg
+curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/PKGBUILD
+curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/ffmpeg-7.1.patch
+curl -LO https://raw.githubusercontent.com/devkitPro/pacman-packages/master/switch/ffmpeg/tls.patch
+# --- Сборка и установка switch-ffmpeg ---
+pushd ~/switch-ffmpeg
 
-# Устанавливаем ffmpeg
-dkp-pacman -S --noconfirm switch-ffmpeg
+# Инициализируем переменные DevkitPro для сборки
+source $DEVKITPRO/switchvars.sh
+
+# Создаём директорию для сборки
+mkdir -p build
+cd build
+
+# Собираем пакет с помощью makepkg
+# Если makepkg не установлен, используем стандартную сборку через PKGBUILD вручную
+# 1) Применяем патчи
+cd ../ffmpeg-7.1
+patch -Np1 -i ../ffmpeg-7.1.patch
+patch -Np1 -i ../tls.patch
+
+# 2) Конфигурация сборки под Switch
+./configure --prefix=$DEVKITPRO/portlibs/switch \
+    --enable-gpl --disable-shared --enable-static \
+    --cross-prefix=aarch64-none-elf- --enable-cross-compile \
+    --arch=aarch64 --cpu=cortex-a57 --target-os=horizon --enable-pic \
+    --extra-cflags='-D__SWITCH__ -D_GNU_SOURCE -O2 -march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIC -ftls-model=local-exec' \
+    --extra-cxxflags='-D__SWITCH__ -D_GNU_SOURCE -O2 -march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIC -ftls-model=local-exec' \
+    --extra-ldflags='-fPIE -L${DEVKITPRO}/portlibs/switch/lib -L${DEVKITPRO}/libnx/lib' \
+    --disable-runtime-cpudetect --disable-programs --disable-debug --disable-doc --disable-autodetect \
+    --enable-asm --enable-neon \
+    --disable-avdevice --disable-encoders --disable-muxers \
+    --enable-swscale --enable-swresample --enable-network \
+    --disable-protocols --enable-protocol=file,http,ftp,tcp,udp,rtmp,tls,httpproxy \
+    --enable-zlib --enable-bzlib --enable-libass --enable-libfreetype --enable-libfribidi --enable-libdav1d \
+    --enable-libnx --enable-nvtegra
+# 3) Собираем статически
+make -j$(nproc)
+# 4) Устанавливаем библиотеки в portlibs
+make DESTDIR="$DEVKITPRO/portlibs/switch" install
+popd
+# Очистка временных файлов
+rm -rf ~/switch-ffmpeg/build
 
 
 export LD_LIBRARY_PATH=$DEVKITPRO/portlibs/switch/lib:$LD_LIBRARY_PATH

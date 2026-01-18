@@ -691,34 +691,100 @@ static void decode_audio(MediaState *ms) {
 			}
 
             converted_frame->sample_rate = audio_sample_rate;
-            av_channel_layout_from_mask(&converted_frame->ch_layout, AV_CH_LAYOUT_STEREO);
             converted_frame->format = AV_SAMPLE_FMT_S16;
+            
+            // FFmpeg 7.1: используем новый API ch_layout
+            // Инициализируем ch_layout для стерео выхода
+            av_channel_layout_uninit(&converted_frame->ch_layout);
+            av_channel_layout_default(&converted_frame->ch_layout, 2);
+            
+            // Проверяем и инициализируем ch_layout для входного кадра
+            if (av_channel_layout_check(&ms->audio_decode_frame->ch_layout) == 0) {
+                // Если ch_layout не валиден, устанавливаем моно по умолчанию
+                av_channel_layout_uninit(&ms->audio_decode_frame->ch_layout);
+                av_channel_layout_default(&ms->audio_decode_frame->ch_layout, 
+                    ms->audio_decode_frame->ch_layout.nb_channels > 0 ? 
+                    ms->audio_decode_frame->ch_layout.nb_channels : 1);
+            }
 
-			if (ms->audio_decode_frame->ch_layout.nb_channels == 0) {
-				av_channel_layout_default(&ms->audio_decode_frame->ch_layout, ms->audio_decode_frame->ch_layout.nb_channels);
-			}
+            // Инициализируем swr контекст если нужно
+            if (ms->swr == NULL) {
+                ms->swr = swr_alloc();
+            }
 
 			if (audio_equal_mono && (ms->audio_decode_frame->ch_layout.nb_channels == 1)) {
-			    AVChannelLayout in_layout, out_layout;
-			    av_channel_layout_copy(&in_layout, &ms->audio_decode_frame->ch_layout);
-			    av_channel_layout_copy(&out_layout, &converted_frame->ch_layout);
-
-			    swr_alloc_set_opts2(&ms->swr,
-			                          &out_layout,
-			                          converted_frame->format,
-			                          converted_frame->sample_rate,
-			                          &in_layout,
-			                          ms->audio_decode_frame->format,
-			                          ms->audio_decode_frame->sample_rate,
-			                          0,
-			                          NULL);
-
+			    // Для моно в стерео с использованием нового API
+			    // Освобождаем старый контекст если был
+			    if (ms->swr) {
+			        swr_free(&ms->swr);
+			        ms->swr = swr_alloc();
+			    }
+			    
+			    // Используем swr_alloc_set_opts2 для нового API
+			    ret = swr_alloc_set_opts2(&ms->swr,
+			                           &converted_frame->ch_layout,
+			                           converted_frame->format,
+			                           converted_frame->sample_rate,
+			                           &ms->audio_decode_frame->ch_layout,
+			                           ms->audio_decode_frame->format,
+			                           ms->audio_decode_frame->sample_rate,
+			                           0,
+			                           NULL);
+			    
+			    if (ret < 0) {
+			        av_frame_free(&converted_frame);
+			        continue;
+			    }
+			    
 			    swr_set_matrix(ms->swr, stereo_matrix, 1);
+			    
+			    // Инициализируем контекст ресэмплера
+			    if (swr_init(ms->swr) < 0) {
+			        swr_free(&ms->swr);
+			        ms->swr = NULL;
+			        av_frame_free(&converted_frame);
+			        continue;
+			    }
+			} else if (ms->swr == NULL) {
+			    // Инициализируем swr для случая когда конвертация не требуется
+			    // но нужен ресэмплинг
+			    ret = swr_alloc_set_opts2(&ms->swr,
+			                           &converted_frame->ch_layout,
+			                           converted_frame->format,
+			                           converted_frame->sample_rate,
+			                           &ms->audio_decode_frame->ch_layout,
+			                           ms->audio_decode_frame->format,
+			                           ms->audio_decode_frame->sample_rate,
+			                           0,
+			                           NULL);
+			    
+			    if (ret >= 0) {
+			        swr_init(ms->swr);
+			    }
 			}
 
-			if(swr_convert_frame(ms->swr, converted_frame, ms->audio_decode_frame)) {
-				av_frame_free(&converted_frame);
-				continue;
+			if (ms->swr) {
+			    ret = swr_convert_frame(ms->swr, converted_frame, ms->audio_decode_frame);
+			    if (ret < 0) {
+			        av_frame_free(&converted_frame);
+			        continue;
+			    }
+			} else {
+			    // Если swr не инициализирован, просто копируем данные
+			    converted_frame->nb_samples = ms->audio_decode_frame->nb_samples;
+			    if (av_frame_get_buffer(converted_frame, 0) < 0) {
+			        av_frame_free(&converted_frame);
+			        continue;
+			    }
+			    
+			    // Простое копирование (без ресэмплинга)
+			    // Это упрощенный случай, на практике лучше использовать swr
+			    av_frame_copy(converted_frame, ms->audio_decode_frame);
+			    av_frame_copy_props(converted_frame, ms->audio_decode_frame);
+			    
+			    // Обновляем параметры выхода
+			    converted_frame->sample_rate = audio_sample_rate;
+			    converted_frame->format = AV_SAMPLE_FMT_S16;
 			}
 
 			double start = ms->audio_decode_frame->best_effort_timestamp * timebase;
@@ -1164,10 +1230,15 @@ static int decode_thread(void *arg) {
 	// Compute the number of samples we need to play back.
 	if (ms->audio_duration < 0) {
 		// Используем устаревшую функцию с макросом для подавления предупреждения
-		#pragma GCC diagnostic push
-		#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-		if (av_fmt_ctx_get_duration_estimation_method(ctx) != AVFMT_DURATION_FROM_BITRATE) {
-		#pragma GCC diagnostic pop
+		#if LIBAVFORMAT_VERSION_MAJOR < 59
+			#pragma GCC diagnostic push
+			#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+			if (av_fmt_ctx_get_duration_estimation_method(ctx) != AVFMT_DURATION_FROM_BITRATE) {
+			#pragma GCC diagnostic pop
+		#else
+			// В новых версиях функция удалена, просто используем длительность
+			if (1) {
+		#endif
 
 			long long duration = ((long long) ctx->duration) * audio_sample_rate;
 			ms->audio_duration = (unsigned int) (duration /  AV_TIME_BASE);
@@ -1328,10 +1399,15 @@ static int decode_sync_start(void *arg) {
 	// Compute the number of samples we need to play back.
 	if (ms->audio_duration < 0) {
 		// Используем устаревшую функцию с макросом для подавления предупреждения
-		#pragma GCC diagnostic push
-		#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-		if (av_fmt_ctx_get_duration_estimation_method(ctx) != AVFMT_DURATION_FROM_BITRATE) {
-		#pragma GCC diagnostic pop
+		#if LIBAVFORMAT_VERSION_MAJOR < 59
+			#pragma GCC diagnostic push
+			#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+			if (av_fmt_ctx_get_duration_estimation_method(ctx) != AVFMT_DURATION_FROM_BITRATE) {
+			#pragma GCC diagnostic pop
+		#else
+			// В новых версиях функция удалена, просто используем длительность
+			if (1) {
+		#endif
 
 			long long duration = ((long long) ctx->duration) * audio_sample_rate;
 			ms->audio_duration = (unsigned int) (duration /  AV_TIME_BASE);

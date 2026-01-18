@@ -7,7 +7,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <png.h>
-
+#include "video_player.h"
 
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
@@ -20,13 +20,6 @@
 
 u64 cur_progid = 0;
 AccountUid userID = {0};
-
-/* -------------------------------------------------------
-   FFmpeg self-test prototype
-------------------------------------------------------- */
-
-void ffmpeg_self_test(void);   // <<< ВАЖНО: прототип до использования
-
 
 /* -------------------------------------------------------
    _nx module (sleep)
@@ -324,8 +317,6 @@ void userAppInit(void)
 
     romfsInit();
     socketInitializeDefault();
-
-   ffmpeg_self_test();
 }
 
 void userAppExit(void)
@@ -368,46 +359,6 @@ static void on_applet_hook(AppletHookType hook, void *param)
          break;
    }
 }
-
-
-void ffmpeg_self_test(void)
-{
-    FILE *f = fopen("sdmc:/ffmpeg_test.log", "w");
-    if (!f) {
-        printf("[FFMPEG] Cannot open log file\n");
-        return;
-    }
-
-    fprintf(f, "=== FFmpeg self-test ===\n");
-
-    unsigned ver = avcodec_version();
-    fprintf(f, "avcodec version: %u.%u.%u\n",
-        (ver >> 16) & 0xFF,
-        (ver >> 8) & 0xFF,
-        ver & 0xFF
-    );
-
-    fprintf(f, "avformat version: %u\n", avformat_version());
-    fprintf(f, "avutil version: %u\n", avutil_version());
-
-    const AVCodec *h264 = avcodec_find_decoder(AV_CODEC_ID_H264);
-    fprintf(f, "H264 decoder: %s\n", h264 ? h264->name : "NOT FOUND");
-
-    const AVCodec *vp9 = avcodec_find_decoder(AV_CODEC_ID_VP9);
-    fprintf(f, "VP9 decoder: %s\n", vp9 ? vp9->name : "NOT FOUND");
-
-    const AVCodec *vp8 = avcodec_find_decoder(AV_CODEC_ID_VP8);
-    fprintf(f, "VP8 decoder: %s\n", vp8 ? vp8->name : "NOT FOUND");
-
-    fprintf(f, "=== FFmpeg test DONE ===\n");
-    fclose(f);
-
-    printf("[FFMPEG] self-test complete\n");
-}
-
-
-
-
 
 /* -------------------------------------------------------
    Main

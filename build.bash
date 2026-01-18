@@ -66,7 +66,10 @@ mv source/module/hydrogen.c include/module/libhydrogen
 find include/module -type d -empty -delete
 
 
-
+# --- Применяем патч для ffmedia.c под FFmpeg 7.1 ---
+pushd source/module
+patch -p1 < ../../ffmedia-ffmpeg7.patch
+popd
 
 
 pushd pygame_sdl2-source

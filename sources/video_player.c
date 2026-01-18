@@ -60,7 +60,7 @@ void draw_circle_progress(SDL_Renderer *ren, int cx, int cy, int radius, float p
 }
 
 // ----------------- основной видеоплеер -----------------
-void play_video_file(const char *path)
+void play_video_file(const char *path, int skip_enabled)
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0) {
         printf("[Video] SDL_Init failed: %s\n", SDL_GetError());
@@ -159,14 +159,15 @@ void play_video_file(const char *path)
 
         // Joycon check
         hidScanInput();
-        u64 kDown = hidKeysHeld(HidNpadButton_B);
-        if(kDown & HidNpadButton_B){
+        u64 kHeld = hidKeysHeld(CONTROLLER_P1_AUTO);  // CONTROLLER_P1_AUTO — корректный идентификатор для первого контроллера
+        if (skip_enabled && (kHeld & HidNpadButton_B)) {
             hold_time += elapsed;
-            if(hold_time >= SKIP_HOLD_TIME){
-                printf("[Video] Skipped video!\n");
-                quit=true;
+            if (hold_time >= 3.0f) { // 3 секунды удержания
+                quit = true;
             }
-        } else hold_time = 0.0;
+        } else {
+            hold_time = 0.0f;
+        }
 
         // Видео
         if(pkt.stream_index==vstream){

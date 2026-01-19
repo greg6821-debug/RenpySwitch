@@ -366,11 +366,33 @@ static void on_applet_hook(AppletHookType hook, void *param)
 
 int main(int argc, char* argv[])
 {  
-    // Проигрываем intro.mp4 с SD карты
+     // Сначала попробуем проиграть видео с SD карты
+    printf("=== Testing video playback ===\n");
+    
+    // Тест 1: С префиксом sdmc:
+    printf("\n=== Test 1: sdmc:/intro.mp4 ===\n");
     play_video_file("sdmc:/intro.mp4", 1);
-
-    // Проигрываем intro.webm с SD карты
-    play_video_file("sdmc:/intro.webm", 0);
+    
+    // Тест 2: Без префикса (если Test 1 не сработал)
+    printf("\n=== Test 2: /intro.mp4 ===\n");
+    play_video_file("/intro.mp4", 1);
+    
+    // Тест 3: Проверим, что файл существует
+    printf("\n=== Checking file existence ===\n");
+    FILE *test = fopen("/intro.mp4", "rb");
+    if (test) {
+        printf("File exists!\n");
+        fseek(test, 0, SEEK_END);
+        long size = ftell(test);
+        printf("File size: %ld bytes\n", size);
+        fclose(test);
+    } else {
+        printf("File does not exist!\n");
+    }
+    
+    // Тест 4: Попробуем другой путь
+    printf("\n=== Test 3: file:///intro.mp4 ===\n");
+    play_video_file("file:///intro.mp4", 1);
 
    
    

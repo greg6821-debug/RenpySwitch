@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 void play_video_file(const char *path, int skip_enabled);
+void play_video_file_delay(const char *path, int skip_enabled, float delay_seconds);
 
 #ifdef __cplusplus
 }

@@ -366,16 +366,27 @@ static void on_applet_hook(AppletHookType hook, void *param)
 
 int main(int argc, char* argv[])
 {  
-     // Сначала попробуем проиграть видео с SD карты
     printf("=== Testing video playback ===\n");
     
-    // Тест 1
-    printf("\n=== Test: /intro.mp4 ===\n");
-    play_video_file_delay("/intro.mp4", 0, 3.0f);
+    // 1. Из корня romfs
+    printf("\n=== Test: romfs:/intro.mp4 ===\n");
+    play_video_file_delay("romfs:/intro.mp4", 1, 3.0f);
     
-    // Тест 2
-    printf("\n=== Test: /intro.webm ===\n");
-    play_video_file_delay("/intro.webm", 1, 1.0f);
+    // 2. Из папки Contents в romfs
+    printf("\n=== Test: romfs:/Contents/intro.mp4 ===\n");
+    play_video_file_delay("romfs:/Contents/intro.mp4", 1, 1.0f);
+    
+    // 3. Из папки game/video в romfs
+    printf("\n=== Test: romfs:/Contents/game/video/intro.mp4 ===\n");
+    play_video_file_delay("romfs:/Contents/game/video/intro.mp4", 1, 1.0f);
+    
+    // 4. Относительный путь (будет автоматически разрешен)
+    printf("\n=== Test: intro.mp4 ===\n");
+    play_video_file_delay("intro.mp4", 1, 1.0f);
+    
+    // 5. С SD карты
+    printf("\n=== Test: sdmc:/intro.mp4 ===\n");
+    play_video_file_delay("sdmc:/intro.mp4", 1, 1.0f);
    
    
     chdir("romfs:/Contents");

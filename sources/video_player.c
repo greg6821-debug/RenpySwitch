@@ -71,39 +71,27 @@ void play_video_file(const char *path, int skip_enabled)
         return;
     }
     
-    // Сначала пробуем открыть файл напрямую
-    AVFormatContext *fmt_ctx = NULL;
-    
-    // Пробуем разные префиксы
-    char full_path[256];
-    snprintf(full_path, sizeof(full_path), "sdmc:%s", path);
-    
-    // Удаляем "romfs:/" если есть
-    const char *actual_path = path;
-    if (strncmp(path, "romfs:/", 7) == 0) {
-        // Попробуем открыть без префикса
-        actual_path = path + 7;
+    // Преобразуем путь: заменяем sdmc:/ на / (корень SD карты)
+    char actual_path[256];
+    if (strncmp(path, "sdmc:/", 6) == 0) {
+        // Для SD карты используем абсолютный путь
+        snprintf(actual_path, sizeof(actual_path), "/%s", path + 6);
+    } else if (strncmp(path, "romfs:/", 7) == 0) {
+        // Для romfs тоже используем абсолютный путь
+        snprintf(actual_path, sizeof(actual_path), "/%s", path + 7);
+    } else {
+        strncpy(actual_path, path, sizeof(actual_path));
     }
+    actual_path[sizeof(actual_path) - 1] = '\0';
     
-    // Пробуем открыть файл
-    if (avformat_open_input(&fmt_ctx, full_path, NULL, NULL) < 0) {
-        printf("[Video] Cannot open file: %s\n", full_path);
-        // Попробуем без sdmc: префикса
-        if (avformat_open_input(&fmt_ctx, path, NULL, NULL) < 0) {
-            printf("[Video] Cannot open file: %s\n", path);
-            // Попробуем с romfs: префиксом
-            if (strncmp(path, "romfs:/", 7) != 0) {
-                snprintf(full_path, sizeof(full_path), "romfs:/%s", path);
-                if (avformat_open_input(&fmt_ctx, full_path, NULL, NULL) < 0) {
-                    printf("[Video] Cannot open any variant of the file\n");
-                    SDL_Quit();
-                    return;
-                }
-            } else {
-                SDL_Quit();
-                return;
-            }
-        }
+    printf("[Video] Actual path: %s\n", actual_path);
+    
+    // Пробуем открыть файл через FFmpeg
+    AVFormatContext *fmt_ctx = NULL;
+    if (avformat_open_input(&fmt_ctx, actual_path, NULL, NULL) < 0) {
+        printf("[Video] Cannot open file: %s\n", actual_path);
+        SDL_Quit();
+        return;
     }
     
     printf("[Video] File opened successfully\n");
@@ -168,6 +156,9 @@ void play_video_file(const char *path, int skip_enabled)
         SDL_Quit();
         return;
     }
+    
+    printf("[Video] Video codec opened: %dx%d, pix_fmt: %d\n", 
+           video_codec_ctx->width, video_codec_ctx->height, video_codec_ctx->pix_fmt);
     
     // Создаем окно SDL
     SDL_Window *window = SDL_CreateWindow("Video", 

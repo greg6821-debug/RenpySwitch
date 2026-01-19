@@ -7,6 +7,8 @@ extern "C" {
 
 void play_video_file(const char *path, int skip_enabled);
 void play_video_file_delay(const char *path, int skip_enabled, float delay_seconds);
+void video_player_init();
+void video_player_quit();
 
 #ifdef __cplusplus
 }

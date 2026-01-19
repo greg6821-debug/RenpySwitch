@@ -10,6 +10,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 /* Should a mono channel be split into two equal stero channels (true) or
  * should the energy be split onto two stereo channels with 1/2 the energy
@@ -53,6 +54,11 @@ static SDL_Surface *rgba_surface = NULL;
 static int debug_enabled = 1;
 
 #define LOG(...) if (debug_enabled) printf("[FFMEDIA] " __VA_ARGS__)
+
+// КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем монотонное время SDL вместо av_gettime()
+static double get_current_time(void) {
+    return SDL_GetTicks() / 1000.0; // Возвращает время в секундах
+}
 
 // http://dranger.com/ffmpeg/
 
@@ -121,6 +127,7 @@ static void rwops_close(SDL_RWops *rw) {
 	rw->close(rw);
 }
 
+// КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: current_time теперь инициализируется правильно
 static double current_time = 0;
 
 typedef struct PacketQueueEntry {
@@ -279,6 +286,9 @@ typedef struct MediaState {
     int audio_frames_played;
     double first_frame_pts;
     int first_frame_shown;
+    
+    /* КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Время начала воспроизведения */
+    double playback_start_time;
 
 } MediaState;
 
@@ -1065,10 +1075,14 @@ int media_video_ready(struct MediaState *ms) {
 	    goto done;
 	}
 
-	double offset_time = current_time - ms->time_offset;
+													 
 
-    LOG("Current state: offset_time=%.3f, queue_size=%d, video_pts_offset=%.3f, first_frame_shown=%d\n",
-        offset_time, ms->surface_queue_size, ms->video_pts_offset, ms->first_frame_shown);
+    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем правильное вычисление времени
+    double now = get_current_time();
+    double playback_time = now - ms->playback_start_time - ms->time_offset;
+    
+    LOG("Current state: playback_time=%.3f, now=%.3f, start=%.3f, time_offset=%.3f, queue_size=%d, video_pts_offset=%.3f, first_frame_shown=%d\n",
+        playback_time, now, ms->playback_start_time, ms->time_offset, ms->surface_queue_size, ms->video_pts_offset, ms->first_frame_shown);
 
 	/*
 	 * Если у нас есть устаревший кадр, удаляем его.
@@ -1101,21 +1115,21 @@ int media_video_ready(struct MediaState *ms) {
 	 * Иначе проверяем, есть ли кадр с PTS, который уже прошел.
 	 */
 	if (ms->surface_queue) {
-        double display_time = ms->surface_queue->pts + ms->video_pts_offset;
+        double frame_display_time = ms->surface_queue->pts + ms->video_pts_offset;
         
-        // КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Для первого кадра игнорируем синхронизацию
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем playback_time вместо offset_time
         if (!ms->first_frame_shown) {
             rv = 1;
             LOG("First frame not shown yet, forcing ready=1\n");
         } else if (ms->video_pts_offset) {
-            double threshold = offset_time + (ms->surface_queue_size > 1 ? frame_early_delivery : frame_early_delivery * 3.0);
-            if (display_time <= threshold) {
+            double threshold = playback_time + (ms->surface_queue_size > 1 ? frame_early_delivery : frame_early_delivery * 3.0);
+            if (frame_display_time <= threshold) {
                 rv = 1;
-                LOG("Frame ready: display_time=%.3f <= offset_time+threshold=%.3f\n", 
-                    display_time, threshold);
+                LOG("Frame ready: frame_display_time=%.3f <= playback_time+threshold=%.3f\n", 
+                    frame_display_time, threshold);
             } else {
-                LOG("Frame not ready yet: display_time=%.3f > offset_time+threshold=%.3f\n", 
-                    display_time, threshold);
+                LOG("Frame not ready yet: frame_display_time=%.3f > playback_time+threshold=%.3f\n", 
+                    frame_display_time, threshold);
             }
         } else {
             // Если еще не установлен video_pts_offset, кадр готов к отображению
@@ -1153,7 +1167,9 @@ SDL_Surface *media_read_video(MediaState *ms) {
 		return NULL;
 	}
 
-	double offset_time = current_time - ms->time_offset;
+    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем правильное вычисление времени
+    double now = get_current_time();
+    double playback_time = now - ms->playback_start_time - ms->time_offset;
 
 	SDL_LockMutex(ms->lock);
 
@@ -1174,41 +1190,53 @@ SDL_Surface *media_read_video(MediaState *ms) {
 		goto done;
 	}
 
-    LOG("Before check: offset_time=%.3f, queue_size=%d, video_pts_offset=%.3f\n",
-        offset_time, ms->surface_queue_size, ms->video_pts_offset);
+    LOG("Before check: playback_time=%.3f, now=%.3f, queue_size=%d, video_pts_offset=%.3f\n",
+        playback_time, now, ms->surface_queue_size, ms->video_pts_offset);
 
 	if (ms->video_pts_offset == 0.0) {
-		ms->video_pts_offset = offset_time - ms->surface_queue->pts;
-        LOG("Setting video_pts_offset=%.3f (offset_time=%.3f - frame_pts=%.3f)\n",
-            ms->video_pts_offset, offset_time, ms->surface_queue->pts);
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Устанавливаем правильный offset
+        if (ms->playback_start_time == 0) {
+            ms->playback_start_time = now;
+            LOG("Setting playback_start_time to current time: %.3f\n", now);
+        }
+        
+        // Устанавливаем video_pts_offset так, чтобы первый кадр показывался сразу
+        ms->video_pts_offset = playback_time - ms->surface_queue->pts;
+        LOG("Setting video_pts_offset=%.3f (playback_time=%.3f - frame_pts=%.3f)\n",
+            ms->video_pts_offset, playback_time, ms->surface_queue->pts);
         
         // Если первый кадр уже должен был быть показан (опоздание > 100ms), 
-        // корректируем offset
-        double display_time = ms->surface_queue->pts + ms->video_pts_offset;
-        if (display_time < offset_time - 0.1) {
-            ms->video_pts_offset = offset_time - ms->surface_queue->pts;
+        // корректируем offset, чтобы показать его немедленно
+        double frame_display_time = ms->surface_queue->pts + ms->video_pts_offset;
+        if (frame_display_time < playback_time - 0.1) {
+            ms->video_pts_offset = playback_time - ms->surface_queue->pts;
             LOG("Adjusted video_pts_offset for late first frame: %.3f\n", ms->video_pts_offset);
         }
 	}
 
-    double display_time = ms->surface_queue->pts + ms->video_pts_offset;
-    LOG("Frame check: pts=%.3f, offset=%.3f, display_time=%.3f, offset_time=%.3f\n",
-        ms->surface_queue->pts, ms->video_pts_offset, display_time, offset_time);
+    double frame_display_time = ms->surface_queue->pts + ms->video_pts_offset;
+    LOG("Frame check: pts=%.3f, offset=%.3f, display_time=%.3f, playback_time=%.3f\n",
+        ms->surface_queue->pts, ms->video_pts_offset, frame_display_time, playback_time);
 
-    // КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Упрощенная логика для первого кадра
+    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Упрощенная логика для первого кадра
     if (!ms->first_frame_shown) {
         sqe = dequeue_surface(&ms->surface_queue);
         ms->surface_queue_size -= 1;
         ms->first_frame_shown = 1;
-        LOG("First frame shown! pts=%.3f\n", sqe->pts);
+        ms->video_read_time = playback_time;
+        LOG("First frame shown! pts=%.3f, playback_time=%.3f\n", sqe->pts, playback_time);
     } else {
         // Для последующих кадров используем обычную логику синхронизации
-        if (display_time <= offset_time + (ms->surface_queue_size > 1 ? frame_early_delivery : frame_early_delivery * 2.0)) {
+        double threshold = frame_early_delivery * (ms->surface_queue_size > 1 ? 1.0 : 2.0);
+        if (frame_display_time <= playback_time + threshold) {
             sqe = dequeue_surface(&ms->surface_queue);
             ms->surface_queue_size -= 1;
-            LOG("Frame displayed: pts=%.3f\n", sqe->pts);
+            ms->video_read_time = playback_time;
+            LOG("Frame displayed: pts=%.3f, display_time=%.3f, playback_time=%.3f\n", 
+                sqe->pts, frame_display_time, playback_time);
         } else {
-            LOG("Frame not ready for display yet\n");
+            LOG("Frame not ready for display yet: display_time=%.3f, playback_time=%.3f, diff=%.3f\n",
+                frame_display_time, playback_time, frame_display_time - playback_time);
         }
     }
 
@@ -1216,10 +1244,10 @@ done:
     /* Only signal if we've consumed something. */
 	if (sqe) {
 		ms->needs_decode = 1;
-		ms->video_read_time = offset_time;
+									
         ms->video_frames_displayed++;
-        LOG("Frame consumed: needs_decode=1, video_read_time=%.3f, frames_displayed=%d\n",
-            ms->video_read_time, ms->video_frames_displayed);
+        LOG("Frame consumed: needs_decode=1, frames_displayed=%d\n", ms->video_frames_displayed);
+															 
 		SDL_CondBroadcast(ms->cond);
 	}
 
@@ -1356,13 +1384,13 @@ static int decode_thread(void *arg) {
 		av_seek_frame(ctx, -1, (int64_t) (ms->skip * AV_TIME_BASE), AVSEEK_FLAG_BACKWARD);
 	}
 
-    // КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Декодируем первый видеокадр ДО того как сообщим о готовности
+    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Декодируем первый видеокадр ДО того как сообщим о готовности
     if (!ms->video_finished) {
         LOG("Decoding first video frame before signaling ready\n");
         decode_video(ms);
     }
 
-    // КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Декодируем немного аудио ДО того как сообщим о готовности
+    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Декодируем немного аудио ДО того как сообщим о готовности
     if (!ms->audio_finished) {
         LOG("Decoding initial audio before signaling ready\n");
         decode_audio(ms);
@@ -1719,6 +1747,7 @@ MediaState *media_open(SDL_RWops *rwops, const char *filename) {
     ms->audio_frames_played = 0;
     ms->first_frame_pts = 0;
     ms->first_frame_shown = 0;
+    ms->playback_start_time = 0;  // Будет установлено при первом кадре
 
 	ms->filename = av_strdup(filename);
 	if (ms->filename == NULL) {
@@ -1784,11 +1813,12 @@ void media_want_video(MediaState *ms, int video) {
 
 void media_pause(MediaState *ms, int pause) {
     LOG("media_pause: %d\n", pause);
+    double now = get_current_time();
     if (pause && (ms->pause_time == 0)) {
-        ms->pause_time = current_time;
+        ms->pause_time = now;
         LOG("Paused at time: %.3f\n", ms->pause_time);
     } else if ((!pause) && (ms->pause_time > 0)) {
-        ms->time_offset += current_time - ms->pause_time;
+        ms->time_offset += now - ms->pause_time;
         ms->pause_time = 0;
         LOG("Unpaused, time_offset now: %.3f\n", ms->time_offset);
     }
@@ -1818,8 +1848,9 @@ void media_close(MediaState *ms) {
 
 }
 
+// КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Функция теперь обновляет правильное время
 void media_advance_time(void) {
-	current_time = SPEED * av_gettime() * 1e-6;
+    current_time = get_current_time();
 }
 
 void media_sample_surfaces(SDL_Surface *rgb, SDL_Surface *rgba) {

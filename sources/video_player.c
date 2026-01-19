@@ -20,6 +20,7 @@
 #define SKIP_HOLD_TIME 3.0
 #define DEFAULT_DELAY_SECONDS 3.0
 #define AUDIO_BUFFER_SIZE (48000 * 2 * 2) // 1 секунда стерео 16-бит
+#define MAX_PATH_LENGTH 512
 
 typedef struct {
     uint8_t *data;
@@ -33,6 +34,13 @@ typedef struct {
 
 static AudioBuffer audio_buf = {0};
 static SDL_AudioDeviceID audio_device = 0;
+
+// Структура для хранения информации о видеофайле в памяти
+typedef struct {
+    uint8_t *data;
+    size_t size;
+    size_t pos;
+} MemoryFile;
 
 void audio_callback(void *userdata, Uint8 *stream, int len)
 {
@@ -184,13 +192,193 @@ static void clear_screen(SDL_Renderer *renderer, int width, int height)
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
     SDL_RenderPresent(renderer);
-    SDL_Delay(1); // Даем время для отрисовки
+    SDL_Delay(1);
 }
 
-void play_video_file_delay(const char *path, int skip_enabled, float delay_seconds)
+// Функция для чтения из памяти (для AVIO)
+static int read_packet(void *opaque, uint8_t *buf, int buf_size)
 {
-    printf("[Video] Starting: %s (delay: %.1fs, skip: %s)\n", 
-           path, delay_seconds, skip_enabled ? "enabled" : "disabled");
+    MemoryFile *mf = (MemoryFile*)opaque;
+    
+    if (mf->pos >= mf->size)
+        return AVERROR_EOF;
+    
+    int to_read = buf_size;
+    if (mf->pos + to_read > mf->size)
+        to_read = mf->size - mf->pos;
+    
+    memcpy(buf, mf->data + mf->pos, to_read);
+    mf->pos += to_read;
+    
+    return to_read;
+}
+
+// Функция для поиска в памяти (для AVIO)
+static int64_t seek_packet(void *opaque, int64_t offset, int whence)
+{
+    MemoryFile *mf = (MemoryFile*)opaque;
+    
+    switch (whence) {
+        case SEEK_SET:
+            mf->pos = offset;
+            break;
+        case SEEK_CUR:
+            mf->pos += offset;
+            break;
+        case SEEK_END:
+            mf->pos = mf->size + offset;
+            break;
+        default:
+            return -1;
+    }
+    
+    if (mf->pos < 0) mf->pos = 0;
+    if (mf->pos > mf->size) mf->pos = mf->size;
+    
+    return mf->pos;
+}
+
+// Функция для загрузки файла в память
+static MemoryFile* load_file_to_memory(const char *path)
+{
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        printf("[Video] Cannot open file for reading: %s\n", path);
+        return NULL;
+    }
+    
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    
+    if (file_size <= 0) {
+        printf("[Video] Invalid file size: %ld\n", file_size);
+        fclose(file);
+        return NULL;
+    }
+    
+    MemoryFile *mf = (MemoryFile*)malloc(sizeof(MemoryFile));
+    if (!mf) {
+        printf("[Video] Failed to allocate MemoryFile\n");
+        fclose(file);
+        return NULL;
+    }
+    
+    mf->data = (uint8_t*)malloc(file_size);
+    if (!mf->data) {
+        printf("[Video] Failed to allocate memory for file data\n");
+        free(mf);
+        fclose(file);
+        return NULL;
+    }
+    
+    size_t bytes_read = fread(mf->data, 1, file_size, file);
+    fclose(file);
+    
+    if (bytes_read != file_size) {
+        printf("[Video] Failed to read entire file: %zu of %ld bytes\n", bytes_read, file_size);
+        free(mf->data);
+        free(mf);
+        return NULL;
+    }
+    
+    mf->size = file_size;
+    mf->pos = 0;
+    
+    printf("[Video] Loaded file into memory: %s (%ld bytes)\n", path, file_size);
+    return mf;
+}
+
+// Функция для освобождения MemoryFile
+static void free_memory_file(MemoryFile *mf)
+{
+    if (mf) {
+        if (mf->data) {
+            free(mf->data);
+            mf->data = NULL;
+        }
+        free(mf);
+    }
+}
+
+// Функция для преобразования путей Switch
+static const char* resolve_switch_path(const char *input_path, char *resolved_path, size_t buffer_size)
+{
+    // Проверяем различные варианты путей
+    const char *test_paths[] = {
+        input_path,  // Оригинальный путь
+        NULL
+    };
+    
+    // Генерируем альтернативные пути
+    char alt_path1[MAX_PATH_LENGTH] = {0};
+    char alt_path2[MAX_PATH_LENGTH] = {0};
+    char alt_path3[MAX_PATH_LENGTH] = {0};
+    
+    // Если путь начинается с romfs:/, пробуем разные варианты
+    if (strncmp(input_path, "romfs:", 6) == 0) {
+        // Убираем префикс romfs: и добавляем / в начале
+        snprintf(alt_path1, sizeof(alt_path1), "/%s", input_path + 6);
+        test_paths[1] = alt_path1;
+        
+        // Пробуем также с префиксом romfs:/Contents
+        snprintf(alt_path2, sizeof(alt_path2), "romfs:/Contents%s", input_path + 6);
+        test_paths[2] = alt_path2;
+        
+        // Пробуем также без префикса в корне romfs
+        snprintf(alt_path3, sizeof(alt_path3), "romfs:%s", input_path + 6);
+        test_paths[3] = alt_path3;
+    }
+    // Если путь начинается с sdmc:/, пробуем без префикса
+    else if (strncmp(input_path, "sdmc:", 5) == 0) {
+        snprintf(alt_path1, sizeof(alt_path1), "/%s", input_path + 5);
+        test_paths[1] = alt_path1;
+    }
+    // Если путь относительный, пробуем добавить префиксы
+    else if (input_path[0] != '/' && strncmp(input_path, "romfs:", 6) != 0 && strncmp(input_path, "sdmc:", 5) != 0) {
+        // Пробуем как romfs:/Contents/game/video/...
+        snprintf(alt_path1, sizeof(alt_path1), "romfs:/Contents/game/video/%s", input_path);
+        test_paths[1] = alt_path1;
+        
+        // Пробуем как romfs:/Contents/...
+        snprintf(alt_path2, sizeof(alt_path2), "romfs:/Contents/%s", input_path);
+        test_paths[2] = alt_path2;
+        
+        // Пробуем как romfs:/...
+        snprintf(alt_path3, sizeof(alt_path3), "romfs:/%s", input_path);
+        test_paths[3] = alt_path3;
+    }
+    
+    // Пробуем все пути
+    for (int i = 0; i < 5; i++) {
+        if (test_paths[i] == NULL) continue;
+        
+        printf("[Video] Testing path: %s\n", test_paths[i]);
+        
+        // Проверяем существование файла
+        FILE *test = fopen(test_paths[i], "rb");
+        if (test) {
+            fclose(test);
+            strncpy(resolved_path, test_paths[i], buffer_size - 1);
+            resolved_path[buffer_size - 1] = '\0';
+            printf("[Video] Using resolved path: %s\n", resolved_path);
+            return resolved_path;
+        }
+    }
+    
+    // Если ни один путь не сработал, возвращаем оригинальный
+    strncpy(resolved_path, input_path, buffer_size - 1);
+    resolved_path[buffer_size - 1] = '\0';
+    return resolved_path;
+}
+
+void play_video_file_delay(const char *input_path, int skip_enabled, float delay_seconds)
+{
+    char resolved_path[MAX_PATH_LENGTH] = {0};
+    const char *path = resolve_switch_path(input_path, resolved_path, sizeof(resolved_path));
+    
+    printf("[Video] Starting: %s (original: %s)\n", path, input_path);
+    printf("[Video] Delay: %.1fs, Skip: %s\n", delay_seconds, skip_enabled ? "enabled" : "disabled");
     
     // Инициализируем аудио буфер
     if (!init_audio_buffer(&audio_buf, AUDIO_BUFFER_SIZE)) {
@@ -210,18 +398,82 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
         return;
     }
     
-    // Пробуем открыть файл
     AVFormatContext *fmt_ctx = NULL;
-    if (avformat_open_input(&fmt_ctx, path, NULL, NULL) < 0) {
-        printf("[Video] Cannot open file: %s\n", path);
-        SDL_Quit();
-        cleanup_audio_buffer(&audio_buf);
-        return;
+    MemoryFile *memory_file = NULL;
+    AVIOContext *avio_ctx = NULL;
+    
+    // Загружаем файл в память (для romfs)
+    if (strncmp(path, "romfs:", 6) == 0) {
+        memory_file = load_file_to_memory(path);
+        if (!memory_file) {
+            printf("[Video] Failed to load file into memory\n");
+            SDL_Quit();
+            cleanup_audio_buffer(&audio_buf);
+            return;
+        }
+        
+        // Создаем AVIOContext для чтения из памяти
+        unsigned char *avio_buffer = (unsigned char*)av_malloc(4096);
+        if (!avio_buffer) {
+            printf("[Video] Failed to allocate AVIO buffer\n");
+            free_memory_file(memory_file);
+            SDL_Quit();
+            cleanup_audio_buffer(&audio_buf);
+            return;
+        }
+        
+        avio_ctx = avio_alloc_context(avio_buffer, 4096, 0, memory_file, read_packet, NULL, seek_packet);
+        if (!avio_ctx) {
+            printf("[Video] Failed to create AVIO context\n");
+            av_free(avio_buffer);
+            free_memory_file(memory_file);
+            SDL_Quit();
+            cleanup_audio_buffer(&audio_buf);
+            return;
+        }
+        
+        // Создаем AVFormatContext
+        fmt_ctx = avformat_alloc_context();
+        if (!fmt_ctx) {
+            printf("[Video] Failed to allocate format context\n");
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+            SDL_Quit();
+            cleanup_audio_buffer(&audio_buf);
+            return;
+        }
+        
+        fmt_ctx->pb = avio_ctx;
+        
+        // Открываем файл
+        if (avformat_open_input(&fmt_ctx, NULL, NULL, NULL) < 0) {
+            printf("[Video] Cannot open file from memory: %s\n", path);
+            avformat_close_input(&fmt_ctx);
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+            SDL_Quit();
+            cleanup_audio_buffer(&audio_buf);
+            return;
+        }
+    } else {
+        // Обычный способ для SD карты
+        if (avformat_open_input(&fmt_ctx, path, NULL, NULL) < 0) {
+            printf("[Video] Cannot open file: %s\n", path);
+            SDL_Quit();
+            cleanup_audio_buffer(&audio_buf);
+            return;
+        }
     }
     
     if (avformat_find_stream_info(fmt_ctx, NULL) < 0) {
         printf("[Video] Could not find stream info\n");
-        avformat_close_input(&fmt_ctx);
+        if (memory_file) {
+            avformat_close_input(&fmt_ctx);
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+        } else {
+            avformat_close_input(&fmt_ctx);
+        }
         SDL_Quit();
         cleanup_audio_buffer(&audio_buf);
         return;
@@ -241,7 +493,13 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
     
     if (video_stream_index == -1) {
         printf("[Video] No video stream found\n");
-        avformat_close_input(&fmt_ctx);
+        if (memory_file) {
+            avformat_close_input(&fmt_ctx);
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+        } else {
+            avformat_close_input(&fmt_ctx);
+        }
         SDL_Quit();
         cleanup_audio_buffer(&audio_buf);
         return;
@@ -255,7 +513,13 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
     const AVCodec *video_codec = avcodec_find_decoder(video_stream->codecpar->codec_id);
     if (!video_codec) {
         printf("[Video] Unsupported video codec\n");
-        avformat_close_input(&fmt_ctx);
+        if (memory_file) {
+            avformat_close_input(&fmt_ctx);
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+        } else {
+            avformat_close_input(&fmt_ctx);
+        }
         SDL_Quit();
         cleanup_audio_buffer(&audio_buf);
         return;
@@ -264,7 +528,13 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
     AVCodecContext *video_codec_ctx = avcodec_alloc_context3(video_codec);
     if (!video_codec_ctx) {
         printf("[Video] Could not allocate video codec context\n");
-        avformat_close_input(&fmt_ctx);
+        if (memory_file) {
+            avformat_close_input(&fmt_ctx);
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+        } else {
+            avformat_close_input(&fmt_ctx);
+        }
         SDL_Quit();
         cleanup_audio_buffer(&audio_buf);
         return;
@@ -273,7 +543,13 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
     if (avcodec_parameters_to_context(video_codec_ctx, video_stream->codecpar) < 0) {
         printf("[Video] Could not copy video codec parameters\n");
         avcodec_free_context(&video_codec_ctx);
-        avformat_close_input(&fmt_ctx);
+        if (memory_file) {
+            avformat_close_input(&fmt_ctx);
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+        } else {
+            avformat_close_input(&fmt_ctx);
+        }
         SDL_Quit();
         cleanup_audio_buffer(&audio_buf);
         return;
@@ -282,7 +558,13 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
     if (avcodec_open2(video_codec_ctx, video_codec, NULL) < 0) {
         printf("[Video] Could not open video codec\n");
         avcodec_free_context(&video_codec_ctx);
-        avformat_close_input(&fmt_ctx);
+        if (memory_file) {
+            avformat_close_input(&fmt_ctx);
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+        } else {
+            avformat_close_input(&fmt_ctx);
+        }
         SDL_Quit();
         cleanup_audio_buffer(&audio_buf);
         return;
@@ -346,7 +628,13 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
         if (audio_codec_ctx) avcodec_free_context(&audio_codec_ctx);
         if (swr_ctx) swr_free(&swr_ctx);
         avcodec_free_context(&video_codec_ctx);
-        avformat_close_input(&fmt_ctx);
+        if (memory_file) {
+            avformat_close_input(&fmt_ctx);
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+        } else {
+            avformat_close_input(&fmt_ctx);
+        }
         SDL_Quit();
         cleanup_audio_buffer(&audio_buf);
         return;
@@ -361,7 +649,13 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
         if (audio_codec_ctx) avcodec_free_context(&audio_codec_ctx);
         if (swr_ctx) swr_free(&swr_ctx);
         avcodec_free_context(&video_codec_ctx);
-        avformat_close_input(&fmt_ctx);
+        if (memory_file) {
+            avformat_close_input(&fmt_ctx);
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+        } else {
+            avformat_close_input(&fmt_ctx);
+        }
         SDL_Quit();
         cleanup_audio_buffer(&audio_buf);
         return;
@@ -379,7 +673,13 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
         if (audio_codec_ctx) avcodec_free_context(&audio_codec_ctx);
         if (swr_ctx) swr_free(&swr_ctx);
         avcodec_free_context(&video_codec_ctx);
-        avformat_close_input(&fmt_ctx);
+        if (memory_file) {
+            avformat_close_input(&fmt_ctx);
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+        } else {
+            avformat_close_input(&fmt_ctx);
+        }
         SDL_Quit();
         cleanup_audio_buffer(&audio_buf);
         return;
@@ -407,7 +707,13 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
         if (audio_codec_ctx) avcodec_free_context(&audio_codec_ctx);
         if (swr_ctx) swr_free(&swr_ctx);
         avcodec_free_context(&video_codec_ctx);
-        avformat_close_input(&fmt_ctx);
+        if (memory_file) {
+            avformat_close_input(&fmt_ctx);
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+        } else {
+            avformat_close_input(&fmt_ctx);
+        }
         SDL_Quit();
         cleanup_audio_buffer(&audio_buf);
         return;
@@ -429,7 +735,13 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
         if (audio_codec_ctx) avcodec_free_context(&audio_codec_ctx);
         if (swr_ctx) swr_free(&swr_ctx);
         avcodec_free_context(&video_codec_ctx);
-        avformat_close_input(&fmt_ctx);
+        if (memory_file) {
+            avformat_close_input(&fmt_ctx);
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+        } else {
+            avformat_close_input(&fmt_ctx);
+        }
         SDL_Quit();
         cleanup_audio_buffer(&audio_buf);
         return;
@@ -452,7 +764,13 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
         if (audio_codec_ctx) avcodec_free_context(&audio_codec_ctx);
         if (swr_ctx) swr_free(&swr_ctx);
         avcodec_free_context(&video_codec_ctx);
-        avformat_close_input(&fmt_ctx);
+        if (memory_file) {
+            avformat_close_input(&fmt_ctx);
+            avio_context_free(&avio_ctx);
+            free_memory_file(memory_file);
+        } else {
+            avformat_close_input(&fmt_ctx);
+        }
         SDL_Quit();
         cleanup_audio_buffer(&audio_buf);
         return;
@@ -530,14 +848,13 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
     Uint32 last_button_check = SDL_GetTicks();
     
     // Для синхронизации видео
-    int64_t start_time = av_gettime(); // Время начала воспроизведения в микросекундах
-    double video_clock = 0; // Текущее время видео в секундах
+    int64_t start_time = av_gettime();
+    double video_clock = 0;
     AVRational time_base = video_stream->time_base;
     double frame_delay = av_q2d(video_stream->avg_frame_rate);
     if (frame_delay > 0) {
         frame_delay = 1.0 / frame_delay;
     } else {
-        // Если не можем получить fps, используем 30 fps
         frame_delay = 1.0 / 30.0;
     }
     
@@ -585,7 +902,7 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
             }
             
             while (avcodec_receive_frame(video_codec_ctx, frame) == 0) {
-                // Получаем PTS кадра (время отображения)
+                // Получаем PTS кадра
                 if (frame->pts != AV_NOPTS_VALUE) {
                     video_clock = frame->pts * av_q2d(time_base);
                 } else if (frame->pkt_dts != AV_NOPTS_VALUE) {
@@ -598,7 +915,6 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
                 
                 // Если кадр должен быть показан в будущем, ждем
                 if (sync_delay > 0) {
-                    // Ждем, но не больше frame_delay * 2
                     if (sync_delay > frame_delay * 2) {
                         sync_delay = frame_delay;
                     }
@@ -688,7 +1004,6 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
     
     // Закрываем аудио
     if (audio_initialized) {
-        // Даем немного времени на завершение воспроизведения
         SDL_Delay(100);
         SDL_CloseAudioDevice(audio_device);
         audio_device = 0;
@@ -755,6 +1070,18 @@ void play_video_file_delay(const char *path, int skip_enabled, float delay_secon
     if (fmt_ctx) {
         avformat_close_input(&fmt_ctx);
         fmt_ctx = NULL;
+    }
+    
+    // Освобождаем AVIO контекст и память для romfs
+    if (avio_ctx) {
+        av_freep(&avio_ctx->buffer);
+        avio_context_free(&avio_ctx);
+        avio_ctx = NULL;
+    }
+    
+    if (memory_file) {
+        free_memory_file(memory_file);
+        memory_file = NULL;
     }
     
     SDL_Quit();

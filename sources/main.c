@@ -371,11 +371,11 @@ int main(int argc, char* argv[])
     
     // Тест 1
     printf("\n=== Test: /intro.mp4 ===\n");
-    play_video_file("/intro.mp4", 1);
+    play_video_file_delay("/intro.mp4", 1, 3.0f);
     
     // Тест 2
     printf("\n=== Test: /intro.webm ===\n");
-    play_video_file("/intro.webm", 1);
+    play_video_file_delay("/intro.webm", 0, 1.0f);
    
    
     chdir("romfs:/Contents");

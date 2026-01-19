@@ -17,6 +17,7 @@
 #include <time.h>
 
 #define SKIP_HOLD_TIME 3.0
+#define DEFAULT_DELAY_SECONDS 3.0
 #define AUDIO_BUFFER_SIZE (48000 * 2 * 2) // 1 секунда стерео 16-бит
 
 typedef struct {
@@ -29,14 +30,8 @@ typedef struct {
     SDL_cond *cond;
 } AudioBuffer;
 
-typedef struct {
-    uint8_t *data;
-    int size;
-} AudioChunk;
-
 static AudioBuffer audio_buf = {0};
 static SDL_AudioDeviceID audio_device = 0;
-static bool audio_running = false;
 
 void audio_callback(void *userdata, Uint8 *stream, int len)
 {
@@ -78,21 +73,20 @@ void audio_callback(void *userdata, Uint8 *stream, int len)
 // Отрисовка плавной заполняемой кольцевой полосы
 void draw_circle_progress(SDL_Renderer *ren, int cx, int cy, int radius, int thickness, float progress)
 {
-    int segments = 360;
-    float angle_step = 2.0f * M_PI / segments;
+    if (progress <= 0.0f) return;
+    
+    int segments = (int)(360 * progress);
+    float angle_step = 2.0f * M_PI / 360.0f;
     float start_angle = -M_PI / 2;
-    float end_angle = start_angle + 2.0f * M_PI * progress;
     
     SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
     
-    for (int i = 0; i < segments * progress; i++) {
+    for (int i = 0; i < segments; i++) {
         float angle = start_angle + i * angle_step;
-        float inner_radius = radius - thickness / 2.0f;
-        float outer_radius = radius + thickness / 2.0f;
         
-        // Рисуем прямоугольник для каждого сегмента
-        for (int j = 0; j < thickness; j++) {
-            float current_radius = inner_radius + j;
+        // Рисуем несколько точек для толщины круга
+        for (int t = 0; t < thickness; t++) {
+            float current_radius = radius - thickness/2 + t;
             int x = cx + (int)(cosf(angle) * current_radius);
             int y = cy + (int)(sinf(angle) * current_radius);
             SDL_RenderDrawPoint(ren, x, y);
@@ -183,9 +177,10 @@ static bool write_audio_data(AudioBuffer *buf, const uint8_t *data, int size)
     return false;
 }
 
-void play_video_file(const char *path, int skip_enabled)
+void play_video_file_delay(const char *path, int skip_enabled, float delay_seconds)
 {
-    printf("[Video] Starting: %s\n", path);
+    printf("[Video] Starting: %s (delay: %.1fs, skip: %s)\n", 
+           path, delay_seconds, skip_enabled ? "enabled" : "disabled");
     
     // Инициализируем аудио буфер
     if (!init_audio_buffer(&audio_buf, AUDIO_BUFFER_SIZE)) {
@@ -476,31 +471,73 @@ void play_video_file(const char *path, int skip_enabled)
         }
     }
     
-    // Основной цикл
+    // Задержка перед началом воспроизведения
+    if (delay_seconds > 0) {
+        printf("[Video] Waiting %.1f seconds before playback...\n", delay_seconds);
+        
+        Uint32 start_delay = SDL_GetTicks();
+        float elapsed_delay = 0.0f;
+        bool skip_delay = false;
+        
+        while (elapsed_delay < delay_seconds && !skip_delay) {
+            // Обновляем состояние контроллера
+            padUpdate(&pad);
+            u64 kHeld = padGetButtons(&pad);
+            
+            // Проверяем, не нажата ли кнопка B для пропуска задержки
+            if (skip_enabled && (kHeld & HidNpadButton_B)) {
+                skip_delay = true;
+                printf("[Video] Delay skipped\n");
+                break;
+            }
+            
+            // Проверка событий SDL
+            SDL_Event event;
+            while (SDL_PollEvent(&event)) {
+                if (event.type == SDL_QUIT) {
+                    skip_delay = true;
+                    break;
+                }
+            }
+            
+            // Очищаем экран черным цветом
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderClear(renderer);
+            SDL_RenderPresent(renderer);
+            
+            // Ждем немного
+            SDL_Delay(16);
+            
+            // Обновляем прошедшее время
+            elapsed_delay = (SDL_GetTicks() - start_delay) / 1000.0f;
+        }
+    }
+    
+    // Основной цикл воспроизведения
     AVPacket packet;
     bool quit = false;
-    double hold_time = 0.0;
-    clock_t last_time = clock();
+    float hold_time = 0.0f;
+    Uint32 last_button_check = SDL_GetTicks();
     
     while (!quit && av_read_frame(fmt_ctx, &packet) >= 0) {
-        // Время кадра для плавного индикатора
-        clock_t now = clock();
-        double elapsed = (double)(now - last_time) / CLOCKS_PER_SEC;
-        last_time = now;
+        // Частая проверка кнопок для пропуска
+        Uint32 now = SDL_GetTicks();
+        float delta_time = (now - last_button_check) / 1000.0f;
+        last_button_check = now;
         
         // Обновляем состояние контроллера
         padUpdate(&pad);
         u64 kHeld = padGetButtons(&pad);
         
         if (skip_enabled && (kHeld & HidNpadButton_B)) {
-            hold_time += elapsed;
+            hold_time += delta_time;
             if (hold_time >= SKIP_HOLD_TIME) {
-                printf("[Video] Skip triggered\n");
+                printf("[Video] Skip triggered after %.1f seconds\n", hold_time);
                 quit = true;
                 break;
             }
         } else {
-            hold_time = 0.0;
+            hold_time = 0.0f;
         }
         
         // Проверка событий SDL
@@ -508,10 +545,14 @@ void play_video_file(const char *path, int skip_enabled)
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 quit = true;
+                break;
             }
         }
         
-        if (quit) break;
+        if (quit) {
+            av_packet_unref(&packet);
+            break;
+        }
         
         // Видео пакет
         if (packet.stream_index == video_stream_index) {
@@ -534,12 +575,12 @@ void play_video_file(const char *path, int skip_enabled)
                 SDL_RenderCopy(renderer, texture, NULL, NULL);
                 
                 // Плавный индикатор пропуска
-                if (hold_time > 0.0) {
-                    float progress = fmin(hold_time / SKIP_HOLD_TIME, 1.0f);
+                if (hold_time > 0.0f) {
+                    float progress = fminf(hold_time / SKIP_HOLD_TIME, 1.0f);
                     draw_circle_progress(renderer, 
-                                       video_codec_ctx->width - 30,
-                                       video_codec_ctx->height - 30,
-                                       20, 5, progress);
+                                       video_codec_ctx->width - 40,
+                                       video_codec_ctx->height - 40,
+                                       25, 6, progress);
                 }
                 
                 SDL_RenderPresent(renderer);
@@ -660,4 +701,10 @@ void play_video_file(const char *path, int skip_enabled)
     cleanup_audio_buffer(&audio_buf);
     
     printf("[Video] Finished\n");
+}
+
+// Совместимость со старой функцией
+void play_video_file(const char *path, int skip_enabled)
+{
+    play_video_file_delay(path, skip_enabled, DEFAULT_DELAY_SECONDS);
 }

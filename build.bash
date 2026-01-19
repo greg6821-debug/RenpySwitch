@@ -35,7 +35,7 @@ popd
 rsync -avm --include='*/' --include='*.c' --exclude='*' pygame_sdl2-source/ source/module
 
 
-#cp -rf ffmedia.c renpy-source/module
+cp -rf ffmedia.c renpy-source/module
 # Копируем .c файлы из renpy-source/module
 rsync -avm --include='*/' --include='*.c' --exclude='*' renpy-source/module/ source/module
 #debug

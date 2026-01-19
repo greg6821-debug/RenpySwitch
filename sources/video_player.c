@@ -26,6 +26,8 @@
 static bool sdl_initialized = false;
 static bool sdl_video_initialized = false;
 static bool sdl_audio_initialized = false;
+static bool window_created_by_us = false;
+static bool renderer_created_by_us = false;
 static SDL_Window *global_window = NULL;
 static SDL_Renderer *global_renderer = NULL;
 
@@ -79,52 +81,69 @@ void video_player_init()
     }
     sdl_audio_initialized = true;
     
-    // Пытаемся получить существующее окно от Ren'Py
-    int num_windows = SDL_GetNumVideoDisplays();
-    if (num_windows > 0) {
-        printf("[Video] Found %d video displays\n", num_windows);
-        
-        // Получаем информацию о текущем дисплее
-        SDL_DisplayMode mode;
-        if (SDL_GetCurrentDisplayMode(0, &mode) == 0) {
-            printf("[Video] Display mode: %dx%d @ %dHz\n", 
-                   mode.w, mode.h, mode.refresh_rate);
-        }
-        
-        // Проверяем, есть ли уже окно (созданное Ren'Py)
-        global_window = SDL_GetWindowFromID(1);
-        if (global_window) {
-            printf("[Video] Found existing window from Ren'Py\n");
-            sdl_video_initialized = true;
-        }
-    }
-    
+																					  
+												
+						  
+																 
+		
+																				 
+							 
+													   
+														   
+													  
+		 
+		
+											
+											   
+							
+																  
+										 
+		 
+	 
+	
+    // Не инициализируем видео здесь - это сделает Ren'Py
     sdl_initialized = true;
-    printf("[Video] SDL subsystem initialized\n");
+    printf("[Video] SDL subsystem initialized (audio only)\n");
 }
 
-// Деинициализация SDL (в конце работы)
+// Деинициализация SDL
 void video_player_quit()
 {
     printf("[Video] Shutting down video player\n");
     
-    if (global_renderer) {
+    // Если рендерер был создан нами, уничтожаем его
+    if (renderer_created_by_us && global_renderer) {
+        printf("[Video] Destroying our renderer\n");
         SDL_DestroyRenderer(global_renderer);
         global_renderer = NULL;
+        renderer_created_by_us = false;
     }
     
-    if (global_window) {
-        // Не уничтожаем окно - оно принадлежит Ren'Py
+    // Если окно было создано нами, уничтожаем его
+    if (window_created_by_us && global_window) {
+        printf("[Video] Destroying our window\n");
+        SDL_DestroyWindow(global_window);
         global_window = NULL;
+        window_created_by_us = false;
+        
+        // Если мы создавали окно, значит мы инициализировали видео подсистему
+        if (sdl_video_initialized) {
+            printf("[Video] Quitting SDL video subsystem\n");
+            SDL_QuitSubSystem(SDL_INIT_VIDEO);
+            sdl_video_initialized = false;
+        }
     }
     
+    // Если аудио инициализировано нами, завершаем его
     if (sdl_audio_initialized) {
+        printf("[Video] Quitting SDL audio subsystem\n");
         SDL_QuitSubSystem(SDL_INIT_AUDIO);
         sdl_audio_initialized = false;
     }
     
+    // Сбрасываем флаги
     sdl_initialized = false;
-    sdl_video_initialized = false;
+								  
     
     printf("[Video] Video player shutdown complete\n");
 }
@@ -450,7 +469,7 @@ static void cleanup_video_state(VideoState *state)
     // Освобождаем аудио буфер
     cleanup_audio_buffer(&state->audio_buf);
     
-    // Освобождаем текстуру
+    // Освобождаем текстуру (она всегда создается нами)
     if (state->texture) {
         printf("[Video] Destroying texture\n");
         SDL_DestroyTexture(state->texture);
@@ -526,10 +545,33 @@ static bool create_or_reuse_window(int width, int height)
     // Если окно уже существует (от Ren'Py), используем его
     if (!global_window) {
         // Пробуем получить окно от Ren'Py
-        global_window = SDL_GetWindowFromID(1);
+        SDL_Window *existing_window = NULL;
         
+        // Проверяем все окна SDL
+        int num_windows = SDL_GetNumVideoDisplays();
+        for (int i = 0; i < num_windows; i++) {
+            existing_window = SDL_GetWindowFromID(i + 1);
+            if (existing_window) {
+                printf("[Video] Found existing window from Ren'Py (ID: %d)\n", i + 1);
+                global_window = existing_window;
+                window_created_by_us = false;
+                break;
+            }
+        }
+        
+        // Если не нашли существующего окна, создаем свое
         if (!global_window) {
             printf("[Video] Creating new SDL window\n");
+            
+            // Инициализируем видео подсистему
+            if (!sdl_video_initialized) {
+                if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) {
+                    printf("[Video] SDL_InitSubSystem video failed: %s\n", SDL_GetError());
+                    return false;
+                }
+                sdl_video_initialized = true;
+            }
+            
             global_window = SDL_CreateWindow("Video", 
                                            SDL_WINDOWPOS_CENTERED, 
                                            SDL_WINDOWPOS_CENTERED, 
@@ -541,13 +583,16 @@ static bool create_or_reuse_window(int width, int height)
                 return false;
             }
             
+            window_created_by_us = true;
+            printf("[Video] Window created by us\n");
+            
             // Скрываем курсор
             SDL_ShowCursor(SDL_DISABLE);
         } else {
             printf("[Video] Using existing window from Ren'Py\n");
-            // Обновляем размер окна под видео
-            SDL_SetWindowSize(global_window, width, height);
-            SDL_SetWindowPosition(global_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+																		 
+															
+																								 
         }
     } else {
         // Обновляем размер существующего окна
@@ -564,6 +609,8 @@ static bool create_or_reuse_window(int width, int height)
             printf("[Video] Could not create renderer: %s\n", SDL_GetError());
             return false;
         }
+        renderer_created_by_us = true;
+        printf("[Video] Renderer created by us\n");
     }
     
     // Очищаем экран

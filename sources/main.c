@@ -366,14 +366,12 @@ static void on_applet_hook(AppletHookType hook, void *param)
 
 int main(int argc, char* argv[])
 {  
-    // Копируем видео из romfs на SD карту
-    printf("Copying video files from romfs to SD card...\n");
-    
-    // Попробуем проиграть с SD карты
+    // Проигрываем intro.mp4 с SD карты
     play_video_file("sdmc:/intro.mp4", 1);
-    
-    // Проигрываем intro.webm
+
+    // Проигрываем intro.webm с SD карты
     play_video_file("sdmc:/intro.webm", 0);
+
    
    
     chdir("romfs:/Contents");

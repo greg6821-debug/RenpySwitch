@@ -16,6 +16,8 @@ PYGAME_SDL2_STATIC=1 python3.9 setup.py build_ext --inplace || true
 rm -rf gen
 popd
 
+cp -rf ffmedia.c renpy-source/module
+
 pushd renpy-source/module
 # СОЗДАЕМ ДИРЕКТОРИЮ ПЕРЕД СБОРКОЙ
 mkdir -p renpy/audio

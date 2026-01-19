@@ -37,7 +37,7 @@ typedef struct {
     AVCodecContext *video_codec_ctx;
     AVCodecContext *audio_codec_ctx;
     SwrContext *swr_ctx;
-    SwsContext *sws_ctx;
+    struct SwsContext *sws_ctx;  // Исправлено: struct SwsContext
     SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Texture *texture;

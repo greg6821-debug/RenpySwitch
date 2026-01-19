@@ -19,8 +19,9 @@
 
 #define SKIP_HOLD_TIME 3.0
 #define DEFAULT_DELAY_SECONDS 3.0
-#define AUDIO_BUFFER_SIZE (48000 * 2 * 2) // 1 секунда стерео 16-бит
+#define AUDIO_BUFFER_SIZE (48000 * 2 * 2)
 #define MAX_PATH_LENGTH 512
+#define MAX_RETRY_COUNT 3
 
 typedef struct {
     uint8_t *data;
@@ -32,15 +33,35 @@ typedef struct {
     SDL_cond *cond;
 } AudioBuffer;
 
-static AudioBuffer audio_buf = {0};
-static SDL_AudioDeviceID audio_device = 0;
-
-// Структура для хранения информации о видеофайле в памяти
 typedef struct {
     uint8_t *data;
     size_t size;
     size_t pos;
 } MemoryFile;
+
+// Структура для хранения состояния видео
+typedef struct {
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    SDL_Texture *texture;
+    SDL_AudioDeviceID audio_device;
+    AudioBuffer audio_buf;
+    
+    AVFormatContext *fmt_ctx;
+    AVCodecContext *video_codec_ctx;
+    AVCodecContext *audio_codec_ctx;
+    SwrContext *swr_ctx;
+    struct SwsContext *sws_ctx;
+    
+    MemoryFile *memory_file;
+    AVIOContext *avio_ctx;
+    
+    bool audio_initialized;
+    bool resources_allocated;
+} VideoState;
+
+// Глобальная переменная для текущего состояния
+static VideoState *current_state = NULL;
 
 void audio_callback(void *userdata, Uint8 *stream, int len)
 {
@@ -58,7 +79,6 @@ void audio_callback(void *userdata, Uint8 *stream, int len)
     if (to_copy > buf->available)
         to_copy = buf->available;
     
-    // Копируем данные из кольцевого буфера
     int first_chunk = buf->size - buf->read_pos;
     if (first_chunk >= to_copy) {
         memcpy(stream, buf->data + buf->read_pos, to_copy);
@@ -71,7 +91,6 @@ void audio_callback(void *userdata, Uint8 *stream, int len)
     
     buf->available -= to_copy;
     
-    // Если скопировали меньше запрошенного - заполняем нулями
     if (to_copy < len)
         memset(stream + to_copy, 0, len - to_copy);
     
@@ -79,7 +98,6 @@ void audio_callback(void *userdata, Uint8 *stream, int len)
     SDL_UnlockMutex(buf->mutex);
 }
 
-// Отрисовка плавной заполняемой кольцевой полосы
 void draw_circle_progress(SDL_Renderer *ren, int cx, int cy, int radius, int thickness, float progress)
 {
     if (progress <= 0.0f) return;
@@ -93,7 +111,6 @@ void draw_circle_progress(SDL_Renderer *ren, int cx, int cy, int radius, int thi
     for (int i = 0; i < segments; i++) {
         float angle = start_angle + i * angle_step;
         
-        // Рисуем несколько точек для толщины круга
         for (int t = 0; t < thickness; t++) {
             float current_radius = radius - thickness/2 + t;
             int x = cx + (int)(cosf(angle) * current_radius);
@@ -103,7 +120,6 @@ void draw_circle_progress(SDL_Renderer *ren, int cx, int cy, int radius, int thi
     }
 }
 
-// Инициализация аудио буфера
 static bool init_audio_buffer(AudioBuffer *buf, int size)
 {
     buf->data = (uint8_t*)malloc(size);
@@ -127,9 +143,10 @@ static bool init_audio_buffer(AudioBuffer *buf, int size)
     return true;
 }
 
-// Очистка аудио буфера
 static void cleanup_audio_buffer(AudioBuffer *buf)
 {
+    if (!buf) return;
+    
     if (buf->mutex) SDL_LockMutex(buf->mutex);
     
     if (buf->data) {
@@ -154,20 +171,18 @@ static void cleanup_audio_buffer(AudioBuffer *buf)
     }
 }
 
-// Добавление аудио данных в буфер
 static bool write_audio_data(AudioBuffer *buf, const uint8_t *data, int size)
 {
+    if (!buf || !buf->mutex) return false;
+    
     SDL_LockMutex(buf->mutex);
     
-    // Ждем, если буфер полный
     while (buf->available + size > buf->size) {
         SDL_CondWait(buf->cond, buf->mutex);
     }
     
-    // Записываем в кольцевой буфер
     int free_space = buf->size - buf->available;
     if (free_space >= size) {
-        // Хватает места от write_pos до конца буфера
         int space_to_end = buf->size - buf->write_pos;
         if (space_to_end >= size) {
             memcpy(buf->data + buf->write_pos, data, size);
@@ -186,16 +201,14 @@ static bool write_audio_data(AudioBuffer *buf, const uint8_t *data, int size)
     return false;
 }
 
-// Очистка экрана черным цветом
-static void clear_screen(SDL_Renderer *renderer, int width, int height)
+static void clear_screen(SDL_Renderer *renderer)
 {
+    if (!renderer) return;
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
     SDL_RenderPresent(renderer);
-    SDL_Delay(1);
 }
 
-// Функция для чтения из памяти (для AVIO)
 static int read_packet(void *opaque, uint8_t *buf, int buf_size)
 {
     MemoryFile *mf = (MemoryFile*)opaque;
@@ -213,7 +226,6 @@ static int read_packet(void *opaque, uint8_t *buf, int buf_size)
     return to_read;
 }
 
-// Функция для поиска в памяти (для AVIO)
 static int64_t seek_packet(void *opaque, int64_t offset, int whence)
 {
     MemoryFile *mf = (MemoryFile*)opaque;
@@ -238,7 +250,6 @@ static int64_t seek_packet(void *opaque, int64_t offset, int whence)
     return mf->pos;
 }
 
-// Функция для загрузки файла в память
 static MemoryFile* load_file_to_memory(const char *path)
 {
     FILE *file = fopen(path, "rb");
@@ -289,7 +300,6 @@ static MemoryFile* load_file_to_memory(const char *path)
     return mf;
 }
 
-// Функция для освобождения MemoryFile
 static void free_memory_file(MemoryFile *mf)
 {
     if (mf) {
@@ -301,61 +311,45 @@ static void free_memory_file(MemoryFile *mf)
     }
 }
 
-// Функция для преобразования путей Switch
 static const char* resolve_switch_path(const char *input_path, char *resolved_path, size_t buffer_size)
 {
-    // Проверяем различные варианты путей
-    const char *test_paths[] = {
-        input_path,  // Оригинальный путь
-        NULL
-    };
-    
-    // Генерируем альтернативные пути
+    const char *test_paths[5] = {NULL};
     char alt_path1[MAX_PATH_LENGTH] = {0};
     char alt_path2[MAX_PATH_LENGTH] = {0};
     char alt_path3[MAX_PATH_LENGTH] = {0};
     
-    // Если путь начинается с romfs:/, пробуем разные варианты
+    test_paths[0] = input_path;
+    
     if (strncmp(input_path, "romfs:", 6) == 0) {
-        // Убираем префикс romfs: и добавляем / в начале
         snprintf(alt_path1, sizeof(alt_path1), "/%s", input_path + 6);
         test_paths[1] = alt_path1;
         
-        // Пробуем также с префиксом romfs:/Contents
         snprintf(alt_path2, sizeof(alt_path2), "romfs:/Contents%s", input_path + 6);
         test_paths[2] = alt_path2;
         
-        // Пробуем также без префикса в корне romfs
         snprintf(alt_path3, sizeof(alt_path3), "romfs:%s", input_path + 6);
         test_paths[3] = alt_path3;
     }
-    // Если путь начинается с sdmc:/, пробуем без префикса
     else if (strncmp(input_path, "sdmc:", 5) == 0) {
         snprintf(alt_path1, sizeof(alt_path1), "/%s", input_path + 5);
         test_paths[1] = alt_path1;
     }
-    // Если путь относительный, пробуем добавить префиксы
     else if (input_path[0] != '/' && strncmp(input_path, "romfs:", 6) != 0 && strncmp(input_path, "sdmc:", 5) != 0) {
-        // Пробуем как romfs:/Contents/game/video/...
         snprintf(alt_path1, sizeof(alt_path1), "romfs:/Contents/game/video/%s", input_path);
         test_paths[1] = alt_path1;
         
-        // Пробуем как romfs:/Contents/...
         snprintf(alt_path2, sizeof(alt_path2), "romfs:/Contents/%s", input_path);
         test_paths[2] = alt_path2;
         
-        // Пробуем как romfs:/...
         snprintf(alt_path3, sizeof(alt_path3), "romfs:/%s", input_path);
         test_paths[3] = alt_path3;
     }
     
-    // Пробуем все пути
     for (int i = 0; i < 5; i++) {
         if (test_paths[i] == NULL) continue;
         
         printf("[Video] Testing path: %s\n", test_paths[i]);
         
-        // Проверяем существование файла
         FILE *test = fopen(test_paths[i], "rb");
         if (test) {
             fclose(test);
@@ -366,10 +360,111 @@ static const char* resolve_switch_path(const char *input_path, char *resolved_pa
         }
     }
     
-    // Если ни один путь не сработал, возвращаем оригинальный
     strncpy(resolved_path, input_path, buffer_size - 1);
     resolved_path[buffer_size - 1] = '\0';
     return resolved_path;
+}
+
+static void cleanup_video_state(VideoState *state)
+{
+    if (!state) return;
+    
+    printf("[Video] Starting cleanup...\n");
+    
+    // Закрываем аудио устройство
+    if (state->audio_initialized && state->audio_device > 0) {
+        printf("[Video] Closing audio device\n");
+        SDL_PauseAudioDevice(state->audio_device, 1);
+        SDL_CloseAudioDevice(state->audio_device);
+        state->audio_device = 0;
+        state->audio_initialized = false;
+    }
+    
+    // Освобождаем аудио буфер
+    cleanup_audio_buffer(&state->audio_buf);
+    
+    // Освобождаем SDL ресурсы
+    if (state->texture) {
+        printf("[Video] Destroying texture\n");
+        SDL_DestroyTexture(state->texture);
+        state->texture = NULL;
+    }
+    
+    if (state->renderer) {
+        printf("[Video] Destroying renderer\n");
+        SDL_DestroyRenderer(state->renderer);
+        state->renderer = NULL;
+    }
+    
+    if (state->window) {
+        printf("[Video] Destroying window\n");
+        SDL_DestroyWindow(state->window);
+        state->window = NULL;
+    }
+    
+    // Освобождаем FFmpeg ресурсы
+    if (state->sws_ctx) {
+        printf("[Video] Freeing sws context\n");
+        sws_freeContext(state->sws_ctx);
+        state->sws_ctx = NULL;
+    }
+    
+    if (state->swr_ctx) {
+        printf("[Video] Freeing swr context\n");
+        swr_free(&state->swr_ctx);
+        state->swr_ctx = NULL;
+    }
+    
+    if (state->audio_codec_ctx) {
+        printf("[Video] Freeing audio codec context\n");
+        avcodec_free_context(&state->audio_codec_ctx);
+        state->audio_codec_ctx = NULL;
+    }
+    
+    if (state->video_codec_ctx) {
+        printf("[Video] Freeing video codec context\n");
+        avcodec_free_context(&state->video_codec_ctx);
+        state->video_codec_ctx = NULL;
+    }
+    
+    if (state->fmt_ctx) {
+        printf("[Video] Closing format context\n");
+        avformat_close_input(&state->fmt_ctx);
+        state->fmt_ctx = NULL;
+    }
+    
+    // Освобождаем AVIO контекст
+    if (state->avio_ctx) {
+        printf("[Video] Freeing AVIO context\n");
+        av_freep(&state->avio_ctx->buffer);
+        avio_context_free(&state->avio_ctx);
+        state->avio_ctx = NULL;
+    }
+    
+    // Освобождаем файл в памяти
+    if (state->memory_file) {
+        printf("[Video] Freeing memory file\n");
+        free_memory_file(state->memory_file);
+        state->memory_file = NULL;
+    }
+    
+    // Освобождаем состояние
+    free(state);
+    current_state = NULL;
+    
+    printf("[Video] Cleanup completed\n");
+}
+
+static VideoState* create_video_state()
+{
+    VideoState *state = (VideoState*)calloc(1, sizeof(VideoState));
+    if (!state) {
+        printf("[Video] Failed to allocate video state\n");
+        return NULL;
+    }
+    
+    state->resources_allocated = false;
+    return state;
 }
 
 void play_video_file_delay(const char *input_path, int skip_enabled, float delay_seconds)
@@ -380,102 +475,95 @@ void play_video_file_delay(const char *input_path, int skip_enabled, float delay
     printf("[Video] Starting: %s (original: %s)\n", path, input_path);
     printf("[Video] Delay: %.1fs, Skip: %s\n", delay_seconds, skip_enabled ? "enabled" : "disabled");
     
-    // Инициализируем аудио буфер
-    if (!init_audio_buffer(&audio_buf, AUDIO_BUFFER_SIZE)) {
-        printf("[Video] Failed to init audio buffer\n");
+    // Очищаем предыдущее состояние, если оно есть
+    if (current_state) {
+        printf("[Video] Cleaning up previous video state\n");
+        cleanup_video_state(current_state);
+    }
+    
+    // Создаем новое состояние
+    VideoState *state = create_video_state();
+    if (!state) {
+        printf("[Video] Failed to create video state\n");
         return;
     }
+    
+    current_state = state;
     
     // Инициализируем контроллеры
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
     PadState pad;
     padInitializeDefault(&pad);
     
-    // Инициализируем SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0) {
-        printf("[Video] SDL_Init failed: %s\n", SDL_GetError());
-        cleanup_audio_buffer(&audio_buf);
+    // Инициализируем SDL (только если еще не инициализирован)
+    static bool sdl_initialized = false;
+    if (!sdl_initialized) {
+        printf("[Video] Initializing SDL\n");
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0) {
+            printf("[Video] SDL_Init failed: %s\n", SDL_GetError());
+            cleanup_video_state(state);
+            return;
+        }
+        sdl_initialized = true;
+    }
+    
+    // Инициализируем аудио буфер
+    if (!init_audio_buffer(&state->audio_buf, AUDIO_BUFFER_SIZE)) {
+        printf("[Video] Failed to init audio buffer\n");
+        cleanup_video_state(state);
         return;
     }
     
-    AVFormatContext *fmt_ctx = NULL;
-    MemoryFile *memory_file = NULL;
-    AVIOContext *avio_ctx = NULL;
-    
     // Загружаем файл в память (для romfs)
     if (strncmp(path, "romfs:", 6) == 0) {
-        memory_file = load_file_to_memory(path);
-        if (!memory_file) {
+        state->memory_file = load_file_to_memory(path);
+        if (!state->memory_file) {
             printf("[Video] Failed to load file into memory\n");
-            SDL_Quit();
-            cleanup_audio_buffer(&audio_buf);
+            cleanup_video_state(state);
             return;
         }
         
-        // Создаем AVIOContext для чтения из памяти
         unsigned char *avio_buffer = (unsigned char*)av_malloc(4096);
         if (!avio_buffer) {
             printf("[Video] Failed to allocate AVIO buffer\n");
-            free_memory_file(memory_file);
-            SDL_Quit();
-            cleanup_audio_buffer(&audio_buf);
+            cleanup_video_state(state);
             return;
         }
         
-        avio_ctx = avio_alloc_context(avio_buffer, 4096, 0, memory_file, read_packet, NULL, seek_packet);
-        if (!avio_ctx) {
+        state->avio_ctx = avio_alloc_context(avio_buffer, 4096, 0, state->memory_file, read_packet, NULL, seek_packet);
+        if (!state->avio_ctx) {
             printf("[Video] Failed to create AVIO context\n");
             av_free(avio_buffer);
-            free_memory_file(memory_file);
-            SDL_Quit();
-            cleanup_audio_buffer(&audio_buf);
+            cleanup_video_state(state);
             return;
         }
         
-        // Создаем AVFormatContext
-        fmt_ctx = avformat_alloc_context();
-        if (!fmt_ctx) {
+        state->fmt_ctx = avformat_alloc_context();
+        if (!state->fmt_ctx) {
             printf("[Video] Failed to allocate format context\n");
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-            SDL_Quit();
-            cleanup_audio_buffer(&audio_buf);
+            cleanup_video_state(state);
             return;
         }
         
-        fmt_ctx->pb = avio_ctx;
+        state->fmt_ctx->pb = state->avio_ctx;
         
-        // Открываем файл
-        if (avformat_open_input(&fmt_ctx, NULL, NULL, NULL) < 0) {
+        if (avformat_open_input(&state->fmt_ctx, NULL, NULL, NULL) < 0) {
             printf("[Video] Cannot open file from memory: %s\n", path);
-            avformat_close_input(&fmt_ctx);
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-            SDL_Quit();
-            cleanup_audio_buffer(&audio_buf);
+            cleanup_video_state(state);
             return;
         }
     } else {
         // Обычный способ для SD карты
-        if (avformat_open_input(&fmt_ctx, path, NULL, NULL) < 0) {
+        if (avformat_open_input(&state->fmt_ctx, path, NULL, NULL) < 0) {
             printf("[Video] Cannot open file: %s\n", path);
-            SDL_Quit();
-            cleanup_audio_buffer(&audio_buf);
+            cleanup_video_state(state);
             return;
         }
     }
     
-    if (avformat_find_stream_info(fmt_ctx, NULL) < 0) {
+    if (avformat_find_stream_info(state->fmt_ctx, NULL) < 0) {
         printf("[Video] Could not find stream info\n");
-        if (memory_file) {
-            avformat_close_input(&fmt_ctx);
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-        } else {
-            avformat_close_input(&fmt_ctx);
-        }
-        SDL_Quit();
-        cleanup_audio_buffer(&audio_buf);
+        cleanup_video_state(state);
         return;
     }
     
@@ -483,215 +571,132 @@ void play_video_file_delay(const char *input_path, int skip_enabled, float delay
     int video_stream_index = -1;
     int audio_stream_index = -1;
     
-    for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
-        if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && video_stream_index == -1) {
+    for (unsigned int i = 0; i < state->fmt_ctx->nb_streams; i++) {
+        if (state->fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && video_stream_index == -1) {
             video_stream_index = i;
-        } else if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && audio_stream_index == -1) {
+        } else if (state->fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && audio_stream_index == -1) {
             audio_stream_index = i;
         }
     }
     
     if (video_stream_index == -1) {
         printf("[Video] No video stream found\n");
-        if (memory_file) {
-            avformat_close_input(&fmt_ctx);
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-        } else {
-            avformat_close_input(&fmt_ctx);
-        }
-        SDL_Quit();
-        cleanup_audio_buffer(&audio_buf);
+        cleanup_video_state(state);
         return;
     }
     
-    // Получаем информацию о потоках
-    AVStream *video_stream = fmt_ctx->streams[video_stream_index];
-    AVStream *audio_stream = audio_stream_index != -1 ? fmt_ctx->streams[audio_stream_index] : NULL;
-    
     // Видео декодер
+    AVStream *video_stream = state->fmt_ctx->streams[video_stream_index];
     const AVCodec *video_codec = avcodec_find_decoder(video_stream->codecpar->codec_id);
     if (!video_codec) {
         printf("[Video] Unsupported video codec\n");
-        if (memory_file) {
-            avformat_close_input(&fmt_ctx);
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-        } else {
-            avformat_close_input(&fmt_ctx);
-        }
-        SDL_Quit();
-        cleanup_audio_buffer(&audio_buf);
+        cleanup_video_state(state);
         return;
     }
     
-    AVCodecContext *video_codec_ctx = avcodec_alloc_context3(video_codec);
-    if (!video_codec_ctx) {
+    state->video_codec_ctx = avcodec_alloc_context3(video_codec);
+    if (!state->video_codec_ctx) {
         printf("[Video] Could not allocate video codec context\n");
-        if (memory_file) {
-            avformat_close_input(&fmt_ctx);
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-        } else {
-            avformat_close_input(&fmt_ctx);
-        }
-        SDL_Quit();
-        cleanup_audio_buffer(&audio_buf);
+        cleanup_video_state(state);
         return;
     }
     
-    if (avcodec_parameters_to_context(video_codec_ctx, video_stream->codecpar) < 0) {
+    if (avcodec_parameters_to_context(state->video_codec_ctx, video_stream->codecpar) < 0) {
         printf("[Video] Could not copy video codec parameters\n");
-        avcodec_free_context(&video_codec_ctx);
-        if (memory_file) {
-            avformat_close_input(&fmt_ctx);
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-        } else {
-            avformat_close_input(&fmt_ctx);
-        }
-        SDL_Quit();
-        cleanup_audio_buffer(&audio_buf);
+        cleanup_video_state(state);
         return;
     }
     
-    if (avcodec_open2(video_codec_ctx, video_codec, NULL) < 0) {
+    if (avcodec_open2(state->video_codec_ctx, video_codec, NULL) < 0) {
         printf("[Video] Could not open video codec\n");
-        avcodec_free_context(&video_codec_ctx);
-        if (memory_file) {
-            avformat_close_input(&fmt_ctx);
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-        } else {
-            avformat_close_input(&fmt_ctx);
-        }
-        SDL_Quit();
-        cleanup_audio_buffer(&audio_buf);
+        cleanup_video_state(state);
         return;
     }
     
     // Аудио декодер
-    AVCodecContext *audio_codec_ctx = NULL;
-    SwrContext *swr_ctx = NULL;
-    int audio_sample_rate = 48000;
-    int audio_channels = 2;
-    
     if (audio_stream_index != -1) {
+        AVStream *audio_stream = state->fmt_ctx->streams[audio_stream_index];
         const AVCodec *audio_codec = avcodec_find_decoder(audio_stream->codecpar->codec_id);
         if (audio_codec) {
-            audio_codec_ctx = avcodec_alloc_context3(audio_codec);
-            if (audio_codec_ctx) {
-                if (avcodec_parameters_to_context(audio_codec_ctx, audio_stream->codecpar) >= 0) {
-                    if (avcodec_open2(audio_codec_ctx, audio_codec, NULL) >= 0) {
+            state->audio_codec_ctx = avcodec_alloc_context3(audio_codec);
+            if (state->audio_codec_ctx) {
+                if (avcodec_parameters_to_context(state->audio_codec_ctx, audio_stream->codecpar) >= 0) {
+                    if (avcodec_open2(state->audio_codec_ctx, audio_codec, NULL) >= 0) {
                         // Инициализируем ресемплер
-                        swr_ctx = swr_alloc();
-                        if (swr_ctx) {
-                            av_opt_set_chlayout(swr_ctx, "in_chlayout", &audio_codec_ctx->ch_layout, 0);
-                            av_opt_set_int(swr_ctx, "in_sample_rate", audio_codec_ctx->sample_rate, 0);
-                            av_opt_set_sample_fmt(swr_ctx, "in_sample_fmt", audio_codec_ctx->sample_fmt, 0);
+                        state->swr_ctx = swr_alloc();
+                        if (state->swr_ctx) {
+                            int audio_sample_rate = 48000;
+                            int audio_channels = 2;
                             
-                            // Выходной формат: стерео, 48kHz, S16
+                            av_opt_set_chlayout(state->swr_ctx, "in_chlayout", &state->audio_codec_ctx->ch_layout, 0);
+                            av_opt_set_int(state->swr_ctx, "in_sample_rate", state->audio_codec_ctx->sample_rate, 0);
+                            av_opt_set_sample_fmt(state->swr_ctx, "in_sample_fmt", state->audio_codec_ctx->sample_fmt, 0);
+                            
                             AVChannelLayout out_chlayout;
                             av_channel_layout_default(&out_chlayout, audio_channels);
                             
-                            av_opt_set_chlayout(swr_ctx, "out_chlayout", &out_chlayout, 0);
-                            av_opt_set_int(swr_ctx, "out_sample_rate", audio_sample_rate, 0);
-                            av_opt_set_sample_fmt(swr_ctx, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
+                            av_opt_set_chlayout(state->swr_ctx, "out_chlayout", &out_chlayout, 0);
+                            av_opt_set_int(state->swr_ctx, "out_sample_rate", audio_sample_rate, 0);
+                            av_opt_set_sample_fmt(state->swr_ctx, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
                             
-                            if (swr_init(swr_ctx) < 0) {
-                                swr_free(&swr_ctx);
-                                swr_ctx = NULL;
+                            if (swr_init(state->swr_ctx) < 0) {
+                                swr_free(&state->swr_ctx);
+                                state->swr_ctx = NULL;
                             }
                             av_channel_layout_uninit(&out_chlayout);
                         }
                     } else {
-                        avcodec_free_context(&audio_codec_ctx);
-                        audio_codec_ctx = NULL;
+                        avcodec_free_context(&state->audio_codec_ctx);
+                        state->audio_codec_ctx = NULL;
                     }
                 } else {
-                    avcodec_free_context(&audio_codec_ctx);
-                    audio_codec_ctx = NULL;
+                    avcodec_free_context(&state->audio_codec_ctx);
+                    state->audio_codec_ctx = NULL;
                 }
             }
         }
     }
     
     // Создаем окно SDL
-    SDL_Window *window = SDL_CreateWindow("Video", 
-                                         SDL_WINDOWPOS_CENTERED, 
-                                         SDL_WINDOWPOS_CENTERED, 
-                                         video_codec_ctx->width, 
-                                         video_codec_ctx->height, 
-                                         0);
-    if (!window) {
+    state->window = SDL_CreateWindow("Video", 
+                                     SDL_WINDOWPOS_CENTERED, 
+                                     SDL_WINDOWPOS_CENTERED, 
+                                     state->video_codec_ctx->width, 
+                                     state->video_codec_ctx->height, 
+                                     0);
+    if (!state->window) {
         printf("[Video] Could not create window: %s\n", SDL_GetError());
-        if (audio_codec_ctx) avcodec_free_context(&audio_codec_ctx);
-        if (swr_ctx) swr_free(&swr_ctx);
-        avcodec_free_context(&video_codec_ctx);
-        if (memory_file) {
-            avformat_close_input(&fmt_ctx);
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-        } else {
-            avformat_close_input(&fmt_ctx);
-        }
-        SDL_Quit();
-        cleanup_audio_buffer(&audio_buf);
+        cleanup_video_state(state);
         return;
     }
     
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 
-                                               SDL_RENDERER_ACCELERATED | 
-                                               SDL_RENDERER_PRESENTVSYNC);
-    if (!renderer) {
+    state->renderer = SDL_CreateRenderer(state->window, -1, 
+                                         SDL_RENDERER_ACCELERATED | 
+                                         SDL_RENDERER_PRESENTVSYNC);
+    if (!state->renderer) {
         printf("[Video] Could not create renderer: %s\n", SDL_GetError());
-        SDL_DestroyWindow(window);
-        if (audio_codec_ctx) avcodec_free_context(&audio_codec_ctx);
-        if (swr_ctx) swr_free(&swr_ctx);
-        avcodec_free_context(&video_codec_ctx);
-        if (memory_file) {
-            avformat_close_input(&fmt_ctx);
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-        } else {
-            avformat_close_input(&fmt_ctx);
-        }
-        SDL_Quit();
-        cleanup_audio_buffer(&audio_buf);
+        cleanup_video_state(state);
         return;
     }
     
-    SDL_Texture *texture = SDL_CreateTexture(renderer,
-                                            SDL_PIXELFORMAT_RGBA32,
-                                            SDL_TEXTUREACCESS_STREAMING,
-                                            video_codec_ctx->width,
-                                            video_codec_ctx->height);
-    if (!texture) {
+    state->texture = SDL_CreateTexture(state->renderer,
+                                       SDL_PIXELFORMAT_RGBA32,
+                                       SDL_TEXTUREACCESS_STREAMING,
+                                       state->video_codec_ctx->width,
+                                       state->video_codec_ctx->height);
+    if (!state->texture) {
         printf("[Video] Could not create texture: %s\n", SDL_GetError());
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        if (audio_codec_ctx) avcodec_free_context(&audio_codec_ctx);
-        if (swr_ctx) swr_free(&swr_ctx);
-        avcodec_free_context(&video_codec_ctx);
-        if (memory_file) {
-            avformat_close_input(&fmt_ctx);
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-        } else {
-            avformat_close_input(&fmt_ctx);
-        }
-        SDL_Quit();
-        cleanup_audio_buffer(&audio_buf);
+        cleanup_video_state(state);
         return;
     }
     
     // Контекст для преобразования цвета
-    struct SwsContext *sws_ctx = sws_getContext(
-        video_codec_ctx->width,
-        video_codec_ctx->height,
-        video_codec_ctx->pix_fmt,
-        video_codec_ctx->width,
-        video_codec_ctx->height,
+    state->sws_ctx = sws_getContext(
+        state->video_codec_ctx->width,
+        state->video_codec_ctx->height,
+        state->video_codec_ctx->pix_fmt,
+        state->video_codec_ctx->width,
+        state->video_codec_ctx->height,
         AV_PIX_FMT_RGBA,
         SWS_BILINEAR,
         NULL,
@@ -699,57 +704,31 @@ void play_video_file_delay(const char *input_path, int skip_enabled, float delay
         NULL
     );
     
-    if (!sws_ctx) {
+    if (!state->sws_ctx) {
         printf("[Video] Could not create sws context\n");
-        SDL_DestroyTexture(texture);
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        if (audio_codec_ctx) avcodec_free_context(&audio_codec_ctx);
-        if (swr_ctx) swr_free(&swr_ctx);
-        avcodec_free_context(&video_codec_ctx);
-        if (memory_file) {
-            avformat_close_input(&fmt_ctx);
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-        } else {
-            avformat_close_input(&fmt_ctx);
-        }
-        SDL_Quit();
-        cleanup_audio_buffer(&audio_buf);
+        cleanup_video_state(state);
         return;
     }
+    
+    state->resources_allocated = true;
     
     // Подготавливаем кадры
     AVFrame *frame = av_frame_alloc();
     AVFrame *rgba_frame = av_frame_alloc();
     AVFrame *audio_frame = av_frame_alloc();
+    
     if (!frame || !rgba_frame || !audio_frame) {
         printf("[Video] Could not allocate frames\n");
         if (frame) av_frame_free(&frame);
         if (rgba_frame) av_frame_free(&rgba_frame);
         if (audio_frame) av_frame_free(&audio_frame);
-        sws_freeContext(sws_ctx);
-        SDL_DestroyTexture(texture);
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        if (audio_codec_ctx) avcodec_free_context(&audio_codec_ctx);
-        if (swr_ctx) swr_free(&swr_ctx);
-        avcodec_free_context(&video_codec_ctx);
-        if (memory_file) {
-            avformat_close_input(&fmt_ctx);
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-        } else {
-            avformat_close_input(&fmt_ctx);
-        }
-        SDL_Quit();
-        cleanup_audio_buffer(&audio_buf);
+        cleanup_video_state(state);
         return;
     }
     
     int num_bytes = av_image_get_buffer_size(AV_PIX_FMT_RGBA, 
-                                            video_codec_ctx->width, 
-                                            video_codec_ctx->height, 
+                                            state->video_codec_ctx->width, 
+                                            state->video_codec_ctx->height, 
                                             1);
     uint8_t *buffer = (uint8_t*)av_malloc(num_bytes * sizeof(uint8_t));
     if (!buffer) {
@@ -757,45 +736,30 @@ void play_video_file_delay(const char *input_path, int skip_enabled, float delay
         av_frame_free(&audio_frame);
         av_frame_free(&rgba_frame);
         av_frame_free(&frame);
-        sws_freeContext(sws_ctx);
-        SDL_DestroyTexture(texture);
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        if (audio_codec_ctx) avcodec_free_context(&audio_codec_ctx);
-        if (swr_ctx) swr_free(&swr_ctx);
-        avcodec_free_context(&video_codec_ctx);
-        if (memory_file) {
-            avformat_close_input(&fmt_ctx);
-            avio_context_free(&avio_ctx);
-            free_memory_file(memory_file);
-        } else {
-            avformat_close_input(&fmt_ctx);
-        }
-        SDL_Quit();
-        cleanup_audio_buffer(&audio_buf);
+        cleanup_video_state(state);
         return;
     }
     
     av_image_fill_arrays(rgba_frame->data, rgba_frame->linesize, buffer,
-                        AV_PIX_FMT_RGBA, video_codec_ctx->width, 
-                        video_codec_ctx->height, 1);
+                        AV_PIX_FMT_RGBA, state->video_codec_ctx->width, 
+                        state->video_codec_ctx->height, 1);
     
     // Настраиваем аудио в SDL
-    SDL_AudioSpec wanted_spec, obtained_spec;
-    SDL_zero(wanted_spec);
-    wanted_spec.freq = audio_sample_rate;
-    wanted_spec.format = AUDIO_S16SYS;
-    wanted_spec.channels = audio_channels;
-    wanted_spec.samples = 1024;
-    wanted_spec.callback = audio_callback;
-    wanted_spec.userdata = &audio_buf;
-    
-    bool audio_initialized = false;
-    if (audio_codec_ctx && swr_ctx) {
-        audio_device = SDL_OpenAudioDevice(NULL, 0, &wanted_spec, &obtained_spec, 0);
-        if (audio_device > 0) {
-            audio_initialized = true;
-            SDL_PauseAudioDevice(audio_device, 0);
+    if (state->audio_codec_ctx && state->swr_ctx) {
+        SDL_AudioSpec wanted_spec, obtained_spec;
+        SDL_zero(wanted_spec);
+        wanted_spec.freq = 48000;
+        wanted_spec.format = AUDIO_S16SYS;
+        wanted_spec.channels = 2;
+        wanted_spec.samples = 1024;
+        wanted_spec.callback = audio_callback;
+        wanted_spec.userdata = &state->audio_buf;
+        
+        state->audio_device = SDL_OpenAudioDevice(NULL, 0, &wanted_spec, &obtained_spec, 0);
+        if (state->audio_device > 0) {
+            state->audio_initialized = true;
+            SDL_PauseAudioDevice(state->audio_device, 0);
+            printf("[Video] Audio initialized\n");
         }
     }
     
@@ -808,18 +772,15 @@ void play_video_file_delay(const char *input_path, int skip_enabled, float delay
         bool skip_delay = false;
         
         while (elapsed_delay < delay_seconds && !skip_delay) {
-            // Обновляем состояние контроллера
             padUpdate(&pad);
             u64 kHeld = padGetButtons(&pad);
             
-            // Проверяем, не нажата ли кнопка B для пропуска задержки
             if (skip_enabled && (kHeld & HidNpadButton_B)) {
                 skip_delay = true;
                 printf("[Video] Delay skipped\n");
                 break;
             }
             
-            // Проверка событий SDL
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
                 if (event.type == SDL_QUIT) {
@@ -828,15 +789,8 @@ void play_video_file_delay(const char *input_path, int skip_enabled, float delay
                 }
             }
             
-            // Очищаем экран черным цветом
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-            SDL_RenderClear(renderer);
-            SDL_RenderPresent(renderer);
-            
-            // Ждем немного
+            clear_screen(state->renderer);
             SDL_Delay(16);
-            
-            // Обновляем прошедшее время
             elapsed_delay = (SDL_GetTicks() - start_delay) / 1000.0f;
         }
     }
@@ -858,13 +812,35 @@ void play_video_file_delay(const char *input_path, int skip_enabled, float delay
         frame_delay = 1.0 / 30.0;
     }
     
-    while (!quit && av_read_frame(fmt_ctx, packet) >= 0) {
-        // Частая проверка кнопок для пропуска
+    int retry_count = 0;
+    const int max_retries = 3;
+    
+    while (!quit) {
+        int read_result = av_read_frame(state->fmt_ctx, packet);
+        if (read_result < 0) {
+            if (read_result == AVERROR_EOF) {
+                // Конец файла
+                break;
+            }
+            
+            retry_count++;
+            if (retry_count > max_retries) {
+                printf("[Video] Failed to read frame after %d retries\n", max_retries);
+                break;
+            }
+            
+            printf("[Video] Read frame error, retrying... (%d/%d)\n", retry_count, max_retries);
+            SDL_Delay(10);
+            continue;
+        }
+        
+        retry_count = 0;
+        
+        // Проверка кнопок
         Uint32 now = SDL_GetTicks();
         float delta_time = (now - last_button_check) / 1000.0f;
         last_button_check = now;
         
-        // Обновляем состояние контроллера
         padUpdate(&pad);
         u64 kHeld = padGetButtons(&pad);
         
@@ -880,7 +856,6 @@ void play_video_file_delay(const char *input_path, int skip_enabled, float delay
             hold_time = 0.0f;
         }
         
-        // Проверка событий SDL
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
@@ -897,23 +872,21 @@ void play_video_file_delay(const char *input_path, int skip_enabled, float delay
         
         // Видео пакет
         if (packet->stream_index == video_stream_index) {
-            if (avcodec_send_packet(video_codec_ctx, packet) < 0) {
-                break;
+            if (avcodec_send_packet(state->video_codec_ctx, packet) < 0) {
+                av_packet_unref(packet);
+                continue;
             }
             
-            while (avcodec_receive_frame(video_codec_ctx, frame) == 0) {
-                // Получаем PTS кадра
+            while (avcodec_receive_frame(state->video_codec_ctx, frame) == 0) {
                 if (frame->pts != AV_NOPTS_VALUE) {
                     video_clock = frame->pts * av_q2d(time_base);
                 } else if (frame->pkt_dts != AV_NOPTS_VALUE) {
                     video_clock = frame->pkt_dts * av_q2d(time_base);
                 }
                 
-                // Синхронизация по времени
                 double current_time = (av_gettime() - start_time) / 1000000.0;
                 double sync_delay = video_clock - current_time;
                 
-                // Если кадр должен быть показан в будущем, ждем
                 if (sync_delay > 0) {
                     if (sync_delay > frame_delay * 2) {
                         sync_delay = frame_delay;
@@ -922,62 +895,54 @@ void play_video_file_delay(const char *input_path, int skip_enabled, float delay
                 }
                 
                 // Конвертируем кадр в RGBA
-                sws_scale(sws_ctx, (uint8_t const * const *)frame->data,
-                         frame->linesize, 0, video_codec_ctx->height,
+                sws_scale(state->sws_ctx, (uint8_t const * const *)frame->data,
+                         frame->linesize, 0, state->video_codec_ctx->height,
                          rgba_frame->data, rgba_frame->linesize);
                 
-                // Обновляем текстуру
-                SDL_UpdateTexture(texture, NULL, rgba_frame->data[0], 
+                SDL_UpdateTexture(state->texture, NULL, rgba_frame->data[0], 
                                 rgba_frame->linesize[0]);
                 
-                // Отрисовываем
-                SDL_RenderClear(renderer);
-                SDL_RenderCopy(renderer, texture, NULL, NULL);
+                SDL_RenderClear(state->renderer);
+                SDL_RenderCopy(state->renderer, state->texture, NULL, NULL);
                 
-                // Плавный индикатор пропуска
                 if (hold_time > 0.0f) {
                     float progress = fminf(hold_time / SKIP_HOLD_TIME, 1.0f);
-                    draw_circle_progress(renderer, 
-                                       video_codec_ctx->width - 40,
-                                       video_codec_ctx->height - 40,
+                    draw_circle_progress(state->renderer, 
+                                       state->video_codec_ctx->width - 40,
+                                       state->video_codec_ctx->height - 40,
                                        25, 6, progress);
                 }
                 
-                SDL_RenderPresent(renderer);
-                
-                // Небольшая задержка для стабильности FPS
+                SDL_RenderPresent(state->renderer);
                 SDL_Delay(1);
             }
         }
         
         // Аудио пакет
-        if (packet->stream_index == audio_stream_index && audio_codec_ctx && swr_ctx) {
-            if (avcodec_send_packet(audio_codec_ctx, packet) < 0) {
-                break;
+        if (packet->stream_index == audio_stream_index && state->audio_codec_ctx && state->swr_ctx) {
+            if (avcodec_send_packet(state->audio_codec_ctx, packet) < 0) {
+                av_packet_unref(packet);
+                continue;
             }
             
-            while (avcodec_receive_frame(audio_codec_ctx, audio_frame) == 0) {
-                // Вычисляем необходимое количество сэмплов на выходе
-                int out_samples = av_rescale_rnd(swr_get_delay(swr_ctx, audio_frame->sample_rate) + 
+            while (avcodec_receive_frame(state->audio_codec_ctx, audio_frame) == 0) {
+                int out_samples = av_rescale_rnd(swr_get_delay(state->swr_ctx, audio_frame->sample_rate) + 
                                                 audio_frame->nb_samples,
-                                                audio_sample_rate, audio_frame->sample_rate, AV_ROUND_UP);
+                                                48000, audio_frame->sample_rate, AV_ROUND_UP);
                 
-                // Выделяем буфер для конвертированного аудио
                 uint8_t *converted_audio = NULL;
                 int out_linesize;
-                int out_count = av_samples_alloc(&converted_audio, &out_linesize, audio_channels,
+                int out_count = av_samples_alloc(&converted_audio, &out_linesize, 2,
                                                 out_samples, AV_SAMPLE_FMT_S16, 1);
                 
                 if (out_count >= 0) {
-                    // Конвертируем
-                    int converted = swr_convert(swr_ctx, &converted_audio, out_samples,
+                    int converted = swr_convert(state->swr_ctx, &converted_audio, out_samples,
                                               (const uint8_t**)audio_frame->data, audio_frame->nb_samples);
                     
                     if (converted > 0) {
-                        // Записываем в кольцевой буфер
-                        int actual_size = av_samples_get_buffer_size(&out_linesize, audio_channels,
+                        int actual_size = av_samples_get_buffer_size(&out_linesize, 2,
                                                                     converted, AV_SAMPLE_FMT_S16, 1);
-                        write_audio_data(&audio_buf, converted_audio, actual_size);
+                        write_audio_data(&state->audio_buf, converted_audio, actual_size);
                     }
                     
                     av_freep(&converted_audio);
@@ -988,109 +953,43 @@ void play_video_file_delay(const char *input_path, int skip_enabled, float delay
         av_packet_unref(packet);
     }
     
-    // Очистка пакета
+    // Освобождаем временные ресурсы
     if (packet) {
         av_packet_free(&packet);
-        packet = NULL;
     }
-    
-    // Очищаем экран черным цветом
-    printf("[Video] Clearing screen...\n");
-    clear_screen(renderer, video_codec_ctx->width, video_codec_ctx->height);
-    
-    // Пауза перед выходом
-    printf("[Video] Pausing for 1 second before cleanup...\n");
-    SDL_Delay(1000);
-    
-    // Закрываем аудио
-    if (audio_initialized) {
-        SDL_Delay(100);
-        SDL_CloseAudioDevice(audio_device);
-        audio_device = 0;
-    }
-    
-    // Освобождение ресурсов
-    printf("[Video] Freeing resources...\n");
     
     if (buffer) {
         av_free(buffer);
-        buffer = NULL;
     }
     
     if (audio_frame) {
         av_frame_free(&audio_frame);
-        audio_frame = NULL;
     }
     
     if (rgba_frame) {
         av_frame_free(&rgba_frame);
-        rgba_frame = NULL;
     }
     
     if (frame) {
         av_frame_free(&frame);
-        frame = NULL;
     }
     
-    if (sws_ctx) {
-        sws_freeContext(sws_ctx);
-        sws_ctx = NULL;
-    }
+    // Очищаем экран
+    printf("[Video] Clearing screen...\n");
+    clear_screen(state->renderer);
     
-    if (texture) {
-        SDL_DestroyTexture(texture);
-        texture = NULL;
-    }
+    // Освобождаем основные ресурсы
+    cleanup_video_state(state);
     
-    if (renderer) {
-        SDL_DestroyRenderer(renderer);
-        renderer = NULL;
+    // Задержка ПОСЛЕ освобождения ресурсов
+    if (delay_seconds > 0) {
+        printf("[Video] Pausing for %.1f seconds after cleanup...\n", delay_seconds);
+        SDL_Delay((Uint32)(delay_seconds * 1000));
     }
-    
-    if (window) {
-        SDL_DestroyWindow(window);
-        window = NULL;
-    }
-    
-    if (audio_codec_ctx) {
-        avcodec_free_context(&audio_codec_ctx);
-        audio_codec_ctx = NULL;
-    }
-    
-    if (swr_ctx) {
-        swr_free(&swr_ctx);
-        swr_ctx = NULL;
-    }
-    
-    if (video_codec_ctx) {
-        avcodec_free_context(&video_codec_ctx);
-        video_codec_ctx = NULL;
-    }
-    
-    if (fmt_ctx) {
-        avformat_close_input(&fmt_ctx);
-        fmt_ctx = NULL;
-    }
-    
-    // Освобождаем AVIO контекст и память для romfs
-    if (avio_ctx) {
-        av_freep(&avio_ctx->buffer);
-        avio_context_free(&avio_ctx);
-        avio_ctx = NULL;
-    }
-    
-    if (memory_file) {
-        free_memory_file(memory_file);
-        memory_file = NULL;
-    }
-    
-    SDL_Quit();
-    cleanup_audio_buffer(&audio_buf);
     
     printf("[Video] Finished\n");
 }
 
-// Совместимость со старой функцией
 void play_video_file(const char *path, int skip_enabled)
 {
     play_video_file_delay(path, skip_enabled, DEFAULT_DELAY_SECONDS);

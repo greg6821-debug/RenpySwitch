@@ -31,7 +31,7 @@ const int CHANNELS = 2;
 const int BPC = 2; // Bytes per channel.
 const int BPS = 4; // Bytes per sample.
 
-const int FRAMES = 5; // Увеличено с 3 для более плавного воспроизведения
+const int FRAMES = 5;
 
 // The alignment of each row of pixels.
 const int ROW_ALIGNMENT = 16;
@@ -50,17 +50,17 @@ static const double frame_early_delivery = .005;
 static SDL_Surface *rgb_surface = NULL;
 static SDL_Surface *rgba_surface = NULL;
 
-// DEBUG: Флаг для включения логирования
-static int debug_enabled = 1;
+																   
+							 
 
-#define LOG(...) if (debug_enabled) printf("[FFMEDIA] " __VA_ARGS__)
+																	
 
-// КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем монотонное время SDL вместо av_gettime()
-static double get_current_time(void) {
-    return SDL_GetTicks() / 1000.0; // Возвращает время в секундах
-}
+																  
+									  
+											 
+ 
 
-// http://dranger.com/ffmpeg/
+							 
 
 /*******************************************************************************
  * SDL_RWops <-> AVIOContext
@@ -80,7 +80,7 @@ static int rwops_read(void *opaque, uint8_t *buf, int buf_size) {
 }
 
 static int rwops_write(void *opaque, uint8_t *buf, int buf_size) {
-    LOG("Writing to an SDL_rwops is a really bad idea.\n");
+														   
     return -1;
 }
 
@@ -127,7 +127,7 @@ static void rwops_close(SDL_RWops *rw) {
 	rw->close(rw);
 }
 
-// КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: current_time теперь инициализируется правильно
+																
 static double current_time = 0;
 
 typedef struct PacketQueueEntry {
@@ -279,17 +279,17 @@ typedef struct MediaState {
 	/* The offset between now and the time of the current frame, at least for video. */
 	double time_offset;
 
-    /* DEBUG: Counters for logging */
-    int video_frames_decoded;
-    int video_frames_displayed;
-    int audio_frames_decoded;
-    int audio_frames_played;
-    double first_frame_pts;
+    /* For tracking first frame */
+							 
+							   
+							 
+							
+						   
     int first_frame_shown;
-    
-    /* КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Время начала воспроизведения */
-    double playback_start_time;
-    int playback_start_time_set;
+	
+														
+							   
+								
 
 } MediaState;
 
@@ -536,16 +536,16 @@ static AVPacket *read_packet(MediaState *ms, PacketQueue *pq) {
 		}
 
 		if (av_read_frame(ms->ctx, pkt)) {
-            LOG("av_read_frame returned error/EOF for stream\n");
+																 
 			return NULL;
 		}
 
 		if (pkt->stream_index == ms->video_stream && ! ms->video_finished) {
 			enqueue_packet(&ms->video_packet_queue, pkt);
-            LOG("Enqueued video packet, queue size: %d\n", count_packet_queue(&ms->video_packet_queue));
+																										
 		} else if (pkt->stream_index == ms->audio_stream && ! ms->audio_finished) {
 			enqueue_packet(&ms->audio_packet_queue, pkt);
-            LOG("Enqueued audio packet, queue size: %d\n", count_packet_queue(&ms->audio_packet_queue));
+																										
 		} else {
 			av_packet_free(&pkt);
 		}
@@ -575,24 +575,24 @@ static SurfaceQueueEntry *dequeue_surface(SurfaceQueueEntry **queue) {
 }
 
 
-#if 0
-static void check_surface_queue(MediaState *ms) {
+	 
+												 
 
-	SurfaceQueueEntry **queue = &ms->surface_queue;
+												
 
-	int count = 0;
+			   
 
-	while (*queue) {
-		count += 1;
-		queue = &(*queue)->next;
-	}
+				 
+			 
+						  
+  
 
-	if (count != ms->surface_queue_size) {
-		abort();
-	}
+									   
+		  
+  
 
-}
-#endif
+ 
+	  
 
 /* Find decoder context ******************************************************/
 
@@ -678,7 +678,7 @@ static void decode_audio(MediaState *ms) {
 		/** Read a packet, and send it to the decoder. */
 		pkt = read_packet(ms, &ms->audio_packet_queue);
         if (!pkt) {
-            LOG("No audio packet available, finishing audio\n");
+																
             ms->audio_finished = 1;
             return;
         }
@@ -687,13 +687,13 @@ static void decode_audio(MediaState *ms) {
 
 		if (ret == 0) {
 			dequeue_packet(&ms->audio_packet_queue);
-            ms->audio_frames_decoded++;
-            LOG("Audio packet sent to decoder successfully, frames decoded: %d\n", ms->audio_frames_decoded);
+									   
+																											 
 		} else if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-            LOG("Audio decoder needs more input (EAGAIN) or EOF\n");
+																	
 			// pass
 		} else {
-            LOG("Failed to send audio packet to decoder: %d\n", ret);
+																	 
 			ms->audio_finished = 1;
 			return;
 		}
@@ -704,23 +704,23 @@ static void decode_audio(MediaState *ms) {
 
 			// More input is needed.
 			if (ret == AVERROR(EAGAIN)) {
-                LOG("Audio decoder needs more input, breaking\n");
+																  
 				break;
 			}
 
 			if (ret < 0) {
-                LOG("Failed to receive audio frame: %d\n", ret);
+																
 				ms->audio_finished = 1;
 				return;
 			}
 
-            LOG("Got audio frame: pts=%lld, nb_samples=%d\n", 
-                ms->audio_decode_frame->pts, ms->audio_decode_frame->nb_samples);
+															  
+																				 
 
             converted_frame = av_frame_alloc();
 
 			if (converted_frame == NULL) {
-                LOG("Failed to allocate converted audio frame\n");
+																  
 				ms->audio_finished = 1;
 				return;
 			}
@@ -749,7 +749,7 @@ static void decode_audio(MediaState *ms) {
 			}
 
 			if(swr_convert_frame(ms->swr, converted_frame, ms->audio_decode_frame)) {
-                LOG("Failed to convert audio frame\n");
+													   
 				av_frame_free(&converted_frame);
 				continue;
 			}
@@ -757,7 +757,7 @@ static void decode_audio(MediaState *ms) {
 			double start = ms->audio_decode_frame->best_effort_timestamp * timebase;
 			double end = start + 1.0 * converted_frame->nb_samples / audio_sample_rate;
 
-            LOG("Audio frame: start=%.3f, end=%.3f, skip=%.3f\n", start, end, ms->skip);
+																						
 
 			SDL_LockMutex(ms->lock);
 
@@ -766,12 +766,12 @@ static void decode_audio(MediaState *ms) {
 				// Normal case, queue the frame.
 				ms->audio_queue_samples += converted_frame->nb_samples;
 				enqueue_frame(&ms->audio_queue, converted_frame);
-                LOG("Queued audio frame, queue samples: %d, target: %d\n", 
-                    ms->audio_queue_samples, ms->audio_queue_target_samples);
+																		   
+																			 
 
 			} else if (end < ms->skip) {
 				// Totally before, drop the frame.
-                LOG("Dropping audio frame before skip point\n");
+																
 				av_frame_free(&converted_frame);
 
 			} else {
@@ -779,7 +779,7 @@ static void decode_audio(MediaState *ms) {
 				// frame and set the index into the frame.
 				ms->audio_out_frame = converted_frame;
 				ms->audio_out_index = BPS * (int) ((ms->skip - start) * audio_sample_rate);
-                LOG("Audio frame straddles skip, setting out_index=%d\n", ms->audio_out_index);
+																							   
 
 			}
 
@@ -824,7 +824,7 @@ static SurfaceQueueEntry *decode_video_frame(MediaState *ms) {
 
 		AVPacket *pkt = read_packet(ms, &ms->video_packet_queue);
         if (!pkt) {
-            LOG("No video packet available, finishing video\n");
+																
             ms->video_finished = 1;
             return NULL;
         }
@@ -833,13 +833,13 @@ static SurfaceQueueEntry *decode_video_frame(MediaState *ms) {
 
 		if (ret == 0) {
 			dequeue_packet(&ms->video_packet_queue);
-            ms->video_frames_decoded++;
-            LOG("Video packet sent to decoder successfully, frames decoded: %d\n", ms->video_frames_decoded);
+									   
+																											 
 		} else if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-            LOG("Video decoder needs more input (EAGAIN) or EOF\n");
+																	
 			// pass
 		} else {
-            LOG("Failed to send video packet to decoder: %d\n", ret);
+																	 
 			ms->video_finished = 1;
 			return NULL;
 		}
@@ -848,12 +848,12 @@ static SurfaceQueueEntry *decode_video_frame(MediaState *ms) {
 
 		// More input is needed.
 		if (ret == AVERROR(EAGAIN)) {
-            LOG("Video decoder needs more input, continuing\n");
+																
 			continue;
 		}
 
 		if (ret < 0) {
-            LOG("Failed to receive video frame: %d\n", ret);
+															
 			ms->video_finished = 1;
 			return NULL;
 		}
@@ -862,23 +862,23 @@ static SurfaceQueueEntry *decode_video_frame(MediaState *ms) {
 	}
 
 	double pts = ms->video_decode_frame->best_effort_timestamp * av_q2d(ms->ctx->streams[ms->video_stream]->time_base);
-    
-    if (ms->first_frame_pts == 0) {
-        ms->first_frame_pts = pts;
-        LOG("First video frame PTS: %.3f\n", pts);
-    }
+	
+								   
+								  
+												  
+	 
 
-    LOG("Decoded video frame: pts=%.3f, skip=%.3f, width=%d, height=%d\n", 
-        pts, ms->skip, ms->video_decode_frame->width, ms->video_decode_frame->height);
+																		   
+																																 
 
 	if (pts < ms->skip) {
-        LOG("Frame pts (%.3f) < skip (%.3f), dropping\n", pts, ms->skip);
+																		 
 		return NULL;
 	}
 
 	// Если мы отстаем в декодировании более чем на 5 секунд, сдаемся
 	if (ms->video_pts_offset && (ms->video_pts_offset + pts < ms->video_read_time - 5.0)) {
-        LOG("More than 5 seconds behind, giving up on video\n");
+																
 		ms->video_finished = 1;
 		return NULL;
 	}
@@ -886,14 +886,14 @@ static SurfaceQueueEntry *decode_video_frame(MediaState *ms) {
 	// Если разрешено дропать кадры и мы опаздываем, дропаем этот кадр
 	if (ms->frame_drops && ms->video_pts_offset && 
         (ms->video_pts_offset + pts < ms->video_read_time)) {
-        LOG("Dropping frame due to being behind schedule\n");
+															 
 		return NULL;
 	}
 
 	SDL_Surface *sample = rgba_surface;
 
 	if (ms->sws == NULL) {
-        LOG("Creating sws context for format conversion\n");
+															
 		ms->sws = sws_getContext(
 			ms->video_decode_frame->width,
 			ms->video_decode_frame->height,
@@ -912,7 +912,7 @@ static SurfaceQueueEntry *decode_video_frame(MediaState *ms) {
 
 
 		if (!ms->sws) {
-            LOG("Failed to create sws context\n");
+												  
 			ms->video_finished = 1;
 			return NULL;
 		}
@@ -925,7 +925,7 @@ static SurfaceQueueEntry *decode_video_frame(MediaState *ms) {
 
 	SurfaceQueueEntry *rv = av_malloc(sizeof(SurfaceQueueEntry));
 	if (rv == NULL) {
-        LOG("Failed to allocate surface queue entry\n");
+														
 		ms->video_finished = 1;
 		return NULL;
 	}
@@ -940,7 +940,7 @@ static SurfaceQueueEntry *decode_video_frame(MediaState *ms) {
 
     rv->pixels = SDL_calloc(rv->pitch * rv->h, 1);
     if (!rv->pixels) {
-        LOG("Failed to allocate pixel buffer\n");
+												 
         av_free(rv);
         ms->video_finished = 1;
         return NULL;
@@ -954,7 +954,7 @@ static SurfaceQueueEntry *decode_video_frame(MediaState *ms) {
 	uint8_t *surf_data[] = { &surf_pixels[FRAME_PADDING * rv->pitch + FRAME_PADDING * sample->format->BytesPerPixel] };
 	int surf_linesize[] = { rv->pitch };
 
-    LOG("Converting frame to surface: w=%d, h=%d, pitch=%d\n", rv->w, rv->h, rv->pitch);
+																						
     
 	int result = sws_scale(
 		ms->sws,
@@ -970,20 +970,20 @@ static SurfaceQueueEntry *decode_video_frame(MediaState *ms) {
 		);
     
     if (result <= 0) {
-        LOG("sws_scale failed: %d\n", result);
+											  
         SDL_free(rv->pixels);
         av_free(rv);
         return NULL;
     }
 
-    LOG("Successfully decoded and converted video frame, pts=%.3f\n", pts);
+																		   
 	return rv;
 }
 
 
 static void decode_video(MediaState *ms) {
 	if (!ms->video_context) {
-        LOG("No video context, finishing video\n");
+												   
 		ms->video_finished = 1;
 		return;
 	}
@@ -993,7 +993,7 @@ static void decode_video(MediaState *ms) {
 	}
 
 	if (!ms->video_decode_frame) {
-        LOG("Failed to allocate video decode frame\n");
+													   
 		ms->video_finished = 1;
 		return;
 	}
@@ -1001,15 +1001,15 @@ static void decode_video(MediaState *ms) {
 	SDL_LockMutex(ms->lock);
 
     int target_frames = FRAMES;
-    // Если это первый кадр или очередь пуста, декодируем хотя бы один кадр
+																  
     if (ms->surface_queue_size == 0) {
         target_frames = 1;
-        LOG("Queue empty, forcing decode of at least one frame\n");
+																   
     }
 
 	if (!ms->video_finished && (ms->surface_queue_size < target_frames)) {
-        LOG("Decoding video frame, queue size=%d, target=%d\n", 
-            ms->surface_queue_size, target_frames);
+																
+												   
 		SDL_UnlockMutex(ms->lock);
 
 		SurfaceQueueEntry *sqe = decode_video_frame(ms);
@@ -1019,25 +1019,25 @@ static void decode_video(MediaState *ms) {
 		if (sqe) {
 			enqueue_surface(&ms->surface_queue, sqe);
 			ms->surface_queue_size += 1;
-            LOG("Added frame to surface queue, new size=%d, pts=%.3f\n", 
-                ms->surface_queue_size, sqe->pts);
+																		 
+												  
             
-            // Если это первый кадр, будим все ожидающие потоки
+													
             if (ms->surface_queue_size == 1) {
-                LOG("First frame ready, broadcasting\n");
+														 
                 SDL_CondBroadcast(ms->cond);
             }
-		} else {
-            LOG("decode_video_frame returned NULL\n");
-        }
-	} else {
-        LOG("Not decoding video: finished=%d, queue_size=%d, target=%d\n", 
-            ms->video_finished, ms->surface_queue_size, target_frames);
-    }
+		}
+													  
+		 
+	}
+																		   
+																	   
+	 
 
 	if (!ms->video_finished && (ms->surface_queue_size < FRAMES)) {
 		ms->needs_decode = 1;
-        LOG("Setting needs_decode=1 for video\n");
+												  
 	}
 
 	SDL_UnlockMutex(ms->lock);
@@ -1057,31 +1057,31 @@ int media_video_ready(struct MediaState *ms) {
 	int consumed = 0;
 	int rv = 0;
 
-    LOG("media_video_ready called\n");
+									  
 
 	if (ms->video_stream == -1) {
-        LOG("No video stream, returning 1\n");
+											  
 		return 1;
 	}
 
 	SDL_LockMutex(ms->lock);
 
 	if (!ms->ready) {
-        LOG("Not ready yet, returning 0\n");
+											
 		goto done;
 	}
 
 	if (ms->pause_time > 0) {
-        LOG("Paused, returning 0\n");
+									 
 	    goto done;
 	}
 
-    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем правильное вычисление времени
-    double now = get_current_time();
+																  
+    double now = SDL_GetTicks() / 1000.0;
     double playback_time = now - ms->time_offset;
     
-    LOG("Current state: playback_time=%.3f, now=%.3f, time_offset=%.3f, queue_size=%d, video_pts_offset=%.3f, first_frame_shown=%d\n",
-        playback_time, now, ms->time_offset, ms->surface_queue_size, ms->video_pts_offset, ms->first_frame_shown);
+																																	  
+																												  
 
 	/*
 	 * Если у нас есть устаревший кадр, удаляем его.
@@ -1097,8 +1097,8 @@ int media_video_ready(struct MediaState *ms) {
 			SurfaceQueueEntry *sqe = dequeue_surface(&ms->surface_queue);
 			ms->surface_queue_size -= 1;
 
-            LOG("Dropping obsolete frame: pts=%.3f, video_read_time=%.3f\n", 
-                sqe->pts, ms->video_read_time);
+																			 
+											   
 
 			if (sqe->pixels) {
 				SDL_free(sqe->pixels);
@@ -1116,40 +1116,40 @@ int media_video_ready(struct MediaState *ms) {
 	if (ms->surface_queue) {
         double frame_display_time = ms->surface_queue->pts + ms->video_pts_offset;
         
-        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем playback_time вместо offset_time
+														   
         if (!ms->first_frame_shown) {
             rv = 1;
-            LOG("First frame not shown yet, forcing ready=1\n");
+																
         } else if (ms->video_pts_offset) {
             double threshold = frame_early_delivery * (ms->surface_queue_size > 1 ? 1.0 : 2.0);
             if (frame_display_time <= playback_time + threshold) {
                 rv = 1;
-                LOG("Frame ready: frame_display_time=%.3f <= playback_time+threshold=%.3f\n", 
-                    frame_display_time, playback_time + threshold);
-            } else {
-                LOG("Frame not ready yet: frame_display_time=%.3f > playback_time+threshold=%.3f\n", 
-                    frame_display_time, playback_time + threshold);
+																							  
+																   
+					
+																									 
+																   
             }
         } else {
-            // Если еще не установлен video_pts_offset, кадр готов к отображению
+															
             rv = 1;
-            LOG("No pts offset yet, frame ready\n");
+													
         }
-	} else {
-        LOG("No frames in queue\n");
-    }
+	}
+									
+	 
 
 done:
 	/* Only signal if we've consumed something. */
 	if (consumed) {
 		ms->needs_decode = 1;
 		SDL_CondBroadcast(ms->cond);
-        LOG("Consumed frames, setting needs_decode=1\n");
+														 
 	}
 
 	SDL_UnlockMutex(ms->lock);
 
-    LOG("media_video_ready returning %d\n", rv);
+												
 	return rv;
 }
 
@@ -1159,52 +1159,52 @@ SDL_Surface *media_read_video(MediaState *ms) {
 	SDL_Surface *rv = NULL;
 	SurfaceQueueEntry *sqe = NULL;
 
-    LOG("media_read_video called\n");
+									 
 
 	if (ms->video_stream == -1) {
-        LOG("No video stream, returning NULL\n");
+												 
 		return NULL;
 	}
 
-    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем правильное вычисление времени
-    double now = get_current_time();
+																  
+    double now = SDL_GetTicks() / 1000.0;
     double playback_time = now - ms->time_offset;
 
 	SDL_LockMutex(ms->lock);
 
 #ifndef __EMSCRIPTEN__
 	while (!ms->ready) {
-        LOG("Waiting for ready signal...\n");
+											 
 	    SDL_CondWait(ms->cond, ms->lock);
 	}
 #endif
 
 	if (ms->pause_time > 0) {
-        LOG("Paused, returning NULL\n");
+										
 	    goto done;
 	}
 
 	if (!ms->surface_queue_size) {
-        LOG("No frames in queue, returning NULL\n");
+													
 		goto done;
 	}
 
-    LOG("Before check: playback_time=%.3f, now=%.3f, queue_size=%d, video_pts_offset=%.3f\n",
-        playback_time, now, ms->surface_queue_size, ms->video_pts_offset);
+																							 
+																		  
 
-    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Правильная установка video_pts_offset
+													   
     if (ms->video_pts_offset == 0.0) {
-        // Устанавливаем video_pts_offset так, чтобы первый кадр показывался сейчас
+																  
         ms->video_pts_offset = playback_time - ms->surface_queue->pts;
-        LOG("Setting video_pts_offset=%.3f (playback_time=%.3f - frame_pts=%.3f)\n",
-            ms->video_pts_offset, playback_time, ms->surface_queue->pts);
+																					
+																		 
     }
 
     double frame_display_time = ms->surface_queue->pts + ms->video_pts_offset;
-    LOG("Frame check: pts=%.3f, offset=%.3f, display_time=%.3f, playback_time=%.3f\n",
-        ms->surface_queue->pts, ms->video_pts_offset, frame_display_time, playback_time);
+																																 
+																						 
 
-    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Упрощенная логика для отображения кадра
+																
     double threshold = frame_early_delivery * (ms->surface_queue_size > 1 ? 1.0 : 2.0);
     if (!ms->first_frame_shown || frame_display_time <= playback_time + threshold) {
         sqe = dequeue_surface(&ms->surface_queue);
@@ -1213,22 +1213,22 @@ SDL_Surface *media_read_video(MediaState *ms) {
         
         if (!ms->first_frame_shown) {
             ms->first_frame_shown = 1;
-            LOG("First frame shown! pts=%.3f, playback_time=%.3f\n", sqe->pts, playback_time);
-        } else {
-            LOG("Frame displayed: pts=%.3f, display_time=%.3f, playback_time=%.3f\n", 
-                sqe->pts, frame_display_time, playback_time);
+																							  
+				
+																																 
+															 
         }
-    } else {
-        LOG("Frame not ready for display yet: display_time=%.3f, playback_time=%.3f, diff=%.3f\n",
-            frame_display_time, playback_time, frame_display_time - playback_time);
+			
+																								  
+																				   
     }
 
 done:
     /* Only signal if we've consumed something. */
 	if (sqe) {
 		ms->needs_decode = 1;
-        ms->video_frames_displayed++;
-        LOG("Frame consumed: needs_decode=1, frames_displayed=%d\n", ms->video_frames_displayed);
+									 
+																								 
 		SDL_CondBroadcast(ms->cond);
 	}
 
@@ -1247,18 +1247,18 @@ done:
 			sqe->format->Amask
 		);
 
-        if (!rv) {
-            LOG("Failed to create SDL surface from frame: %s\n", SDL_GetError());
-        } else {
-            LOG("Successfully created SDL surface\n");
-        }
+				  
+																				 
+				
+													  
+		 
 
 		/* Force SDL to take over management of pixels. */
 		rv->flags &= ~SDL_PREALLOC;
 		av_free(sqe);
-	} else {
-        LOG("No frame to display\n");
-    }
+	}
+									 
+	 
 
 	return rv;
 }
@@ -1269,25 +1269,25 @@ static int decode_thread(void *arg) {
 
 	int err;
 
-    LOG("Decode thread started for %s\n", ms->filename);
+														
 
 	AVFormatContext *ctx = avformat_alloc_context();
 	if (ctx == NULL) {
-        LOG("Failed to allocate format context\n");
+												   
 		goto finish;
 	}
 	ms->ctx = ctx;
 
 	AVIOContext *io_context = rwops_open(ms->rwops);
 	if (io_context == NULL) {
-        LOG("Failed to create AVIO context\n");
+											   
 		goto finish;
 	}
 	ctx->pb = io_context;
 
 	err = avformat_open_input(&ctx, ms->filename, NULL, NULL);
 	if (err) {
-        LOG("Failed to open input: %d\n", err);
+											   
 		avformat_free_context(ctx);
 		ms->ctx = NULL;
 		goto finish;
@@ -1295,7 +1295,7 @@ static int decode_thread(void *arg) {
 
 	err = avformat_find_stream_info(ctx, NULL);
 	if (err) {
-        LOG("Failed to find stream info: %d\n", err);
+													 
 		goto finish;
 	}
 
@@ -1307,14 +1307,14 @@ static int decode_thread(void *arg) {
 		if (ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
 			if (ms->want_video && ms->video_stream == -1) {
 				ms->video_stream = i;
-                LOG("Found video stream at index %d\n", i);
+														   
 			}
 		}
 
 		if (ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
 			if (ms->audio_stream == -1) {
 				ms->audio_stream = i;
-                LOG("Found audio stream at index %d\n", i);
+														   
 			}
 		}
 	}
@@ -1322,16 +1322,16 @@ static int decode_thread(void *arg) {
 	ms->video_context = find_context(ctx, ms->video_stream);
 	ms->audio_context = find_context(ctx, ms->audio_stream);
 
-    if (ms->video_stream != -1 && !ms->video_context) {
-        LOG("Failed to create video context\n");
-    }
-    if (ms->audio_stream != -1 && !ms->audio_context) {
-        LOG("Failed to create audio context\n");
-    }
+													   
+												
+	 
+													   
+												
+	 
 
 	ms->swr = swr_alloc();
 	if (ms->swr == NULL) {
-        LOG("Failed to allocate swr context\n");
+												
 		goto finish;
 	}
 
@@ -1352,8 +1352,8 @@ static int decode_thread(void *arg) {
 
 			ms->audio_duration -= (unsigned int) (ms->skip * audio_sample_rate);
 
-            LOG("Audio duration: %d samples, total duration: %.2f seconds\n", 
-                ms->audio_duration, ms->total_duration);
+																			  
+														
 
 		} else {
 			ms->audio_duration = -1;
@@ -1361,19 +1361,19 @@ static int decode_thread(void *arg) {
 	}
 
 	if (ms->skip != 0.0) {
-        LOG("Seeking to skip point: %.3f seconds\n", ms->skip);
+															   
 		av_seek_frame(ctx, -1, (int64_t) (ms->skip * AV_TIME_BASE), AVSEEK_FLAG_BACKWARD);
 	}
 
-    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Декодируем первый видеокадр ДО того как сообщим о готовности
+																																									  
     if (!ms->video_finished) {
-        LOG("Decoding first video frame before signaling ready\n");
+																   
         decode_video(ms);
     }
 
-    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Декодируем немного аудио ДО того как сообщим о готовности
+																																								
     if (!ms->audio_finished) {
-        LOG("Decoding initial audio before signaling ready\n");
+															   
         decode_audio(ms);
     }
 
@@ -1391,12 +1391,12 @@ static int decode_thread(void *arg) {
 
 		if (!ms->ready) {
 			ms->ready = 1;
-            LOG("Media is now READY! Signaling all waiters\n");
+															   
 			SDL_CondBroadcast(ms->cond);
 		}
 
 		if (!(ms->needs_decode || ms->quit)) {
-            LOG("Decoder waiting for signal...\n");
+												   
 			SDL_CondWait(ms->cond, ms->lock);
 		}
 
@@ -1425,7 +1425,7 @@ finish:
 
 	SDL_UnlockMutex(ms->lock);
 
-    LOG("Decode thread finishing, calling deallocate\n");
+														 
 	deallocate(ms);
 
 	return 0;
@@ -1433,15 +1433,15 @@ finish:
 
 
 void media_read_sync_finish(struct MediaState *ms) {
-	// copy/paste from end of decode_thread
+										
 
-	/* Data used by the decoder should be freed here, while data shared with
-	 * the readers should be freed in media_close.
-	 */
+																		 
+											   
+	
 
 	SDL_LockMutex(ms->lock);
 
-	/* Ensures that every stream becomes ready. */
+											   
 	if (!ms->ready) {
 		ms->ready = 1;
 		SDL_CondBroadcast(ms->cond);
@@ -1458,7 +1458,7 @@ void media_read_sync_finish(struct MediaState *ms) {
 
 
 static int decode_sync_start(void *arg) {
-    // copy/paste from start of decode_thread
+											 
 	MediaState *ms = (MediaState *) arg;
 
 	int err;
@@ -1540,19 +1540,19 @@ static int decode_sync_start(void *arg) {
 		av_seek_frame(ctx, -1, (int64_t) (ms->skip * AV_TIME_BASE), AVSEEK_FLAG_BACKWARD);
 	}
 
-	// [snip!]
+		   
 
 	return 0;
 }
 
 
 void media_read_sync(struct MediaState *ms) {
-	// copy/paste from middle of decode_thread
-	// printf("---* media_read_sync %p\n", ms);
+										   
+											
 
-	//while (!ms->quit) {
+					  
 	if (!ms->quit) {
-		// printf("     audio_finished: %d, video_finished: %d\n", ms->audio_finished, ms->video_finished);
+																									 
 		if (! ms->audio_finished) {
 			decode_audio(ms);
 		}
@@ -1602,25 +1602,25 @@ int media_read_audio(struct MediaState *ms, Uint8 *stream, int len) {
 
 		if (!remaining) {
 			ms->audio_finished = 1;
-            LOG("Audio finished (duration reached)\n");
+													   
 		}
 
 	}
 
-    LOG("media_read_audio: requested %d bytes, audio_queue_samples=%d\n", len, ms->audio_queue_samples);
+																										
 
 	while (len) {
 
 		if (!ms->audio_out_frame) {
 			ms->audio_out_frame = dequeue_frame(&ms->audio_queue);
 			ms->audio_out_index = 0;
-            if (ms->audio_out_frame) {
-                LOG("Dequeued audio frame: %d samples\n", ms->audio_out_frame->nb_samples);
-            }
+									  
+																						   
+			 
 		}
 
 		if (!ms->audio_out_frame) {
-            LOG("No audio frame available, breaking\n");
+														
 			break;
 		}
 
@@ -1635,21 +1635,21 @@ int media_read_audio(struct MediaState *ms, Uint8 *stream, int len) {
 			count = len;
 		}
 
-        LOG("Copying %d bytes of audio data\n", count);
+													   
 		memcpy(stream, &f->data[0][ms->audio_out_index], count);
 
 		ms->audio_out_index += count;
 
 		ms->audio_read_samples += count / BPS;
 		ms->audio_queue_samples -= count / BPS;
-        ms->audio_frames_played++;
+								  
 
 		rv += count;
 		len -= count;
 		stream += count;
 
 		if (ms->audio_out_index >= f->nb_samples * BPS) {
-            LOG("Audio frame fully consumed, freeing\n");
+														 
 			av_frame_free(&ms->audio_out_frame);
 			ms->audio_out_index = 0;
 		}
@@ -1659,7 +1659,7 @@ int media_read_audio(struct MediaState *ms, Uint8 *stream, int len) {
 	if (rv) {
 		ms->needs_decode = 1;
 		SDL_CondBroadcast(ms->cond);
-        LOG("Consumed %d bytes of audio, setting needs_decode=1\n", rv);
+																		
 	}
 
 	SDL_UnlockMutex(ms->lock);
@@ -1674,22 +1674,22 @@ int media_read_audio(struct MediaState *ms, Uint8 *stream, int len) {
 		rv += len;
 	}
 
-    if (rv < len) {
-        LOG("Only provided %d of %d requested audio bytes\n", rv, len);
-    }
+				   
+																	   
+	 
 
 	return rv;
 }
 
 int media_is_ready(struct MediaState *ms) {
-    int ready = ms->ready;
-    LOG("media_is_ready: %d\n", ready);
-    return ready;
+    return ms->ready;
+									   
+				 
 }
 
 
 double media_duration(MediaState *ms) {
-    LOG("media_duration: %.2f seconds\n", ms->total_duration);
+															  
 	return ms->total_duration;
 }
 
@@ -1702,7 +1702,7 @@ void media_start(MediaState *ms) {
     char buf[1024];
 
 	snprintf(buf, 1024, "decode: %s", ms->filename);
-    LOG("Creating decode thread for: %s\n", ms->filename);
+														  
 	SDL_Thread *t = SDL_CreateThread(decode_thread, buf, (void *) ms);
 	ms->thread = t;
 #endif
@@ -1713,27 +1713,27 @@ MediaState *media_open(SDL_RWops *rwops, const char *filename) {
 
     deallocate_deferred();
 
-    LOG("media_open: %s\n", filename);
+									  
 
     MediaState *ms = av_calloc(1, sizeof(MediaState));
 	if (ms == NULL) {
-        LOG("Failed to allocate MediaState\n");
+											   
 		return NULL;
 	}
 
-    // Инициализация счетчиков для логирования
-    ms->video_frames_decoded = 0;
-    ms->video_frames_displayed = 0;
-    ms->audio_frames_decoded = 0;
-    ms->audio_frames_played = 0;
-    ms->first_frame_pts = 0;
+																				  
+								 
+								   
+								 
+								
+							
     ms->first_frame_shown = 0;
-    ms->playback_start_time = 0;
-    ms->playback_start_time_set = 0;
+								
+									
 
 	ms->filename = av_strdup(filename);
 	if (ms->filename == NULL) {
-        LOG("Failed to duplicate filename\n");
+											  
 		deallocate(ms);
 		return NULL;
 	}
@@ -1742,13 +1742,13 @@ MediaState *media_open(SDL_RWops *rwops, const char *filename) {
 #ifndef __EMSCRIPTEN__
 	ms->cond = SDL_CreateCond();
 	if (ms->cond == NULL) {
-        LOG("Failed to create condition variable\n");
+													 
 		deallocate(ms);
 		return NULL;
 	}
 	ms->lock = SDL_CreateMutex();
 	if (ms->lock == NULL) {
-        LOG("Failed to create mutex\n");
+										
 		deallocate(ms);
 		return NULL;
 	}
@@ -1757,7 +1757,7 @@ MediaState *media_open(SDL_RWops *rwops, const char *filename) {
 	ms->audio_duration = -1;
 	ms->frame_drops = 1;
 
-    LOG("MediaState created successfully\n");
+											 
 	return ms;
 }
 
@@ -1772,7 +1772,7 @@ MediaState *media_open(SDL_RWops *rwops, const char *filename) {
  *    already. If 0, the stream plays until its natural end.
  */
 void media_start_end(MediaState *ms, double start, double end) {
-    LOG("media_start_end: start=%.3f, end=%.3f\n", start, end);
+															   
 	ms->skip = start;
 
 	if (end >= 0) {
@@ -1788,30 +1788,30 @@ void media_start_end(MediaState *ms, double start, double end) {
  * Marks the channel as having video.
  */
 void media_want_video(MediaState *ms, int video) {
-    LOG("media_want_video: %d\n", video);
+										 
 	ms->want_video = 1;
 	ms->frame_drops = (video != 2);
 }
 
 void media_pause(MediaState *ms, int pause) {
-    LOG("media_pause: %d\n", pause);
-    double now = get_current_time();
+									
+    double now = SDL_GetTicks() / 1000.0;
     if (pause && (ms->pause_time == 0)) {
         ms->pause_time = now;
-        LOG("Paused at time: %.3f\n", ms->pause_time);
+													  
     } else if ((!pause) && (ms->pause_time > 0)) {
         ms->time_offset += now - ms->pause_time;
         ms->pause_time = 0;
-        LOG("Unpaused, time_offset now: %.3f\n", ms->time_offset);
+																  
     }
 }
 
 void media_close(MediaState *ms) {
 
-    LOG("media_close called\n");
+								
 
 	if (!ms->thread) {
-        LOG("No thread, deallocating directly\n");
+												  
 		deallocate(ms);
 		return;
 	}
@@ -1824,26 +1824,26 @@ void media_close(MediaState *ms) {
 	media_read_sync_finish(ms);
 #endif
 
-    LOG("Signaling decode thread to quit\n");
+											 
 	SDL_CondBroadcast(ms->cond);
 	SDL_UnlockMutex(ms->lock);
 
 }
 
-// КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Функция теперь обновляет правильное время
+																
 void media_advance_time(void) {
-    current_time = get_current_time();
+    current_time = SDL_GetTicks() / 1000.0;
 }
 
 void media_sample_surfaces(SDL_Surface *rgb, SDL_Surface *rgba) {
 	rgb_surface = rgb;
 	rgba_surface = rgba;
-    LOG("media_sample_surfaces called\n");
+										  
 }
 
 void media_init(int rate, int status, int equal_mono) {
 
-    LOG("media_init: rate=%d, status=%d, equal_mono=%d\n", rate, status, equal_mono);
+																					 
 
     deallocate_mutex = SDL_CreateMutex();
 
